@@ -232,72 +232,60 @@ def _get_header_data(fid):
 
     header_data["rx_frequency_offset"] = np.fromfile(fid, dtype=np.int32, count=29, offset=3660)
     """
-    [mu.head(916:944,1), count]     = fread(fid, 29, 'ulong=>int32');
-
     %-- (3777-3808) FIR coefficient in RX: 16 * 2 bytes (2*8=16 bits)
     %-- Doesn't fit into the head matrix: 16 numbers into 8 slots...
     """
 
+    header_data["fir_rx_coefficient"] = np.fromfile(fid, dtype=np.int16, count=16, offset=3776)
     """
-    [mu.itxfir, count]              = fread(fid, 16, 'int16');
-
     %-- (3809-3924) Gain adjustment of FIR filter in RX for each combined channel:
     %-- 29 * 2 bytes (2*8=16 bits each)
     %-- Cannot fit into the head matrix: 58 number into 29 slots
     """
 
+    header_data["fir_rx_gain"] = np.fromfile(fid, dtype=np.int16, count=58, offset=3808)
     """
-    [mu.igafir, count]              = fread(fid, 58, 'int16');
-
     %-- (3925-3940) The next four parameters are 4 bytes each, i.e. 4*8=32 bits
     """
 
+    header_data["mu_head_982_to_985"] = np.fromfile(fid, dtype=np.int32, count=4, offset=3924)
     """
-    [mu.head(982:985,1), count]     = fread(fid, 4, 'int32');
-
     %-- (3941-4056) Number of CIC filter in RX for each cmobined channel:
     %-- 29 unsigned longwords -> 29 * 4 byte (4*8=32 bit) integers
+    """
+
+    header_data["cic_rx_filter_amount"] = np.fromfile(fid, dtype=np.int32, count=29, offset=3940)
+    """
     %-- (4057-4172) CIC cropping rate in RX for each combined channel:
     %-- 29 unsigned longwords -> 29 * 4 byte (4*8=32 bit) integers
     """
 
+    header_data["cic_rx_cropping_rate"] = np.fromfile(fid, dtype=np.int32, count=29, offset=4056)
     """
-    [mu.head(986:1043,1), count]    = fread(fid, 58, 'ulong=>int32');
-
-    %-- position19                  = ftell(fid);
-
     %-- (4173-4176) Above sea level:
     """
 
+    header_data["above_sea_level"] = np.fromfile(fid, dtype=np.float32, count=1, offset=4172)
     """
-    [mu.head(1044,1), count]        = fread(fid, 1, 'float32');
     %-- (4177-4180) Header flag: 4 bytes, i.e., 4*8=32 bits
     """
 
+    header_data["header_flag"] = np.fromfile(fid, dtype=np.int32, count=1, offset=4176)
     """
-    [mu.head(1045,1), count]        = fread(fid, 1, 'int32');
-
-    %-- position18                  = ftell(fid);
-
     %-- (4181-4260) Comment by user: 80 bytes (80*8=640 bits)
     """
 
+    header_data["user_comment"] = decode_utf(np.fromfile(fid, dtype='S80', count=1, offset=4180))
     """
-    mu.coment                       = fread(fid, 80, 'uint8=>char')';
-
     %-- (4261-4272) The next 3 parameters are 4 bytes (4*8=32 bits) each
     """
 
+    header_data["mu_head_1066_to_1068"] = np.fromfile(fid, dtype=np.int32, count=3, offset=4260)
     """
-    [mu.head(1066:1068,1), count]   = fread(fid, 3, 'int32');
-
     %-- (4273-4480) User header: 4480-4273+1 = 208 bytes
     """
 
-    """
-    mu.usrhdr                       = fread(fid, 208, 'uint8=>char')';
-    """
-
+    header_data["user_header"] = decode_utf(np.fromfile(fid, dtype='S208', count=1, offset=4272))
     return header_data
 
 
