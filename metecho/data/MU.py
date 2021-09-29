@@ -3,6 +3,7 @@ import h5py
 import logging
 import pathlib
 import os
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ def _get_header_data(file):
     %-- (61-84) Record start time: DD-MMM-YYYY hh:mm:ss.ss is 24 bytes long, each 8 bits
     """
     header_data["record_start_time"] = np.datetime64(_convert_date(
-        np.fromfile(file, dtype='S24', count=1).strip() + "Z"), 'ns')
+        np.fromfile(file, dtype='S24', count=1)).strip() + "Z", 'ns')
 
     """
     %-- (85-96) Record end time: hh:mm:ss.ss is 12 bytes long
@@ -122,7 +123,7 @@ def _get_header_data(file):
     header_data["mu_head_224_to_225"] = np.fromfile(file, dtype='>i4', count=2)
 
     """
-    %-- (905-1160) Pulse decoding pattern for all channels: 32 bits * 64
+    %-- (905-1160) Pulse decoding pattern for all channel: 32 bits * 64
     """
     header_data["pulse_decoding_patterns"] = np.fromfile(file, dtype='>i4', count=64)
 
@@ -135,12 +136,12 @@ def _get_header_data(file):
     %-- (1165-1676) Beam direction: 2 bytes (2*8=16 bits) * 256
     %-- Cannot put this into the matrix - 256 numbers into 128 slots
     """
-    header_data["beam_directions"] = np.fromfile(file, dtype=np.int16, count=256)
+    header_data["beam_directions"] = np.fromfile(file, dtype='>i2', count=256)
 
     """
     %-- (1677-1696) The next 5 parameters are 4 bytes (2*8=32 bits) each
     """
-    header_data["mu_head_420_to_424"] = np.fromfile(file, dtype='>i4', count=4)
+    header_data["mu_head_420_to_424"] = np.fromfile(file, dtype='>i4', count=5)
 
     """
     %-- (1697-1716) TX frequency offset of 5 unsigned longwords -> 5 * 4 byte (4*8=32 bit) integers
@@ -171,7 +172,7 @@ def _get_header_data(file):
     %-- (1761:1812) The RX module selection is given by 2 bytes * (25+1)
     %-- -> cannot be saved in the head matrix (no room for it)
     """
-    header_data["rx_module_selection"] = np.fromfile(file, dtype=np.int16, count=26)
+    header_data["rx_module_selection"] = np.fromfile(file, dtype='>i2', count=26)
 
     """
     %-- (1813:1820) The next 2 parameters are 4 bytes (2*8=32 bits) each
@@ -216,19 +217,19 @@ def _get_header_data(file):
     %-- (3313-3428) Lower and upper boundary of FFT number in each combined channel:
     %-- 2 * 29 * 2 bytes (2*8=16 bits)
     """
-    header_data["lo_hi_bound_fft"][0] = np.fromfile(file, dtype=np.int16, count=58)
+    header_data["lo_hi_bound_fft_0"] = np.fromfile(file, dtype='>i2', count=58)
 
     """
     %-- (3429-3544) Lower and upper boundary of FFT number in each combined channel:
     %-- 2 * 29 * 2 bytes (2*8=16 bits)
     """
-    header_data["lo_hi_bound_fft"][1] = np.fromfile(file, dtype=np.int16, count=58)
+    header_data["lo_hi_bound_fft_1"] = np.fromfile(file, dtype='>i2', count=58)
 
     """
     %-- (3545-3660) Lower and upper boundary of FFT number in each combined channel:
     %-- 2 * 29 * 2 bytes (2*8=16 bits)
     """
-    header_data["lo_hi_bound_fft"][2] = np.fromfile(file, dtype=np.int16, count=58)
+    header_data["lo_hi_bound_fft_2"] = np.fromfile(file, dtype='>i2', count=58)
 
     """
     %-- The above numbers don't fit into the head matrix (58 numbers but 29 slots)
@@ -242,14 +243,14 @@ def _get_header_data(file):
     %-- (3777-3808) FIR coefficient in RX: 16 * 2 bytes (2*8=16 bits)
     %-- Doesn't fit into the head matrix: 16 numbers into 8 slots...
     """
-    header_data["fir_rx_coefficient"] = np.fromfile(file, dtype=np.int16, count=16)
+    header_data["fir_rx_coefficient"] = np.fromfile(file, dtype='>i2', count=16)
 
     """
     %-- (3809-3924) Gain adjustment of FIR filter in RX for each combined channel:
     %-- 29 * 2 bytes (2*8=16 bits each)
     %-- Cannot fit into the head matrix: 58 number into 29 slots
     """
-    header_data["fir_rx_gain"] = np.fromfile(file, dtype=np.int16, count=58)
+    header_data["fir_rx_gain"] = np.fromfile(file, dtype='>i2', count=58)
 
     """
     %-- (3925-3940) The next four parameters are 4 bytes each, i.e. 4*8=32 bits
@@ -343,10 +344,11 @@ def _fix_date_edge_case(start_time, end_time):
     return end_time
 
 
-def convert_MUI_to_h5(filepath, experiment_name, output_location=None, skip_existing=False):
+def convert_MUI_to_h5(filepath, experiment_name="mw26x6", output_location=None, skip_existing=False):
     """
     Converts a MU data file into a HDF5 file
     """
+    file_outputs_created = []
 
     logger.debug(f'Opening file {filepath}')
     try:
@@ -369,76 +371,118 @@ def convert_MUI_to_h5(filepath, experiment_name, output_location=None, skip_exis
         header_data = _get_header_data(file)
         block_amount = header_data["mu_head_1_to_24"][2]
         observation_param_name = header_data["observation_param_name"]
-        start_time = header_data["record_start_time"]
+        # I replace ':' with a ., as windows cannot save files with ':' in their name.
+        start_time = np.datetime_as_string(header_data["record_start_time"]).replace(':', '.')
         output_location_dated = pathlib.Path(str(output_location)).joinpath(
             start_time[0:4],        # Year
-            start_time[6:8],        # Month
-            start_time[10:12]       # Day
+            start_time[5:7],        # Month
+            start_time[8:10]       # Day
         ) if bool(output_location) else ""
         """
-        Combined it will be something like "output_location/20XX/YY/ZZ
+        Combined it will be something like "output_location/20XX/YY/ZZ"
         Using str(output_location) to safeguard against output_location being None
         """
         output_file_name = pathlib.Path(output_location_dated).joinpath(start_time + ".h5")
-        h5file = h5py.File(output_file_name, 'w')
 
         """
-        Adding all header data as attributes to the hdf5 file.
+        Creates the directories if not yet created.
         """
-        for key, val in header_data.items():
-            logger.debug(f'Setting file attribute {key} to {val}')
-            h5file.attr[key] = val
-
-        if bool(output_location) and pathlib.Path(output_location).is_dir:
-            """
-            Checks if output_location has been set and if the directory already exists.
-            If it does, it will check if the output file already exists. If it does and
-            the "skip existing files" flag is set, it will skip those datasets.
-            """
-            # If the file already exists and you want to skip it
-            if pathlib.Path(output_file_name).is_file and skip_existing:
-                logger.debug(f'Skip existing set and file was found. Skipping file "{output_file_name}".')
-                # Skip ahead to the next block
-                file.seek(block_amount * SKIP_AMOUNT, 1)
-
-        if observation_param_name != experiment_name:
-            logger.critical(f'Experiment name "{experiment_name}"" was not '
-                            + 'equal to observation parameter name "{observation_param_name}". Exiting.')
-            break
-
-        """
-        # Allocating variables to hold the data. mu_data is a 512 times block_amount large complex array
-        # that's going to hold... something. mu_beam_channel_height is a 3-dimensional array containing
-        # int8, int8, int16 numbers representing which beam, which channel, and what height.
-        """
-        mu_data = np.zeros(512 * block_amount, dtype='complex')
-        dt = np.dtype([('beam', '>i1'), ('channel', '>i1'), ('height', '>i2')])
-        mu_beam_channel_height = np.zeros(block_amount, dt)
-
-        for x in range(0, block_amount):
-            """
-            First it saves the channels from the file via a custom dtype (written above.)
-            After that, it stores the real and complex numbers separately, then combines them
-            in the mu_data with the help of the 1j operator. Each 'line' ends with 380 blank bytes
-            and are therefore skipped in the end.
-            """
-            mu_beam_channel_height[x] = np.fromfile(file, dtype=dt, count=1)
-            real_numbers = np.fromfile(file, dtype='>f8', count=512)
-            complex_numbers = np.fromfile(file, dtype='>f8', count=512)
-            mu_data[x:x + 511] = real_numbers + 1j * complex_numbers
-            file.seek(380, 1)
-
         if not output_location_dated == "" and not pathlib.Path(output_location_dated).is_dir():
             logger.debug(f'Creating file directories for location {output_location_dated}')
             os.makedirs(output_location_dated)
 
-        logger.debug(f'Creating datasets {start_time}_beams and {start_time}_data and saving them to file')
-        h5file.create_dataset(str(start_time) + "_beams", data=mu_beam_channel_height)
-        h5file.create_dataset(str(start_time) + "_data", data=mu_data)
-        h5file.close()
+        """
+        Opening the file properly so it closes if it crashes.
+        """
+        with h5py.File(output_file_name, 'w') as h5file:
+
+            if bool(output_location):
+                """
+                Checks if output_location has been set and if the directory already exists.
+                If it does, it will check if the output file already exists. If it does and
+                the "skip existing files" flag is set, it will skip those datasets.
+                """
+                # If the file already exists and you want to skip it
+                if pathlib.Path(output_file_name).is_file and skip_existing:
+                    logger.debug(f'Skip existing set and file was found. Skipping file "{output_file_name}".')
+                    # Skip ahead to the next block
+                    file.seek(block_amount * SKIP_AMOUNT, 1)
+                    byte = file.read(1)
+                    file.seek(-1, 1)
+                    continue
+
+            if observation_param_name.strip() != experiment_name:
+                logger.critical(f'Experiment name "{experiment_name}" was not '
+                                + f'equal to observation parameter name "{observation_param_name}". Exiting.')
+                break
+
+            """
+            # Allocating variables to hold the data. mu_data is a 512 times block_amount large complex array
+            # that's going to hold... something. mu_beam_channel_height is a 3-dimensional array containing
+            # int8, int8, int16 numbers representing which beam, which channel, and what height.
+            """
+            mu_data = np.zeros((25, 85, 512), dtype='complex')
+            dt = np.dtype([('beam', '>i1'), ('channel', '>i1'), ('height', '>i2')])
+            mu_beam_channel_height = np.zeros(block_amount, dt)
+
+            for x in range(0, block_amount):
+                """
+                First it saves the channel from the file via a custom dtype (written above.)
+                After that, it stores the real and complex numbers separately, then combines them
+                in the mu_data with the help of the 1j operator. Each 'line' ends with 380 blank bytes
+                and are therefore skipped in the end.
+                """
+                mu_beam_channel_height[x] = np.fromfile(file, dtype=dt, count=1)
+                real_numbers = np.fromfile(file, dtype='>f4', count=512)
+                complex_numbers = np.fromfile(file, dtype='>f4', count=512)
+                """
+                high represents the height of the data. It is generally 85 long.
+                channel represents the number of channels. It is generally 25 long.
+                """
+                high = (x // 85) % 25
+                channel = (x % 85)
+                mu_data[high, channel, ] = real_numbers + 1j * complex_numbers
+                file.seek(380, 1)
+
+            """
+            Adding all header data as attributes to the hdf5 file.
+            """
+            for key, val in header_data.items():
+                logger.debug(f'Setting file attribute {key} to {val}')
+                if type(val) == np.datetime64:
+                    h5file.attrs[key] = str(val)
+                else:
+                    h5file.attrs[key] = val
+
+            logger.debug(f'Creating datasets beams and data, and saving them to file')
+            h5file.create_dataset("beams", data=mu_beam_channel_height)
+            h5file.create_dataset("data", data=mu_data)
+            h5file.close()
+            file_outputs_created.append(str(output_file_name))
 
         byte = file.read(1)
         file.seek(-1, 1)
 
     logger.debug(f'Reached EOF, exiting loop and closing file')
     file.close()
+    return file_outputs_created
+
+
+def _plot_colormesh(filepath, output_filepath=""):
+    """
+    Simple function to check the data. Filepath needs a h5 file.
+    """
+    try:
+        h5file = h5py.File(filepath, 'r')
+    except FileNotFoundError:
+        logger.exception(f'Could not open file: {filepath}. File does not exist.')
+        return
+
+    dset = h5file["data"]
+    powsum = np.abs(np.sum(dset, axis=0))**2
+    plt.pcolormesh(powsum, shading='auto')
+    plt.colorbar()
+    plt.ylabel('signal strength')
+    plt.xlabel('time')
+    plt.savefig(output_filepath + 'plot.png')
+    plt.close('all')
