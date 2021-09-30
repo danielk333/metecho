@@ -6,6 +6,5 @@ class RawData:
     def __init__(self, path):
         self.file = h5py.File(path, 'r')
 
-
     def validate(self):
         pass

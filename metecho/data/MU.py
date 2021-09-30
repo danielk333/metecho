@@ -480,9 +480,17 @@ def _plot_colormesh(filepath, output_filepath=""):
 
     dset = h5file["data"]
     powsum = np.abs(np.sum(dset, axis=0))**2
-    plt.pcolormesh(powsum, shading='auto')
+    """
+    Sets pyplot to classic rendering, then renders the powersum unto it. We then add
+    a colorbar and the y and x-label before saving it. At the moment it only saves
+    to plot.png.
+    """
+    plt.style.use('classic')
+    plt.pcolormesh(powsum)
     plt.colorbar()
     plt.ylabel('signal strength')
     plt.xlabel('time')
     plt.savefig(output_filepath + 'plot.png')
     plt.close('all')
+
+_plot_colormesh("/mnt/e/Kurser/X7007E/data/2009/06/27/2009-06-27T09.54.05.690000000.h5")
