@@ -4,6 +4,7 @@ import logging
 import pathlib
 import os
 import matplotlib.pyplot as plt
+from .. import tools
 
 logger = logging.getLogger(__name__)
 
@@ -344,6 +345,7 @@ def _fix_date_edge_case(start_time, end_time):
     return end_time
 
 
+@tools.MPI_target_arg(0)
 def convert_MUI_to_h5(filepath, experiment_name="mw26x6", output_location=None, skip_existing=False):
     """
     Converts a MU data file into a HDF5 file

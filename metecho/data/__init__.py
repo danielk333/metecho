@@ -11,3 +11,5 @@ rest of the package.
 - the voltage data nd-array is saved in a dataset called "/data"
 
 '''
+
+from .mu import convert_MUI_to_h5
