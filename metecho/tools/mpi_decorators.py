@@ -9,6 +9,7 @@ try:
     comm = MPI.COMM_WORLD
 except ImportError:
     logger.warning('MPI import failed: reverting to one process')
+
     class COMM_WORLD:
         rank = 0
         size = 1
@@ -16,23 +17,25 @@ except ImportError:
 
 
 def MPI_target_arg(arg_index):
-    '''Decorates the target function to parallelize over a single input iterable positional argument identified by the given index.
+    '''Decorates the target function to parallelize over a single input iterable
+    positional argument identified by the given index.
 
-    If MPI is enabled and `MPI_root >= 0` it gathers the results into the `MPI_root` process and removes them from the calculating processes.
+    If MPI is enabled and `MPI_root >= 0` it gathers the results into the `MPI_root`
+    process and removes them from the calculating processes.
     If the results needs to be broadcast that can be done after calling the function.
 
     :param arg_index int: Index of the positional argument to iterate over.
 
     The wrapped function gain the following parameters:
     :MPI bool: Flag that enables MPI if `true`, defaults to `false`.
-    :MPI_root int: Rank of the process to gather iteration results in, defaults to 0. If set to a negative number, no gathering is performed.
+    :MPI_root int: Rank of the process to gather iteration results in, defaults to 0.
+    If set to a negative number, no gathering is performed.
     '''
     def _mpi_wrapper(func):
         def _mpi_wrapped_func(*args, **kwargs):
-
             input_list = args[arg_index]
-            _args = copy.copy(args)
-            rets = [None]*len(input_list)
+            _args = list(args)
+            rets = [None] * len(input_list)
 
             MPI = kwargs.pop('MPI', False)
             root = kwargs.pop('MPI_root', 0)
