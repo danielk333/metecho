@@ -10,6 +10,10 @@ logger = logging.getLogger(__name__)
 
 
 def _get_header_data(file):
+    """
+    Retrieves the meta/headerdata from a MUI file for later conversion and for
+    use in parsing information.
+    """
     header_data = dict()
 
     # Copyright Csilla Szasz, Kenneth Kullbrandt, Daniel Kastinen
