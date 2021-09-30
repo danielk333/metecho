@@ -492,5 +492,3 @@ def _plot_colormesh(filepath, output_filepath=""):
     plt.xlabel('time')
     plt.savefig(output_filepath + 'plot.png')
     plt.close('all')
-
-_plot_colormesh("/mnt/e/Kurser/X7007E/data/2009/06/27/2009-06-27T09.54.05.690000000.h5")
