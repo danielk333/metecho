@@ -48,7 +48,7 @@ def rti(file,
 
     if title == '':
         # Uppdatera när jag vet hur jag ska stoppa in radarnamnet
-        title = f'Placeholder: {h5file.attrs["record_start_time"]}'
+        title = f'{h5file.attrs["filename"]} - {h5file.attrs["record_start_time"]}'
 
     plt.suptitle(title, fontsize=title_font_size)
     plt.colorbar(label='Power [1]')

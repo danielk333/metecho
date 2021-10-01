@@ -459,6 +459,7 @@ def convert_MUI_to_h5(filepath, experiment_name="mw26x6", output_location=None, 
                     h5file.attrs[key] = str(val)
                 else:
                     h5file.attrs[key] = val
+            h5file.attrs["filename"] = pathlib.Path(file.name).name
 
             logger.debug(f'Creating datasets beams and data, and saving them to file')
             h5file.create_dataset("beams", data=mu_beam_channel_height)
