@@ -1,11 +1,15 @@
 import numpy as np
 import h5py
 
-class RawData:
+class AXIS:
+    CHANNEL = 'channel'
+    SAMPLE = 'sample'
+    PULSE = 'pulse'
+    POLARIZATION = 'polarization'
 
-    def __init__(self, path):
-        self.file = h5py.File(path, 'r')
 
+class RawDataInterface:
 
-    def validate(self):
-        pass
+    def __init__(self):
+        self.data = None
+        self.axis = None
