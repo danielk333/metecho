@@ -357,10 +357,14 @@ def convert_MUI_to_h5(file, experiment_name="mw26x6", output_location=None, skip
     file_outputs_created = []
 
     try:
-        file.mode = 'rb'
-    except AttributeError:
-        logger.exception(f'Object {file} had no attribute "mode". Was the input correct?')
-        return []
+        file = open(file, 'rb')
+    except TypeError:
+        logger.debug("File already open or wrong input type.")
+
+    if hasattr(file, 'mode'):
+        if file.mode != 'rb':
+            logger.critical("File not open in binary mode.")
+            return []
 
     """
     Constants declared
