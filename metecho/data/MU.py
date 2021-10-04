@@ -475,4 +475,4 @@ def convert_MUI_to_h5(file, experiment_name="mw26x6", output_location=None, skip
 
 
 def detector(file):
-    return pathlib.Path(file).name.startswith('MUI')
+    return pathlib.Path(file.name).name.startswith('MUI')
