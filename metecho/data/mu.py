@@ -4,7 +4,9 @@ import logging
 import pathlib
 import os
 import matplotlib.pyplot as plt
+
 from .. import tools
+from .raw_data import BACKEND_ERROR, raw_data_backend
 
 logger = logging.getLogger(__name__)
 
@@ -478,5 +480,22 @@ def convert_MUI_to_h5(file, experiment_name="mw26x6", output_location=None, skip
     return file_outputs_created
 
 
-def detector(file):
-    return pathlib.Path(file.name).name.startswith('MUI')
+
+@raw_data_backend('mu_h5')
+def load_h5_data(path):
+    try:
+        h5file = h5py.File(file, 'r')
+        #fix better exception handling and logging
+    except (FileNotFoundError, OSError, UnicodeDecodeError):
+        raise BACKEND_ERROR
+
+    if 'data' not in h5file or 'beams' not in h5file:
+        #fix better exception handling and logging
+        raise BACKEND_ERROR
+
+    #add MOAR meta
+    meta = {}
+    meta['filename'] = h5file.attrs["filename"]
+
+    return h5file['data'][()], {'channel':0, 'sample':1, 'pulse':2}, meta
+
