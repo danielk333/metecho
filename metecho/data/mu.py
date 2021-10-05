@@ -484,7 +484,7 @@ def convert_MUI_to_h5(file, experiment_name="mw26x6", output_location=None, skip
 @raw_data_backend('mu_h5')
 def load_h5_data(path):
     try:
-        h5file = h5py.File(file, 'r')
+        h5file = h5py.File(str(path), 'r')
         #fix better exception handling and logging
     except (FileNotFoundError, OSError, UnicodeDecodeError):
         raise BACKEND_ERROR
