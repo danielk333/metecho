@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import h5py
 import logging
 import numpy as np
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -13,22 +14,32 @@ def rti(file,
         tick_font_size=12,
         title='',
         index_axis=1,
+        save_figure=False,
+        show_figure=True,
+        keep_figure_in_plot=False,
+        create_new_figure=True
         ):
     """
     Simple function to plot the information of a h5-file.
     """
     try:
         logger.debug(f'Opening file {file}')
-        h5file = h5py.File(file, 'r')
+        h5file = h5py.File(file)
+        name = h5file.attrs["filename"]
     except FileNotFoundError:
         logger.exception(f'Could not open file: {file}. File does not exist.')
         return
+    except OSError:
+        logger.exception(f'File {file} was not a h5 file, and was probably in binary format.')
+        return
+    except UnicodeDecodeError:
+        logger.exception(f'File {file} was not a h5 file.')
+        return
 
     """
-    File opened, starting to set pyplot settings. Starting with closing the other pyplots as to not render
-    over anything else
+    File opened, starting to set pyplot settings. Presuming that the user doesn't have any other
+    pyplots open.
     """
-    plt.close('all')
     dset = h5file["data"]
     powsum = np.abs(np.sum(dset, axis=0))**2
 
@@ -37,6 +48,9 @@ def rti(file,
     a colorbar and the y and x-label before saving it. At the moment it only saves
     to plot.png.
     """
+    if create_new_figure:
+        plt.figure()
+
     plt.pcolormesh(powsum)
 
     if index_axis:
@@ -55,5 +69,12 @@ def rti(file,
     plt.xticks(fontsize=tick_font_size)
     plt.yticks(fontsize=tick_font_size)
 
-    plt.savefig(output_filepath + title.replace(':', '.') + '.png')
-    plt.close('all')
+    if show_figure:
+        plt.show()
+    if save_figure:
+        try:
+            plt.savefig(output_filepath + title.replace(':', '.') + '.png')
+        except FileNotFoundError:
+            logger.exception(f'Output filepath {output_filepath} directory does not exist.')
+    if not keep_figure_in_plot:
+        plt.close()
