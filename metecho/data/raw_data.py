@@ -22,6 +22,8 @@ def raw_data_backend(name):
 
 
 class RawDataInterface:
+    '''Common interface between metecho functionality and different radar-data backends.
+    '''
 
     DATA_AXIS = [
         'channel',
@@ -52,16 +54,3 @@ class RawDataInterface:
 
         if self.data is None:
             raise ValueError('No backend found for given input path')
-
-
-@raw_data_backend('metecho_h5')
-def load_h5_data(path):
-    try:
-        h5file = h5py.File(file, 'r')
-    except (FileNotFoundError, OSError, UnicodeDecodeError):
-        raise BACKEND_ERROR
-
-    if 'data' not in h5file or 'beams' not in h5file:
-        raise BACKEND_ERROR
-
-    return fh.data[()], ['channel', 'sample', 'pulse']
