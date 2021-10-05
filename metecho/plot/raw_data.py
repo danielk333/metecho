@@ -16,7 +16,8 @@ def rti(file,
         index_axis=1,
         save_figure=False,
         show_figure=True,
-        keep_figure_in_plot=False
+        keep_figure_in_plot=False,
+        create_new_figure=True
         ):
     """
     Simple function to plot the information of a h5-file.
@@ -47,6 +48,9 @@ def rti(file,
     a colorbar and the y and x-label before saving it. At the moment it only saves
     to plot.png.
     """
+    if create_new_figure:
+        plt.figure()
+
     plt.pcolormesh(powsum)
 
     if index_axis:
@@ -68,6 +72,9 @@ def rti(file,
     if show_figure:
         plt.show()
     if save_figure:
-        plt.savefig(output_filepath + title.replace(':', '.') + '.png')
+        try:
+            plt.savefig(output_filepath + title.replace(':', '.') + '.png')
+        except FileNotFoundError:
+            logger.exception(f'Output filepath {output_filepath} directory does not exist.')
     if not keep_figure_in_plot:
         plt.close()
