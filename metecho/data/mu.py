@@ -486,6 +486,20 @@ def load_h5_data(path):
     try:
         h5file = h5py.File(str(path), 'r')
         #fix better exception handling and logging
+        # try:
+        #     logger.debug(f'Opening file {file}')
+        #     h5file = h5py.File(file)
+        #     name = h5file.attrs["filename"]
+        # except FileNotFoundError:
+        #     logger.exception(f'Could not open file: {file}. File does not exist.')
+        #     return
+        # except OSError:
+        #     logger.exception(f'File {file} was not a h5 file, and was probably in binary format.')
+        #     return
+        # except UnicodeDecodeError:
+        #     logger.exception(f'File {file} was not a h5 file.')
+        #     return
+
     except (FileNotFoundError, OSError, UnicodeDecodeError):
         raise BACKEND_ERROR
 
