@@ -3,78 +3,65 @@ import h5py
 import logging
 import numpy as np
 import sys
+import copy
+
+from .general import basic_matplotlib_kw
 
 logger = logging.getLogger(__name__)
 
-
-def rti(file,
-        output_filepath="",
-        axis_font_size=8,
-        title_font_size=12,
-        tick_font_size=12,
+@basic_matplotlib_kw
+def rti(ax,
+        raw_data,
+        axis_font_size=15,
+        title_font_size=11,
+        tick_font_size=11,
         title='',
         index_axis=1,
-        save_figure=False,
-        show_figure=True,
-        keep_figure_in_plot=False,
-        create_new_figure=True
         ):
     """
     Simple function to plot the information of a h5-file.
     """
-    try:
-        logger.debug(f'Opening file {file}')
-        h5file = h5py.File(file)
-        name = h5file.attrs["filename"]
-    except FileNotFoundError:
-        logger.exception(f'Could not open file: {file}. File does not exist.')
-        return
-    except OSError:
-        logger.exception(f'File {file} was not a h5 file, and was probably in binary format.')
-        return
-    except UnicodeDecodeError:
-        logger.exception(f'File {file} was not a h5 file.')
-        return
+
 
     """
     File opened, starting to set pyplot settings. Presuming that the user doesn't have any other
     pyplots open.
     """
-    dset = h5file["data"]
-    powsum = np.abs(np.sum(dset, axis=0))**2
+    summed = raw_data.data
+    remove_axis = copy.deepcopy(raw_data.DATA_AXIS)
+    remove_axis.remove('sample')
+    remove_axis.remove('pulse')
+    for axis in remove_axis:
+        if raw_data.axis[axis] is not None:
+            summed = np.sum(summed, axis=raw_data.axis[axis])
+
+    powsum = np.abs(summed)**2
 
     """
     Sets pyplot to classic rendering, then renders the powersum unto it. We then add
     a colorbar and the y and x-label before saving it. At the moment it only saves
     to plot.png.
     """
-    if create_new_figure:
-        plt.figure()
 
-    plt.pcolormesh(powsum)
+    pmesh = ax.pcolormesh(powsum)
 
     if index_axis:
-        plt.xlabel('IPP [1]', fontsize=axis_font_size)
-        plt.ylabel('Sample [1]', fontsize=axis_font_size)
+        ax.set_xlabel('IPP [1]', fontsize=axis_font_size)
+        ax.set_ylabel('Sample [1]', fontsize=axis_font_size)
     else:
-        plt.xlabel('$t$ [s]', fontsize=axis_font_size)
-        plt.ylabel('$h$ [km]', fontsize=axis_font_size)
+        ax.set_xlabel('$t$ [s]', fontsize=axis_font_size)
+        ax.set_ylabel('$h$ [km]', fontsize=axis_font_size)
 
     if title == '':
         # Uppdatera när jag vet hur jag ska stoppa in radarnamnet
-        title = f'{h5file.attrs["filename"]} - {h5file.attrs["record_start_time"]}'
+        title = f'{raw_data.path.name} - {raw_data.meta.get("start_time", "")}'
 
-    plt.suptitle(title, fontsize=title_font_size)
-    plt.colorbar(label='Power [1]')
-    plt.xticks(fontsize=tick_font_size)
-    plt.yticks(fontsize=tick_font_size)
+    ax.set_title(title, fontsize=title_font_size)
+    cbar = plt.colorbar(pmesh)
+    cbar.set_label('Power [1]', size=axis_font_size)
+    cbar.ax.tick_params(labelsize=tick_font_size)
 
-    if show_figure:
-        plt.show()
-    if save_figure:
-        try:
-            plt.savefig(output_filepath + title.replace(':', '.') + '.png')
-        except FileNotFoundError:
-            logger.exception(f'Output filepath {output_filepath} directory does not exist.')
-    if not keep_figure_in_plot:
-        plt.close()
+    for ax_label in ['x', 'y']:
+        ax.tick_params(axis=ax_label, labelsize=tick_font_size)
+
+    return ax
