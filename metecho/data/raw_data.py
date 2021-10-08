@@ -1,8 +1,10 @@
 import pathlib
+import logging
 
 import numpy as np
 import h5py
 
+logger = logging.getLogger(__name__)
 
 BACKENDS = {}
 BACKEND_ERROR = ValueError('Not compatible with backend')
