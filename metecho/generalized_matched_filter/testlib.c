@@ -1,8 +1,10 @@
 #include <stdio.h>
+#include <complex.h>
 
-void myprint(void);
+void myprint(float, float);
 
-void myprint()
+void myprint(float coolstuff_real, float coolstuff_imag)
 {
-    printf("hello world\n");
+    complex coolstuff = coolstuff_real + coolstuff_imag * I;
+    printf("Read: %f\nImag: %f\n", creal(coolstuff), cimag(coolstuff));
 }
