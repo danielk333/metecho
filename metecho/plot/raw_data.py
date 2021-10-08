@@ -3,6 +3,7 @@ import h5py
 import logging
 import numpy as np
 import sys
+import copy
 
 from .general import basic_matplotlib_kw
 
@@ -27,7 +28,10 @@ def rti(ax,
     pyplots open.
     """
     summed = raw_data.data
-    for axis in ['channel', 'polarization']:
+    remove_axis = copy.deepcopy(raw_data.DATA_AXIS)
+    remove_axis.remove('sample')
+    remove_axis.remove('pulse')
+    for axis in remove_axis:
         if raw_data.axis[axis] is not None:
             summed = np.sum(summed, axis=raw_data.axis[axis])
 
