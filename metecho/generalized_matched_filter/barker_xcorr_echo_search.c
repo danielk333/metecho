@@ -5,54 +5,13 @@
 #include <complex.h>
 #include <math.h>
 #include <time.h>
-#define precision double
-
-
-//precision complex* get_complex_number(int *size);
-void arange(int start, int stop, int step, precision *outarray);
-void complex_absolute_array(precision complex *inarray, int start, int stop, precision complex *outarray);
-void crosscorrelate(precision complex *x, int size_x, precision complex *y, int size_y, int delay, precision complex *result);
-void crosscorrelate_array(precision complex *x, int size_x, precision complex *y, int size_y, int min_delay, int max_delay, precision complex *result);
-void max_in_array(precision complex *inarray, int size, precision complex *maxval, int *maxvalindex);
-void set_abs_ampsum(precision complex abs_ampsum_sum, int start, int stop, precision complex *outarray);
-precision complex complex_sum(precision complex *inarray, int size);
-
-/*
-precision complex* get_complex_number(int *size){
-    precision complex *outarray;
-    outarray = (precision complex*)malloc(size[0]*size[1]*sizeof(precision complex));
-    for (int i = 0; i < size[0]; ++i)
-    {
-        for (int j = 0; j < size[1]; ++j)
-        {
-            precision u1 = (precision)(rand()%100)/100;
-            precision u2 = (precision)(rand()%100)/100;
-            outarray[i*size[0] + j] = u1 + u2 * I;
-
-        }
-    }
-    return outarray;
-}
-*/
-void perform_xcorr( precision complex *ampsum,
-                    int ampsum_size, 
-                    precision *DFVAR, 
-                    int DFVAR_SIZE, 
-                    precision *CODE27, 
-                    int code_size,
-                    precision complex *pows,
-                    int *pows_size,
-                    precision complex *powmax,
-                    int powmax_size,
-                    int *maxpowind,
-                    int maxpowind_size,
-                    precision samp
-                    );
+#include <assert.h>
+#include "barker_xcorr_echo_search.h"
 
 
 void barker_xcorr_echo_search(
-                        precision complex *ampsum,
-                        int ampsum_size,
+                        precision complex *signal_samples,
+                        int signal_samples_size,
                         precision *code,
                         int code_size,
                         precision complex *pows,
@@ -65,40 +24,34 @@ void barker_xcorr_echo_search(
                         ){
 
     // Declaring constants
-    int STEP = 100;
-    int DFVAR_SIZE = (35000/STEP)+1;
+    precision step = 100;
+    int doppler_freq_size = (int)((35000.0/step)+1);
     
-    precision DFVAR[DFVAR_SIZE];
-    precision *CODE27 = code;
-        
-    // Declaring variables
-    precision bestpeak[ampsum_size];
-    precision best_dop[ampsum_size];
-    precision best_start[ampsum_size];
+    precision doppler_freq[doppler_freq_size];
 
-    arange(-30000, 5000, STEP, DFVAR);
+    arange(-30000.0, 5000.0, step, doppler_freq);
 
-    perform_xcorr(  ampsum, 
-                    ampsum_size, 
-                    DFVAR, 
-                    DFVAR_SIZE, 
-                    CODE27, 
-                    code_size, 
-                    pows, 
-                    pows_size, 
-                    powmax, 
-                    powmax_size, 
-                    maxpowind, 
+    perform_xcorr(  signal_samples,
+                    signal_samples_size,
+                    doppler_freq,
+                    doppler_freq_size,
+                    code,
+                    code_size,
+                    pows,
+                    pows_size,
+                    powmax,
+                    powmax_size,
+                    maxpowind,
                     maxpowind_size,
                     samp);
 
 }
 
-void perform_xcorr( precision complex *ampsum,
-                    int ampsum_size, 
-                    precision *DFVAR, 
-                    int DFVAR_SIZE, 
-                    precision *CODE27, 
+void perform_xcorr( precision complex *signal_samples,
+                    int signal_samples_size,
+                    precision *doppler_freq,
+                    int doppler_freq_size,
+                    precision *code,
                     int code_size,
                     precision complex *pows,
                     int *pows_size,
@@ -108,100 +61,88 @@ void perform_xcorr( precision complex *ampsum,
                     int maxpowind_size,
                     precision samp
                     ){
-    precision complex norm_coefs[ampsum_size+code_size];
-    precision complex abs_ampsum[ampsum_size];
-    precision complex decpow[ampsum_size+code_size];
-    int norm_coefs_size = ampsum_size+code_size;
-    int decpow_size = ampsum_size+code_size;
+    int decoded_size = signal_samples_size + code_size;
+    precision complex norm_coefs[decoded_size];
+    precision complex abs_signal_samples[signal_samples_size];
+    precision complex output_power[decoded_size];
+    precision doppler_freq_samp;
+    precision complex signal_model[code_size];
+    precision complex decoded[decoded_size];
+    precision complex doppler_freq_abs_arr[code_size];
     
     // Setting arrays to zeroes
     memset(pows, (precision)0, sizeof(pows[0])*pows_size[0]*pows_size[1]);
     memset(powmax, (precision)0, sizeof(powmax[0])*powmax_size);
     memset(maxpowind, (int)0, sizeof(maxpowind[0])*maxpowind_size);
-    memset(norm_coefs, (precision)0, sizeof(norm_coefs_size)*norm_coefs[0]);
+    memset(norm_coefs, (precision)0, sizeof(decoded_size)*norm_coefs[0]);
 
 
-     // Calculate the absolute value complex_sum of the ampsum from 0 to L
-    complex_absolute_array(ampsum, 0, code_size, abs_ampsum);
-    precision complex abs_ampsum_sum = complex_sum(abs_ampsum, code_size);
-    set_abs_ampsum(abs_ampsum_sum, 0, code_size, norm_coefs);
-    for (int i = code_size; i < ampsum_size; i++)
+     // Calculate the absolute value complex_sum of the signal_samples from 0 to code_size
+    elementwise_cabs(signal_samples, 0, code_size, abs_signal_samples);
+    precision complex abs_signal_samples_sum = complex_sum(abs_signal_samples, code_size);
+    set_norm_coefs(abs_signal_samples_sum, 0, code_size, norm_coefs);
+    for (int i = code_size; i < signal_samples_size; i++)
     {
-        complex_absolute_array(ampsum, i-code_size, i, abs_ampsum);
-        abs_ampsum_sum = complex_sum(abs_ampsum, code_size);
-        norm_coefs[i] = abs_ampsum_sum;
+        elementwise_cabs(signal_samples, i-code_size, i, abs_signal_samples);
+        abs_signal_samples_sum = complex_sum(abs_signal_samples, code_size);
+        norm_coefs[i] = abs_signal_samples_sum;
     }
-    complex_absolute_array(ampsum, ampsum_size-code_size, ampsum_size, abs_ampsum);
-    abs_ampsum_sum = complex_sum(abs_ampsum, code_size);
-    set_abs_ampsum(abs_ampsum_sum, ampsum_size, ampsum_size+code_size, norm_coefs);
+    elementwise_cabs(signal_samples, signal_samples_size-code_size, signal_samples_size, abs_signal_samples);
+    abs_signal_samples_sum = complex_sum(abs_signal_samples, code_size);
+    set_norm_coefs(abs_signal_samples_sum, signal_samples_size, signal_samples_size+code_size, norm_coefs);
     
-    for (int i = 0; i < DFVAR_SIZE; i++)
+    for (int i = 0; i < doppler_freq_size; i++)
     {
-        
-        precision dfvar_samp;
-        int dfvarcode_size = code_size;
-        precision complex dfvarcode[dfvarcode_size];
-        int decoded_size = dfvarcode_size + ampsum_size;
-        precision complex decoded[decoded_size];
-
         for (int j = 0; j < code_size; j++)
         {
-            dfvar_samp = (j+1)*2*M_PI*DFVAR[i]*samp;
-            dfvarcode[j] = (sin(dfvar_samp) * I  + cos(dfvar_samp)) * CODE27[j];
+            doppler_freq_samp = (j+1)*2*M_PI*doppler_freq[i]*samp;
+            signal_model[j] = (sin(doppler_freq_samp) * I  + cos(doppler_freq_samp)) * code[j];
         }
 
-        precision complex dfvar_abs_arr[dfvarcode_size];
-        complex_absolute_array(dfvarcode, 0, dfvarcode_size, dfvar_abs_arr);
-        precision complex dfvar_abs_sum = complex_sum(dfvar_abs_arr, dfvarcode_size);
+        elementwise_cabs(signal_model, 0, code_size, doppler_freq_abs_arr);
+        precision complex doppler_freq_abs_sum = complex_sum(doppler_freq_abs_arr, code_size);
 
-        for (int k = 0; k < dfvarcode_size; k++)
+        for (int k = 0; k < code_size; k++)
         {
-            dfvarcode[k] = dfvarcode[k]/sqrt(dfvar_abs_sum);
+            signal_model[k] = signal_model[k]/sqrt(doppler_freq_abs_sum);
         }
 
-        crosscorrelate_array(ampsum, ampsum_size, dfvarcode, dfvarcode_size, -ampsum_size, dfvarcode_size, decoded);
+        crosscorrelate(signal_samples, signal_samples_size, signal_model, code_size, -signal_samples_size, code_size, decoded);
+
         for (int j = 0; j < decoded_size; j++)
         {
             if (norm_coefs[j] == 0)
             {
                 norm_coefs[j] = 1;
             }
-            decpow[j] = decoded[j]/sqrt(norm_coefs[j]);
-            decpow[j] = cpow(cabs(decpow[j]), 2);
+            output_power[j] = decoded[j]/sqrt(norm_coefs[j]);
+            output_power[j] = cpow(cabs(output_power[j]), 2);
 
-            if (cabs(decpow[j]) > cabs(powmax[i])){                
-                powmax[i] = decpow[j];
+            if (cabs(output_power[j]) > cabs(powmax[i])){
+                powmax[i] = output_power[j];
                 maxpowind[i] = j;
             }
         }
         maxpowind[i] = maxpowind[i] - code_size;
-        for (int j = 0; j < decpow_size; j++)
+        for (int j = 0; j < decoded_size; j++)
         {
-            pows[i*decpow_size+j] = decpow[j];
+            pows[i*decoded_size+j] = output_power[j];
         }          
     }
 
 }
 
-void crosscorrelate_array(precision complex *x, int size_x, precision complex *y, int size_y, int min_delay, int max_delay, precision complex *result){
-    if (max_delay < min_delay)
-    {
-        printf("max delay less than min delay, exiting.");
-        return;
-    }
+void crosscorrelate(precision complex *x, int size_x, precision complex *y, int size_y, int min_delay, int max_delay, precision complex *result){
+    assert(max_delay > min_delay);
     int count = 0;
     for (int i = max_delay; i > min_delay; i--)
     {
-        crosscorrelate(x, size_x, y, size_y, i, &result[count]);
-        if (cabs(result[count]) == 22)
-        {
-            printf("result[%d] == 22 at delay %d\n", count, i);
-        }
+        crosscorrelate_single_delay(x, size_x, y, size_y, i, &result[count]);
         count++;
     }
 }
 
-void crosscorrelate(precision complex *x, int size_x, precision complex *y, int size_y, int delay, precision complex *result){
+void crosscorrelate_single_delay(precision complex *x, int size_x, precision complex *y, int size_y, int delay, precision complex *result){
     
     precision complex correlation = 0.0 + 0.0 * I;
 
@@ -211,17 +152,17 @@ void crosscorrelate(precision complex *x, int size_x, precision complex *y, int 
             correlation += 0.0 + 0.0 * I;
         }
         else{
-            correlation += x[i] * y[j];
+            correlation += x[i] * conj(y[j]);
         }
     }
     *result = correlation;
 }
 
-// Sets the value of abs_ampsum_sum from start to stop on outarray
-void set_abs_ampsum(precision complex abs_ampsum_sum, int start, int stop, precision complex *outarray){
+// Sets the value of abs_signal_samples_sum from start to stop on outarray
+void set_norm_coefs(precision complex abs_signal_samples_sum, int start, int stop, precision complex *outarray){
     for (int i = start; i < stop; i++)
     {
-        outarray[i] = abs_ampsum_sum;
+        outarray[i] = abs_signal_samples_sum;
     }
 }
 
@@ -234,7 +175,7 @@ precision complex complex_sum(precision complex *inarray, int size){
     return rv;
 }
 
-void complex_absolute_array(precision complex *inarray, int start, int stop, precision complex *outarray){
+void elementwise_cabs(precision complex *inarray, int start, int stop, precision complex *outarray){
     int temp = 0;
     for (int i = start; i < stop; i++)
     {
@@ -245,11 +186,11 @@ void complex_absolute_array(precision complex *inarray, int start, int stop, pre
 
 // takes a start and an end and creates an array with 
 // steps size between them and stores it in outarray
-void arange(int start, int end, int step, precision *outarray){
+void arange(precision start, precision end, precision step, precision *outarray){
     int counter = 0;
-    for (int i = start; i < (end+step); i+=step)
+    for (precision i = start; i < (end+step); i+=step)
     {
-        outarray[counter] = (float)i;
+        outarray[counter] = i;
         counter++;
     }
 }
