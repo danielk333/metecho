@@ -6,7 +6,9 @@
 #include <math.h>
 #include <time.h>
 #include <assert.h>
+#include <float.h>
 #include "barker_xcorr_echo_search.h"
+
 
 
 void barker_xcorr_echo_search(
@@ -63,13 +65,14 @@ void perform_xcorr( precision complex *signal_samples,
                     ){
     int decoded_size = signal_samples_size + code_size;
     precision complex norm_coefs[decoded_size];
-    precision complex abs_signal_samples[signal_samples_size];
+    precision complex abs_signal_samples[code_size];
     precision complex output_power[decoded_size];
     precision doppler_freq_samp;
     precision complex signal_model[code_size];
     precision complex decoded[decoded_size];
-    precision complex doppler_freq_abs_arr[code_size];
-    
+    precision complex signal_model_abs_arr[code_size];
+    precision complex abs_signal_samples_sum;
+
     // Setting arrays to zeroes
     memset(pows, (precision)0, sizeof(pows[0])*pows_size[0]*pows_size[1]);
     memset(powmax, (precision)0, sizeof(powmax[0])*powmax_size);
@@ -77,17 +80,18 @@ void perform_xcorr( precision complex *signal_samples,
     memset(norm_coefs, (precision)0, sizeof(decoded_size)*norm_coefs[0]);
 
 
-     // Calculate the absolute value complex_sum of the signal_samples from 0 to code_size
-    elementwise_cabs(signal_samples, 0, code_size, abs_signal_samples);
-    precision complex abs_signal_samples_sum = complex_sum(abs_signal_samples, code_size);
-    set_norm_coefs(abs_signal_samples_sum, 0, code_size, norm_coefs);
-    for (int i = code_size; i < signal_samples_size; i++)
+     // Calculate the absolute value complex_sum of the signal_samples from 0 to code_size 
+    for (int i = code_size; i < signal_samples_size+code_size; i++)
     {
-        elementwise_cabs(signal_samples, i-code_size, i, abs_signal_samples);
+        elementwise_cabs_square(signal_samples, i-code_size, i, abs_signal_samples);
         abs_signal_samples_sum = complex_sum(abs_signal_samples, code_size);
         norm_coefs[i] = abs_signal_samples_sum;
     }
-    elementwise_cabs(signal_samples, signal_samples_size-code_size, signal_samples_size, abs_signal_samples);
+    elementwise_cabs_square(signal_samples, 0, code_size, abs_signal_samples);
+    abs_signal_samples_sum = complex_sum(abs_signal_samples, code_size);
+    set_norm_coefs(abs_signal_samples_sum, 0, code_size, norm_coefs);
+    
+    elementwise_cabs_square(signal_samples, signal_samples_size-code_size, signal_samples_size, abs_signal_samples);
     abs_signal_samples_sum = complex_sum(abs_signal_samples, code_size);
     set_norm_coefs(abs_signal_samples_sum, signal_samples_size, signal_samples_size+code_size, norm_coefs);
     
@@ -99,23 +103,18 @@ void perform_xcorr( precision complex *signal_samples,
             signal_model[j] = (sin(doppler_freq_samp) * I  + cos(doppler_freq_samp)) * code[j];
         }
 
-        elementwise_cabs(signal_model, 0, code_size, doppler_freq_abs_arr);
-        precision complex doppler_freq_abs_sum = complex_sum(doppler_freq_abs_arr, code_size);
-
-        for (int k = 0; k < code_size; k++)
-        {
-            signal_model[k] = signal_model[k]/sqrt(doppler_freq_abs_sum);
-        }
+        elementwise_cabs_square(signal_model, 0, code_size, signal_model_abs_arr);
+        precision complex signal_model_abs_sum = complex_sum(signal_model_abs_arr, code_size);
 
         crosscorrelate(signal_samples, signal_samples_size, signal_model, code_size, -signal_samples_size, code_size, decoded);
 
         for (int j = 0; j < decoded_size; j++)
         {
-            if (norm_coefs[j] == 0)
+            if (cabs(norm_coefs[j]) < FLT_EPSILON)
             {
                 norm_coefs[j] = 1;
             }
-            output_power[j] = decoded[j]/sqrt(norm_coefs[j]);
+            output_power[j] = decoded[j]/(sqrt(norm_coefs[j])*sqrt(signal_model_abs_sum));
             output_power[j] = cpow(cabs(output_power[j]), 2);
 
             if (cabs(output_power[j]) > cabs(powmax[i])){
@@ -132,6 +131,8 @@ void perform_xcorr( precision complex *signal_samples,
 
 }
 
+
+
 void crosscorrelate(precision complex *x, int size_x, precision complex *y, int size_y, int min_delay, int max_delay, precision complex *result){
     assert(max_delay > min_delay);
     int count = 0;
@@ -147,11 +148,12 @@ void crosscorrelate_single_delay(precision complex *x, int size_x, precision com
     precision complex correlation = 0.0 + 0.0 * I;
 
     for (int i=0; i < size_x; i++) {
-        int j = i - delay;
+        int j = i + delay;
         if (j < 0 || j >= size_y){
             correlation += 0.0 + 0.0 * I;
         }
         else{
+
             correlation += x[i] * conj(y[j]);
         }
     }
@@ -175,11 +177,11 @@ precision complex complex_sum(precision complex *inarray, int size){
     return rv;
 }
 
-void elementwise_cabs(precision complex *inarray, int start, int stop, precision complex *outarray){
+void elementwise_cabs_square(precision complex *inarray, int start, int stop, precision complex *outarray){
     int temp = 0;
     for (int i = start; i < stop; i++)
     {
-        outarray[temp] = cabs(inarray[i]);
+        outarray[temp] = inarray[i]*conj(inarray[i]);
         temp++;       
     }
 }

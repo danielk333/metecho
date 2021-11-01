@@ -4,7 +4,7 @@
 #define precision double
 
 void arange(precision start, precision stop, precision step, precision *outarray);
-void elementwise_cabs(precision complex *inarray, int start, int stop, precision complex *outarray);
+void elementwise_cabs_square(precision complex *inarray, int start, int stop, precision complex *outarray);
 void crosscorrelate_single_delay(precision complex *x, int size_x, precision complex *y, int size_y, int delay, precision complex *result);
 void crosscorrelate(precision complex *x, int size_x, precision complex *y, int size_y, int min_delay, int max_delay, precision complex *result);
 void max_in_array(precision complex *inarray, int size, precision complex *maxval, int *maxvalindex);
