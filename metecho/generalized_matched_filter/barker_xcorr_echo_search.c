@@ -12,26 +12,28 @@
 
 
 void barker_xcorr_echo_search(
-                        precision complex *signal_samples,
-                        int signal_samples_size,
-                        precision *code,
-                        int code_size,
-                        precision complex *pows,
-                        int *pows_size,
-                        precision complex *powmax,
-                        int powmax_size,
-                        int *maxpowind,
-                        int maxpowind_size,
-                        precision samp
-                        ){
+    precision doppler_freq_min,
+    precision doppler_freq_max,
+    precision doppler_freq_step,
+    precision complex *signal_samples,
+    int signal_samples_size,
+    precision *code,
+    int code_size,
+    precision complex *pows,
+    int *pows_size,
+    precision complex *powmax,
+    int powmax_size,
+    int *maxpowind,
+    int maxpowind_size,
+    precision samp
+    ){
 
     // Declaring constants
-    precision step = 100;
-    int doppler_freq_size = (int)((35000.0/step)+1);
+    int doppler_freq_size = (int)((doppler_freq_max - doppler_freq_min) / (doppler_freq_step) + 1);
     
     precision doppler_freq[doppler_freq_size];
 
-    arange(-30000.0, 5000.0, step, doppler_freq);
+    arange(doppler_freq_min, doppler_freq_max, doppler_freq_step, doppler_freq);
 
     perform_xcorr(  signal_samples,
                     signal_samples_size,

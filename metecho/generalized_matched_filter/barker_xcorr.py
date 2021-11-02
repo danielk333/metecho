@@ -22,7 +22,10 @@ def barker_xcorr_echo_search(raw_data, code=0, xcorr_noise_limit=0.5):
     raw_data = h5file["data"]
     sample_signal_all = np.squeeze(np.sum(raw_data, 0))
     code_size = len(code)
-    doppler_freq_size = 351
+    doppler_freq_min = -35000.0
+    doppler_freq_max = 5000.0
+    doppler_freq_step = 100.0
+    doppler_freq_size = int(((doppler_freq_max - doppler_freq_min) / doppler_freq_step) + 1)
     bestpeak = np.zeros(sample_signal_all.shape[1], dtype=np.complex128)
     best_start = np.zeros(sample_signal_all.shape[1])
     powmaxall = np.zeros(
@@ -41,6 +44,9 @@ def barker_xcorr_echo_search(raw_data, code=0, xcorr_noise_limit=0.5):
         maxpowind = np.zeros([doppler_freq_size], dtype=np.int32)
         maxpowind_size = doppler_freq_size
         libecho.barker_xcorr_echo_search(
+            doppler_freq_min,
+            doppler_freq_max,
+            doppler_freq_step,
             sample_signal,
             sample_signal_size,
             code,
@@ -58,10 +64,10 @@ def barker_xcorr_echo_search(raw_data, code=0, xcorr_noise_limit=0.5):
         bestpeak[x] = np.amax(powmax)
         best_value_index = np.where(powmax == bestpeak[x])
         best_start[x] = maxpowind[best_value_index]
+        """
         for x in powmaxall[:, x]:
             if np.abs(x) > xcorr_noise_limit:
                 print(x)
-        """
         """
     return powmaxall
 
@@ -71,6 +77,9 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 # Then we open the created shared libecho file
 libecho = ctypes.CDLL(script_dir + "/libecho.so")
 libecho.barker_xcorr_echo_search.argtypes = [
+    ctypes.c_double,
+    ctypes.c_double,
+    ctypes.c_double,
     np_complex,
     ctypes.c_int,
     np_double,
@@ -86,7 +95,7 @@ libecho.barker_xcorr_echo_search.argtypes = [
 
 encode = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, 1, 1, 1, 1, -1, -1, 1, 1, -1, -1, 1, 1],
                   dtype=np.float64)
-#barker_xcorr_echo_search("/mnt/e/Kurser/X7007E/data/2009/06/27/2009-06-27T09.54.05.690000000.h5", code=encode)
+# barker_xcorr_echo_search("/mnt/e/Kurser/X7007E/data/2009/06/27/2009-06-27T09.54.05.690000000.h5", code=encode)
 
 """
 dfvar_size=351
@@ -116,7 +125,8 @@ plt.close('all')
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    powsum = barker_xcorr_echo_search("/mnt/e/Kurser/X7007E/data/2009/06/27/2009-06-27T09.54.05.690000000.h5", code=encode)
+    powsum = barker_xcorr_echo_search(
+        "/mnt/e/Kurser/X7007E/data/2009/06/27/2009-06-27T09.54.05.690000000.h5", code=encode)
     plt.style.use('classic')
     plt.pcolormesh(np.abs(powsum))
     plt.colorbar()
