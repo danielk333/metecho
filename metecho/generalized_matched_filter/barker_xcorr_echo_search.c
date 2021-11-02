@@ -20,6 +20,7 @@ void barker_xcorr_echo_search(
     precision *code,
     int code_size,
     precision complex *pows,
+    precision complex *pows_normalized,
     int *pows_size,
     precision complex *powmax,
     int powmax_size,
@@ -35,36 +36,42 @@ void barker_xcorr_echo_search(
 
     arange(doppler_freq_min, doppler_freq_max, doppler_freq_step, doppler_freq);
 
-    perform_xcorr(  signal_samples,
-                    signal_samples_size,
-                    doppler_freq,
-                    doppler_freq_size,
-                    code,
-                    code_size,
-                    pows,
-                    pows_size,
-                    powmax,
-                    powmax_size,
-                    maxpowind,
-                    maxpowind_size,
-                    samp);
-
+    perform_xcorr(
+        signal_samples,
+        signal_samples_size,
+        doppler_freq,
+        doppler_freq_size,
+        code,
+        code_size,
+        pows,
+        pows_normalized,
+        pows_size,
+        powmax,
+        powmax_size,
+        maxpowind,
+        maxpowind_size,
+        samp
+    );
 }
 
-void perform_xcorr( precision complex *signal_samples,
-                    int signal_samples_size,
-                    precision *doppler_freq,
-                    int doppler_freq_size,
-                    precision *code,
-                    int code_size,
-                    precision complex *pows,
-                    int *pows_size,
-                    precision complex *powmax,
-                    int powmax_size,
-                    int *maxpowind,
-                    int maxpowind_size,
-                    precision samp
-                    ){
+void perform_xcorr(
+        precision complex *signal_samples,
+        int signal_samples_size,
+        precision *doppler_freq,
+        int doppler_freq_size,
+        precision *code,
+        int code_size,
+        precision complex *pows,
+        precision complex *pows_normalized,
+        int *pows_size,
+        precision complex *powmax,
+        int powmax_size,
+        int *maxpowind,
+        int maxpowind_size,
+        precision samp
+    ){
+
+    // Initiate variables
     int decoded_size = signal_samples_size + code_size;
     precision complex norm_coefs[decoded_size];
     precision complex abs_signal_samples[code_size];
@@ -77,6 +84,7 @@ void perform_xcorr( precision complex *signal_samples,
 
     // Setting arrays to zeroes
     memset(pows, (precision)0, sizeof(pows[0])*pows_size[0]*pows_size[1]);
+    memset(pows_normalized, (precision)0, sizeof(pows_normalized[0])*pows_size[0]*pows_size[1]);
     memset(powmax, (precision)0, sizeof(powmax[0])*powmax_size);
     memset(maxpowind, (int)0, sizeof(maxpowind[0])*maxpowind_size);
     memset(norm_coefs, (precision)0, sizeof(decoded_size)*norm_coefs[0]);
@@ -127,7 +135,8 @@ void perform_xcorr( precision complex *signal_samples,
         maxpowind[i] = maxpowind[i] - code_size;
         for (int j = 0; j < decoded_size; j++)
         {
-            pows[i*decoded_size+j] = output_power[j];
+            pows_normalized[i*decoded_size+j] = output_power[j];
+            pows[i*decoded_size+j] = decoded[j];
         }          
     }
 

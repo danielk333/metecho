@@ -26,8 +26,9 @@ def barker_xcorr_echo_search(raw_data, code=0, xcorr_noise_limit=0.5):
     doppler_freq_max = 5000.0
     doppler_freq_step = 100.0
     doppler_freq_size = int(((doppler_freq_max - doppler_freq_min) / doppler_freq_step) + 1)
-    bestpeak = np.zeros(sample_signal_all.shape[1], dtype=np.complex128)
+    best_peak = np.zeros(sample_signal_all.shape[1], dtype=np.complex128)
     best_start = np.zeros(sample_signal_all.shape[1])
+    best_doppler = np.zeros(sample_signal_all.shape[1])
     powmaxall = np.zeros(
         [sample_signal_all.shape[0] + code_size,
          sample_signal_all.shape[1]],
@@ -38,6 +39,7 @@ def barker_xcorr_echo_search(raw_data, code=0, xcorr_noise_limit=0.5):
         sample_signal = sample_signal_all[:, x].copy()
         sample_signal_size = len(sample_signal)
         pows = np.zeros([doppler_freq_size, (sample_signal_size + code_size)], dtype=np.complex128)
+        pows_normalized = np.zeros([doppler_freq_size, (sample_signal_size + code_size)], dtype=np.complex128)
         pows_size = np.array([doppler_freq_size, sample_signal_size + code_size], dtype=np.int32)
         powmax = np.zeros([doppler_freq_size], dtype=np.complex128)
         powmax_size = doppler_freq_size
@@ -52,6 +54,7 @@ def barker_xcorr_echo_search(raw_data, code=0, xcorr_noise_limit=0.5):
             code,
             code_size,
             pows,
+            pows_normalized,
             pows_size,
             powmax,
             powmax_size,
@@ -59,11 +62,11 @@ def barker_xcorr_echo_search(raw_data, code=0, xcorr_noise_limit=0.5):
             maxpowind_size,
             samp,
         )
-        pows.shape = [doppler_freq_size, sample_signal_size + code_size]
-        powmaxall[:, x] = np.max(pows, axis=0)
-        bestpeak[x] = np.amax(powmax)
-        best_value_index = np.where(powmax == bestpeak[x])
+        powmaxall[:, x] = np.max(pows_normalized, axis=0)
+        best_peak[x] = np.amax(powmax)
+        best_value_index = np.where(powmax == best_peak[x])
         best_start[x] = maxpowind[best_value_index]
+        best_doppler[x] = doppler_freq_min + (best_value_index[0][0] * doppler_freq_step)
         """
         for x in powmaxall[:, x]:
             if np.abs(x) > xcorr_noise_limit:
@@ -84,6 +87,7 @@ libecho.barker_xcorr_echo_search.argtypes = [
     ctypes.c_int,
     np_double,
     ctypes.c_int,
+    np_complex_2d,
     np_complex_2d,
     np_int_pointer,
     np_complex,
