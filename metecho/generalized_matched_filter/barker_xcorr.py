@@ -10,7 +10,30 @@ logger = logging.getLogger(__name__)
 np_double = npct.ndpointer(np.float64, ndim=1, flags='aligned, contiguous, writeable')
 np_complex = npct.ndpointer(np.complex128, ndim=1, flags='aligned, c_contiguous, writeable')
 np_complex_2d = npct.ndpointer(np.complex128, ndim=2, flags='aligned, c_contiguous, writeable')
+np_complex_single = npct.ndpointer(np.complex128, ndim=0)
 np_int_pointer = npct.ndpointer(np.int32, ndim=1, flags='aligned, contiguous, writeable')
+
+# We start by making a path to the current directory.
+script_dir = os.path.dirname(os.path.realpath(__file__))
+# Then we open the created shared libecho file
+libecho = ctypes.CDLL(script_dir + "/libecho.so")
+libecho.barker_xcorr_echo_search.argtypes = [
+    ctypes.c_double,
+    ctypes.c_double,
+    ctypes.c_double,
+    np_complex,
+    ctypes.c_int,
+    np_double,
+    ctypes.c_int,
+    np_complex_2d,
+    np_complex_2d,
+    np_int_pointer,
+    np_complex,
+    ctypes.c_int,
+    np_int_pointer,
+    ctypes.c_int,
+    ctypes.c_double,
+]
 
 
 def barker_xcorr_echo_search(raw_data, code=0, xcorr_noise_limit=0.5):
@@ -75,31 +98,72 @@ def barker_xcorr_echo_search(raw_data, code=0, xcorr_noise_limit=0.5):
     return powmaxall
 
 
-# We start by making a path to the current directory.
-script_dir = os.path.dirname(os.path.realpath(__file__))
-# Then we open the created shared libecho file
-libecho = ctypes.CDLL(script_dir + "/libecho.so")
-libecho.barker_xcorr_echo_search.argtypes = [
-    ctypes.c_double,
-    ctypes.c_double,
-    ctypes.c_double,
-    np_complex,
-    ctypes.c_int,
-    np_double,
-    ctypes.c_int,
-    np_complex_2d,
-    np_complex_2d,
-    np_int_pointer,
-    np_complex,
-    ctypes.c_int,
-    np_int_pointer,
-    ctypes.c_int,
-    ctypes.c_double,
-]
+def crosscorrelate(x, y, min_delay, max_delay):
+    libecho.crosscorrelate.argtypes = [
+        np_complex,
+        ctypes.c_int,
+        np_complex,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+        np_complex,
+    ]
+    return_value = np.zeros([len(x) + len(y)], dtype=np.complex128)
+    libecho.crosscorrelate(
+        x,
+        len(x),
+        y,
+        len(y),
+        min_delay,
+        max_delay,
+        return_value,
+    )
+    return return_value
 
-encode = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, 1, 1, 1, 1, -1, -1, 1, 1, -1, -1, 1, 1],
-                  dtype=np.float64)
-# barker_xcorr_echo_search("/mnt/e/Kurser/X7007E/data/2009/06/27/2009-06-27T09.54.05.690000000.h5", code=encode)
+
+def crosscorrelate_single_delay(x, y, delay):
+    libecho.crosscorrelate_single_delay.argtypes = [
+        np_complex,
+        ctypes.c_int,
+        np_complex,
+        ctypes.c_int,
+        ctypes.c_int,
+        np_complex,
+    ]
+    return_value = np.zeros([1], dtype=np.complex128)
+    libecho.crosscorrelate_single_delay(
+        x,
+        len(x),
+        y,
+        len(y),
+        delay,
+        return_value
+    )
+    return return_value
+
+
+def set_norm_coefs(abs_signal_sample_sum, start, stop, inarray):
+    libecho.set_norm_coefs.argtypes = [
+        np_complex_single,
+        ctypes.c_int,
+        ctypes.c_int,
+        np_complex,
+    ]
+    libecho.set_norm_coefs(abs_signal_sample_sum, start, stop, inarray)
+    return inarray
+
+
+def complex_sum(inarray):
+    libecho.complex_sum.argtypes = [
+        np_complex,
+        ctypes.c_int,
+    ]
+    libecho.complex_sum.restype = np_double
+    temp = libecho.complex_sum(inarray, len(inarray))
+    rv = npct.as_array(temp, shape=(2, ))
+    print(rv)
+    return rv
+
 
 """
 dfvar_size=351
@@ -126,9 +190,11 @@ plt.savefig('./plot.png')
 plt.close('all')
 """
 
-
+"""
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
+    encode = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, 1, 1, 1, 1, -1, -1, 1, 1, -1, -1, 1, 1],
+                      dtype=np.float64)
     powsum = barker_xcorr_echo_search(
         "/mnt/e/Kurser/X7007E/data/2009/06/27/2009-06-27T09.54.05.690000000.h5", code=encode)
     plt.style.use('classic')
@@ -138,5 +204,4 @@ if __name__ == '__main__':
     plt.xlabel('time')
     plt.savefig('./plot.png')
     plt.close('all')
-"""
 """

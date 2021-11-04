@@ -8,7 +8,7 @@ void elementwise_cabs_square(precision complex *inarray, int start, int stop, pr
 void crosscorrelate_single_delay(precision complex *x, int size_x, precision complex *y, int size_y, int delay, precision complex *result);
 void crosscorrelate(precision complex *x, int size_x, precision complex *y, int size_y, int min_delay, int max_delay, precision complex *result);
 void max_in_array(precision complex *inarray, int size, precision complex *maxval, int *maxvalindex);
-void set_norm_coefs(precision complex abs_signal_samples_sum, int start, int stop, precision complex *outarray);
+void set_norm_coefs(precision complex *abs_signal_samples_sum, int start, int stop, precision complex *outarray);
 precision complex complex_sum(precision complex *inarray, int size);
 
 void perform_xcorr( 

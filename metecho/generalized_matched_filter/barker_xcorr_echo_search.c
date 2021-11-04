@@ -99,11 +99,11 @@ void perform_xcorr(
     }
     elementwise_cabs_square(signal_samples, 0, code_size, abs_signal_samples);
     abs_signal_samples_sum = complex_sum(abs_signal_samples, code_size);
-    set_norm_coefs(abs_signal_samples_sum, 0, code_size, norm_coefs);
+    set_norm_coefs(&abs_signal_samples_sum, 0, code_size, norm_coefs);
     
     elementwise_cabs_square(signal_samples, signal_samples_size-code_size, signal_samples_size, abs_signal_samples);
     abs_signal_samples_sum = complex_sum(abs_signal_samples, code_size);
-    set_norm_coefs(abs_signal_samples_sum, signal_samples_size, signal_samples_size+code_size, norm_coefs);
+    set_norm_coefs(&abs_signal_samples_sum, signal_samples_size, signal_samples_size+code_size, norm_coefs);
     
     for (int i = 0; i < doppler_freq_size; i++)
     {
@@ -172,10 +172,10 @@ void crosscorrelate_single_delay(precision complex *x, int size_x, precision com
 }
 
 // Sets the value of abs_signal_samples_sum from start to stop on outarray
-void set_norm_coefs(precision complex abs_signal_samples_sum, int start, int stop, precision complex *outarray){
+void set_norm_coefs(precision complex *abs_signal_samples_sum, int start, int stop, precision complex *outarray){
     for (int i = start; i < stop; i++)
     {
-        outarray[i] = abs_signal_samples_sum;
+        outarray[i] = abs_signal_samples_sum[0];
     }
 }
 
