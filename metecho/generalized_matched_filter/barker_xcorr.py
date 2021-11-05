@@ -13,6 +13,10 @@ np_complex_2d = npct.ndpointer(np.complex128, ndim=2, flags='aligned, c_contiguo
 np_complex_single = npct.ndpointer(np.complex128, ndim=0)
 np_int_pointer = npct.ndpointer(np.int32, ndim=1, flags='aligned, contiguous, writeable')
 
+encode = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, 1, 1, 1, 1, -1, -1, 1, 1, -1, -1, 1, 1],
+                  dtype=np.float64)
+
+
 # We start by making a path to the current directory.
 script_dir = os.path.dirname(os.path.realpath(__file__))
 # Then we open the created shared libecho file
@@ -36,7 +40,14 @@ libecho.barker_xcorr_echo_search.argtypes = [
 ]
 
 
-def barker_xcorr_echo_search(raw_data, code=0, xcorr_noise_limit=0.5):
+def barker_xcorr_echo_search(
+    raw_data,
+    code=encode,
+    doppler_freq_min=-35000.0,
+    doppler_freq_max=5000.0,
+    doppler_freq_step=100.0,
+    xcorr_noise_limit=0.5,
+):
     """
     # Will take a raw_data object and search for signs of a meteor echo.
     # At the moment takes a file location for testing purposes.
@@ -45,9 +56,6 @@ def barker_xcorr_echo_search(raw_data, code=0, xcorr_noise_limit=0.5):
     raw_data = h5file["data"]
     sample_signal_all = np.squeeze(np.sum(raw_data, 0))
     code_size = len(code)
-    doppler_freq_min = -35000.0
-    doppler_freq_max = 5000.0
-    doppler_freq_step = 100.0
     doppler_freq_size = int(((doppler_freq_max - doppler_freq_min) / doppler_freq_step) + 1)
     best_peak = np.zeros(sample_signal_all.shape[1], dtype=np.complex128)
     best_start = np.zeros(sample_signal_all.shape[1])
@@ -58,6 +66,7 @@ def barker_xcorr_echo_search(raw_data, code=0, xcorr_noise_limit=0.5):
         dtype=np.complex128
     )
     samp = np.float64(6E-6)
+    logger.debug("Starting crosscorrelation echo search cycle.")
     for x in range(0, sample_signal_all.shape[1]):
         sample_signal = sample_signal_all[:, x].copy()
         sample_signal_size = len(sample_signal)
@@ -68,6 +77,7 @@ def barker_xcorr_echo_search(raw_data, code=0, xcorr_noise_limit=0.5):
         powmax_size = doppler_freq_size
         maxpowind = np.zeros([doppler_freq_size], dtype=np.int32)
         maxpowind_size = doppler_freq_size
+        logger.debug("Calling C function.")
         libecho.barker_xcorr_echo_search(
             doppler_freq_min,
             doppler_freq_max,
@@ -153,6 +163,31 @@ def set_norm_coefs(abs_signal_sample_sum, start, stop, inarray):
     return inarray
 
 
+def elementwise_cabs_square(inarray, start, stop):
+    libecho.elementwise_cabs_square.argtypes = [
+        np_complex,
+        ctypes.c_int,
+        ctypes.c_int,
+        np_complex
+    ]
+    result = np.zeros([stop - start], dtype=np.complex128)
+    libecho.elementwise_cabs_square(inarray, start, stop, result)
+    return result
+
+
+def arange(start, stop, step):
+    libecho.arange.argtypes = [
+        ctypes.c_double,
+        ctypes.c_double,
+        ctypes.c_double,
+        np_double,
+    ]
+    outarray = np.zeros([int((stop - start) / step) + 1], dtype=np.double)
+    libecho.arange(start, stop, step, outarray)
+    return outarray
+
+
+"""
 def complex_sum(inarray):
     libecho.complex_sum.argtypes = [
         np_complex,
@@ -163,7 +198,7 @@ def complex_sum(inarray):
     rv = npct.as_array(temp, shape=(2, ))
     print(rv)
     return rv
-
+"""
 
 """
 dfvar_size=351
