@@ -12,4 +12,5 @@ rest of the package.
 
 '''
 
-from .mu import convert_MUI_to_h5
+from . import mu
+from .raw_data import RawDataInterface
