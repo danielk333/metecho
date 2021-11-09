@@ -6,7 +6,7 @@ import os
 import matplotlib.pyplot as plt
 
 from .. import tools
-from .raw_data import BACKEND_ERROR, raw_data_backend
+from . import raw_data
 
 logger = logging.getLogger(__name__)
 
@@ -480,34 +480,30 @@ def convert_MUI_to_h5(file, experiment_name="mw26x6", output_location=None, skip
     return file_outputs_created
 
 
+#TODO: This is ugly as shit, please refactor
+@raw_data.backend_validator('mu_h5')
+def check_if_MU_h5_data(path):
+    check = len(path.name) == 32 and path.name[10] == 'T' and path.suffix == '.h5'
+    return check
 
-@raw_data_backend('mu_h5')
-def load_h5_data(path):
+
+
+@raw_data.backend_loader('mu_h5')
+def load_MU_h5_data(path):
     try:
+        logger.debug(f'Backend "mu_h5" opening file {path}')
         h5file = h5py.File(str(path), 'r')
-        #fix better exception handling and logging
-        # try:
-        #     logger.debug(f'Opening file {file}')
-        #     h5file = h5py.File(file)
-        #     name = h5file.attrs["filename"]
-        # except FileNotFoundError:
-        #     logger.exception(f'Could not open file: {file}. File does not exist.')
-        #     return
-        # except OSError:
-        #     logger.exception(f'File {file} was not a h5 file, and was probably in binary format.')
-        #     return
-        # except UnicodeDecodeError:
-        #     logger.exception(f'File {file} was not a h5 file.')
-        #     return
+    except FileNotFoundError:
+        logger.exception(f'Could not open file: {file}. File does not exist.')
+        raise
+    except OSError:
+        logger.exception(f'File {file} was not a h5 file, and was probably in binary format.')
+        raise
+    except UnicodeDecodeError:
+        logger.exception(f'File {file} was not a h5 file.')
+        raise
 
-    except (FileNotFoundError, OSError, UnicodeDecodeError):
-        raise BACKEND_ERROR
-
-    if 'data' not in h5file or 'beams' not in h5file:
-        #fix better exception handling and logging
-        raise BACKEND_ERROR
-
-    #add MOAR meta
+    #TODO: add MOAR meta
     meta = {}
     meta['filename'] = h5file.attrs["filename"]
 

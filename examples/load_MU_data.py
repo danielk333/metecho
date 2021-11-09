@@ -1,7 +1,21 @@
 import pathlib
+import logging
+import sys
+
 import matplotlib.pyplot as plt
 
 import metecho
+
+handler = logging.StreamHandler(sys.stdout)
+
+for name in logging.root.manager.loggerDict:
+    if name.startswith('metecho'):
+        print(f'logger: {name}')
+
+logger = logging.getLogger('metecho')
+logger.setLevel(logging.DEBUG)
+logger.addHandler(handler)
+
 
 base_path = pathlib.Path('/home/danielk/IRF/data/MU_TEST_DATA_SET/MUI/')
 
