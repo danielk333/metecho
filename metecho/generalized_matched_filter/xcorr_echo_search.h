@@ -29,7 +29,7 @@ void perform_xcorr(
 );
 
 
-void barker_xcorr_echo_search(
+void xcorr_echo_search(
     precision doppler_freq_min,
     precision doppler_freq_max,
     precision doppler_freq_step,

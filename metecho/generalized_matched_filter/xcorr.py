@@ -1,7 +1,6 @@
 import ctypes
 import os
 import logging
-import h5py
 import numpy as np
 import numpy.ctypeslib as npct
 
@@ -21,7 +20,7 @@ encode = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, 1, 1, 1, 1, -1,
 script_dir = os.path.dirname(os.path.realpath(__file__))
 # Then we open the created shared libecho file
 libecho = ctypes.CDLL(script_dir + "/libecho.so")
-libecho.barker_xcorr_echo_search.argtypes = [
+libecho.xcorr_echo_search.argtypes = [
     ctypes.c_double,
     ctypes.c_double,
     ctypes.c_double,
@@ -42,19 +41,17 @@ libecho.barker_xcorr_echo_search.argtypes = [
 
 def barker_xcorr_echo_search(
     raw_data,
+    doppler_freq_min,
+    doppler_freq_max,
+    doppler_freq_step,
     code=encode,
-    doppler_freq_min=-35000.0,
-    doppler_freq_max=5000.0,
-    doppler_freq_step=100.0,
     xcorr_noise_limit=0.5,
 ):
     """
     # Will take a raw_data object and search for signs of a meteor echo.
     # At the moment takes a file location for testing purposes.
     """
-    h5file = h5py.File(raw_data, 'r')
-    raw_data = h5file["data"]
-    sample_signal_all = np.squeeze(np.sum(raw_data, 0))
+    sample_signal_all = np.squeeze(np.sum(raw_data["data"], 0))
     code_size = len(code)
     doppler_freq_size = int(((doppler_freq_max - doppler_freq_min) / doppler_freq_step) + 1)
     best_peak = np.zeros(sample_signal_all.shape[1], dtype=np.complex128)
@@ -78,7 +75,7 @@ def barker_xcorr_echo_search(
         maxpowind = np.zeros([doppler_freq_size], dtype=np.int32)
         maxpowind_size = doppler_freq_size
         logger.debug("Calling C function.")
-        libecho.barker_xcorr_echo_search(
+        libecho.xcorr_echo_search(
             doppler_freq_min,
             doppler_freq_max,
             doppler_freq_step,

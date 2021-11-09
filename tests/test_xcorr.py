@@ -1,5 +1,5 @@
 import numpy as np
-from metecho.generalized_matched_filter import barker_xcorr
+from metecho.generalized_matched_filter import xcorr
 
 
 def test_crosscorrelate_single_delay():
@@ -7,7 +7,7 @@ def test_crosscorrelate_single_delay():
                       dtype=complex)
     sample_signal = np.zeros(85, dtype=complex)
     sample_signal[23:23 + len(encode)] = encode
-    assert barker_xcorr.crosscorrelate_single_delay(sample_signal, encode, -23) == 26
+    assert xcorr.crosscorrelate_single_delay(sample_signal, encode, -23) == 26
 
 
 def test_crosscorrelate():
@@ -38,7 +38,7 @@ def test_crosscorrelate():
                        ])
     sample_signal = np.zeros(85, dtype=complex)
     sample_signal[23:23 + len(encode)] = encode
-    rv = barker_xcorr.crosscorrelate(
+    rv = xcorr.crosscorrelate(
         sample_signal,
         encode,
         -len(sample_signal),
@@ -54,7 +54,7 @@ def test_set_norm_coefs():
     start = 10
     stop = 20
     result[start:stop] = abs_signal_sample_sum
-    rv = barker_xcorr.set_norm_coefs(
+    rv = xcorr.set_norm_coefs(
         abs_signal_sample_sum,
         start,
         stop,
@@ -69,7 +69,7 @@ def test_elementwise_cabs_square():
     stop = 6
     result = inarray[start:stop] * np.conjugate(inarray[start:stop])
     assert np.array_equal(
-        barker_xcorr.elementwise_cabs_square(inarray, start, stop),
+        xcorr.elementwise_cabs_square(inarray, start, stop),
         result
     )
 
@@ -78,7 +78,7 @@ def test_arange():
     start = -2593.1
     stop = 8543.1
     step = 641.1
-    rv = barker_xcorr.arange(start, stop, step)
+    rv = xcorr.arange(start, stop, step)
     result = np.arange(start, stop, step)
     print(rv)
     print(result)
@@ -88,5 +88,5 @@ def test_arange():
 """
 def test_complex_sum():
     test_array = np.ones([100], dtype=np.complex128)
-    assert barker_xcorr.complex_sum(test_array) == 100
+    assert xcorr.complex_sum(test_array) == 100
 """
