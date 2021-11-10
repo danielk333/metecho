@@ -351,8 +351,9 @@ def _fix_date_edge_case(start_time, end_time):
         return end_time + np.timedelta64(1, 'D')
     return end_time
 
-@tools.profiling.timeing(f'{__name__}')
+
 @tools.MPI_target_arg(0)
+@tools.profiling.timeing(f'{__name__}')
 def convert_MUI_to_h5(file, experiment_name="mw26x6", output_location=None, skip_existing=False):
     """
     Converts a MU data file into a HDF5 file
@@ -482,15 +483,15 @@ def convert_MUI_to_h5(file, experiment_name="mw26x6", output_location=None, skip
 
 
 #TODO: This is ugly as shit, please refactor
-@tools.profiling.timeing(f'{__name__}')
 @raw_data.backend_validator('mu_h5')
+@tools.profiling.timeing(f'{__name__}')
 def check_if_MU_h5_data(path):
     check = len(path.name) == 32 and path.name[10] == 'T' and path.suffix == '.h5'
     return check
 
 
-@tools.profiling.timeing(f'{__name__}')
 @raw_data.backend_loader('mu_h5')
+@tools.profiling.timeing(f'{__name__}')
 def load_MU_h5_data(path):
     try:
         logger.debug(f'Backend "mu_h5" opening file {path}')

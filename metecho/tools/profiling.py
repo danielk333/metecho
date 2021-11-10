@@ -29,7 +29,11 @@ class BaseProfiler:
     def __str__(self):
         means = self.means()
         max_len = max([len(x) for x in self.names])
-        rows = [f'{name:<{max_len}} @ {self.executions[name]} x {means.get(name,0):.3e} s = {self.times[name]:.3e} s total' for name in self.names]
+        rows = [
+            f'{name:<{max_len}} @ {self.executions[name]} x {means.get(name,0):.3e} s = {self.times[name]:.3e} s total'
+                for name in self.names
+                if self.executions[name] > 0
+        ]
         return '\n'.join(rows)
 
 
