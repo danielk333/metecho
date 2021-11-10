@@ -25,6 +25,8 @@ cache:
 default:
   tags:
     - IRF
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
 
 before_script:
   - python -V  # Print out python version for debugging
