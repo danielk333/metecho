@@ -16,6 +16,7 @@ logger = logging.getLogger('metecho')
 logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)
 
+metecho.profiler.enable('metecho')
 
 base_path = pathlib.Path('/home/danielk/IRF/data/MU_TEST_DATA_SET/MUI/')
 
@@ -33,6 +34,8 @@ if not h5_mu_file.is_file():
 
 raw = metecho.data.RawDataInterface(h5_mu_file)
 
-metecho.plot.rti(raw, output_path=base_path / f'2009/06/27/{".".join(raw.path.name.split(".")[:-1]) + ".png"}')
+print(metecho.profiler)
 
-plt.show()
+# metecho.plot.rti(raw, output_path=base_path / f'2009/06/27/{".".join(raw.path.name.split(".")[:-1]) + ".png"}')
+
+# plt.show()
