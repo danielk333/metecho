@@ -482,7 +482,7 @@ def convert_MUI_to_h5(file, experiment_name="mw26x6", output_location=None, skip
     return file_outputs_created
 
 
-#TODO: This is ugly as shit, please refactor
+# TODO: This is ugly as shit, please refactor
 @raw_data.backend_validator('mu_h5')
 @tools.profiling.timeing(f'{__name__}')
 def check_if_MU_h5_data(path):
@@ -506,9 +506,8 @@ def load_MU_h5_data(path):
         logger.exception(f'File {file} was not a h5 file.')
         raise
 
-    #TODO: add MOAR meta
+    # TODO: add MOAR meta
     meta = {}
     meta['filename'] = h5file.attrs["filename"]
 
-    return h5file['data'][()], {'channel':0, 'sample':1, 'pulse':2}, meta
-
+    return h5file['data'][()], {'channel': 0, 'sample': 1, 'pulse': 2}, meta

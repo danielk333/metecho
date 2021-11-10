@@ -1,5 +1,6 @@
 import numpy as np
 from metecho.generalized_matched_filter import xcorr
+from metecho.data import raw_data
 
 
 def test_crosscorrelate_single_delay():
@@ -80,9 +81,22 @@ def test_arange():
     step = 641.1
     rv = xcorr.arange(start, stop, step)
     result = np.arange(start, stop, step)
-    print(rv)
-    print(result)
     assert np.allclose(rv, result)
+
+
+def test_xcorr_echo_search():
+    barker4 = np.array([1, 1, -1, 1, ], dtype=np.float64)
+    test_signal = np.zeros([1, 10, 1], dtype=np.complex128)
+    test_signal[0, 4:8, 0] = barker4
+    test_data = raw_data.RawDataInterface(None, load_on_init=False)
+    test_data.data = test_signal
+    test_data.axis['channels'] = 0
+    test_data.axis['samples'] = 1
+    test_data.axis['pulses'] = 2
+    result = np.array([[0], [0], [0], [0], [0], [1], [0], [-1], [4],
+                       [-1], [0], [1], [0], [0]], dtype=np.complex128)
+    powmax = xcorr.xcorr_echo_search(test_data, -100, 100, 50, barker4)
+    assert np.allclose(np.abs(powmax), np.abs(result), rtol=1e-4)
 
 
 """
