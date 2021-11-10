@@ -5,6 +5,8 @@ from collections import OrderedDict
 import numpy as np
 import h5py
 
+from .. import tools
+
 logger = logging.getLogger(__name__)
 
 BACKENDS = OrderedDict()
@@ -61,6 +63,7 @@ class RawDataInterface:
         'start_time',
     ]
 
+    @tools.profiling.timeing(f'{__name__}.RawDataInterface')
     def __init__(self, path, backend=None, **kwargs):
         self.path = pathlib.Path(path)
         self.backend = backend
@@ -72,7 +75,7 @@ class RawDataInterface:
         self.axis = {key:None for key in self.DATA_AXIS}
         self.meta = {key:None for key in self.META_KEYS}
 
-
+    @tools.profiling.timeing(f'{__name__}.RawDataInterface')
     def load(self, **kwargs):
         self._clear()
 
