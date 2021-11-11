@@ -31,7 +31,7 @@ before_script:
   - pip install virtualenv
   - virtualenv venv
   - source venv/bin/activate
-  - pip install .  # you can also use tox
+  - pip install .[develop] # you can also use tox  
 
 test:
   script:

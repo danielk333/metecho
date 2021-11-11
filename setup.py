@@ -4,10 +4,6 @@ import os.path
 from distutils.core import Extension
 
 
-with open('requirements', 'r') as fh:
-    pip_req = fh.read().split('\n')
-    pip_req = [x.strip() for x in pip_req if len(x.strip()) > 0]
-
 with open('README.md', 'r') as fh:
     long_description = fh.read()
 
@@ -58,7 +54,8 @@ setuptools.setup(
         "tqdm>=4.46.0",
     ],
     extras_require={
-        "mpi": ["mpi4py>=3.1.1"]
+        "mpi": ["mpi4py>=3.1.1"],
+        "develop": ["pytest>=5.2.2"]
     },
     packages=setuptools.find_packages(),
     ext_modules=[libecho],
