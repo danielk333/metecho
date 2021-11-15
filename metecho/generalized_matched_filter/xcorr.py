@@ -108,15 +108,6 @@ def xcorr_echo_search(
 
 
 def crosscorrelate(x, y, min_delay, max_delay):
-    libecho.crosscorrelate.argtypes = [
-        np_complex,
-        ctypes.c_int,
-        np_complex,
-        ctypes.c_int,
-        ctypes.c_int,
-        ctypes.c_int,
-        np_complex,
-    ]
     return_value = np.zeros([len(x) + len(y)], dtype=np.complex128)
     libecho.crosscorrelate(
         x,
@@ -131,14 +122,6 @@ def crosscorrelate(x, y, min_delay, max_delay):
 
 
 def crosscorrelate_single_delay(x, y, delay):
-    libecho.crosscorrelate_single_delay.argtypes = [
-        np_complex,
-        ctypes.c_int,
-        np_complex,
-        ctypes.c_int,
-        ctypes.c_int,
-        np_complex,
-    ]
     return_value = np.zeros([1], dtype=np.complex128)
     libecho.crosscorrelate_single_delay(
         x,
@@ -152,40 +135,23 @@ def crosscorrelate_single_delay(x, y, delay):
 
 
 def set_norm_coefs(abs_signal_sample_sum, start, stop, inarray):
-    libecho.set_norm_coefs.argtypes = [
-        np_complex_single,
-        ctypes.c_int,
-        ctypes.c_int,
-        np_complex,
-    ]
     libecho.set_norm_coefs(abs_signal_sample_sum, start, stop, inarray)
     return inarray
 
 
 def elementwise_cabs_square(inarray, start, stop):
-    libecho.elementwise_cabs_square.argtypes = [
-        np_complex,
-        ctypes.c_int,
-        ctypes.c_int,
-        np_complex
-    ]
     result = np.zeros([stop - start], dtype=np.complex128)
     libecho.elementwise_cabs_square(inarray, start, stop, result)
     return result
 
 
 def arange(start, stop, step):
-    libecho.arange.argtypes = [
-        ctypes.c_double,
-        ctypes.c_double,
-        ctypes.c_double,
-        np_double,
-    ]
     outarray = np.zeros([int((stop - start) / step) + 1], dtype=np.double)
     libecho.arange(start, stop, step, outarray)
     return outarray
 
 
+"""
 def complex_sum(inarray):
     libecho.complex_sum.argtypes = [
         np_complex,
@@ -194,5 +160,46 @@ def complex_sum(inarray):
     libecho.complex_sum.restype = np_double
     temp = libecho.complex_sum(inarray, len(inarray))
     rv = npct.as_array(temp, shape=(2, ))
-    print(rv)
     return rv
+"""
+
+
+libecho.crosscorrelate.argtypes = [
+    np_complex,
+    ctypes.c_int,
+    np_complex,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    np_complex,
+]
+
+libecho.crosscorrelate_single_delay.argtypes = [
+    np_complex,
+    ctypes.c_int,
+    np_complex,
+    ctypes.c_int,
+    ctypes.c_int,
+    np_complex,
+]
+
+libecho.set_norm_coefs.argtypes = [
+    np_complex_single,
+    ctypes.c_int,
+    ctypes.c_int,
+    np_complex,
+]
+
+libecho.elementwise_cabs_square.argtypes = [
+    np_complex,
+    ctypes.c_int,
+    ctypes.c_int,
+    np_complex
+]
+
+libecho.arange.argtypes = [
+    ctypes.c_double,
+    ctypes.c_double,
+    ctypes.c_double,
+    np_double,
+]
