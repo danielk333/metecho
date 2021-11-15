@@ -23,7 +23,7 @@ libecho.xcorr_echo_search.argtypes = [
     ctypes.c_double,
     np_complex,
     ctypes.c_int,
-    np_double,
+    np_complex,
     ctypes.c_int,
     np_complex_2d,
     np_complex_2d,
@@ -60,6 +60,12 @@ def xcorr_echo_search(
         [sample_signal_all.shape[0] + signal_model_size,
          sample_signal_all.shape[1]],
         dtype=np.complex128
+    )
+    filter_output = np.zeros(
+        [sample_signal_all.shape[0] + signal_model_size,
+         doppler_freq_size,
+         sample_signal_all.shape[1]],
+        dtype=np.complex128,
     )
     samp = np.float64(6E-6)
     logger.debug("Starting crosscorrelation echo search cycle.")
@@ -104,7 +110,7 @@ def xcorr_echo_search(
             if np.abs(x) > xcorr_noise_limit:
                 print(x)
         """
-    return powmaxall
+    return filter_output
 
 
 def crosscorrelate(x, y, min_delay, max_delay):
