@@ -1,10 +1,17 @@
 import pathlib
 import logging
 import sys
+import time
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 import metecho
+import metecho.generalized_matched_filter as mgmf
+
+metecho.profiler.init('full', True)
+metecho.profiler.start('full')
+
 
 handler = logging.StreamHandler(sys.stdout)
 
@@ -33,9 +40,21 @@ if not h5_mu_file.is_file():
 
 
 raw = metecho.data.RawDataInterface(h5_mu_file)
+raw.data = raw.data[:,:,100:101]
 
+transmitted_waveform = mgmf.signal_model.barker_code_13(1, oversampling=2)
+
+matched_filter_output = mgmf.xcorr.xcorr_echo_search(
+    raw,
+    -35e3,
+    100e3,
+    100.0,
+    transmitted_waveform,
+)
+
+metecho.profiler.stop('full')
 print(metecho.profiler)
 
-metecho.plot.rti(raw, output_path=base_path / f'2009/06/27/{".".join(raw.path.name.split(".")[:-1]) + ".png"}')
+metecho.plot.gmf(np.squeeze(matched_filter_output))
 
 plt.show()
