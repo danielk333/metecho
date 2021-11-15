@@ -11,6 +11,16 @@ class BaseProfiler:
         self.times = {}
         self.names = []
         self.enabled = {}
+        self.timings = {}
+
+    def start(self, name):
+        self.timings[name] = time.time()
+
+    def stop(self, name):
+        dt = time.time() - self.timings[name]
+        self.timings[name] = None
+        self.add(name, dt)
+        return dt
 
 
     def init(self, name, enabled):
