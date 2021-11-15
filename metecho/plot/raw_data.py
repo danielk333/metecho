@@ -19,7 +19,7 @@ def rti(ax,
         index_axis=1,
         ):
     """
-    Simple function to plot the information of a h5-file.
+    Simple function to plot the range-time intensity information of complex raw voltage data.
     """
 
 
