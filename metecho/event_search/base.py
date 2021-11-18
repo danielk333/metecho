@@ -1,5 +1,7 @@
 import numpy as np
+from . import conf
 
 
-def search(raw_data, powmaxall, best_peak, best_start, best_doppler):
-    return np.zeros(len(powmaxall), dtype=bool)
+def search(raw_data, config, matched_filter_output, search_function_objects):
+    return np.zeros(len(raw_data), dtype=bool)
+
