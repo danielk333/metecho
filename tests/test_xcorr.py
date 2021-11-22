@@ -96,7 +96,7 @@ def test_xcorr_echo_search():
     result = np.array([[0], [0], [0], [0], [0], [1], [0], [-1], [4],
                        [-1], [0], [1], [0], [0]], dtype=np.complex128)
     powmax = xcorr.xcorr_echo_search(test_data, -100, 100, 50, barker4)
-    assert np.allclose(np.abs(powmax), np.abs(result), rtol=1e-4)
+    assert np.allclose(np.abs(powmax["powmaxall"]), np.abs(result), rtol=1e-4)
 
 
 """

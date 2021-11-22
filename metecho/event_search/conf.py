@@ -2,10 +2,6 @@ import configparser
 import pathlib
 import os
 
-PROGRAM_NAME = 'event_search'
-HERE = pathlib.Path(os.path.abspath(__file__)).parent
-CONFIGFILE = HERE / (PROGRAM_NAME + ".config")
-
 DEFAULT_CONFIG = {
     'General': {
 
@@ -53,6 +49,11 @@ DEFAULT_CONFIG = {
         # Sequential analysis config
         'allow_analysis_overlap': '3',
         'event_max_overlap': '5',
+
+        # Xcorr settings
+        'dop_min_freq': '-30000',
+        'dop_max_freq': '5000',
+        'dop_step_size': '1000',
     }
 }
 
@@ -60,10 +61,6 @@ DEFAULT_CONFIG = {
 def generate_event_search_config(file_input=None):
     config = configparser.ConfigParser()
     config.read_dict(DEFAULT_CONFIG)
-    conffile = pathlib.Path(CONFIGFILE)
-
-    if conffile.exists() and conffile.is_file():
-        config.read([conffile])
 
     if file_input is not None and file_input.is_file():
         config.read([file_input])

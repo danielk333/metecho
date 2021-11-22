@@ -1,7 +1,16 @@
 import numpy as np
-from metecho.event_search import base
-from metecho.event_search import conf
-from unittest.mock import patch, mock_open, MagicMock
+from metecho.data import raw_data
+from metecho.event_search import event_search, conf, search_objects
+from metecho.generalized_matched_filter import signal_model
+from unittest.mock import patch, mock_open, MagicMock, Mock
+
+
+def test_search_object():
+    class TestSearch(search_objects.SearchObject):
+        def search(self, matched_filter_output):
+            return self.arguments["test"]
+    searcher = TestSearch(test=True)
+    assert searcher.search(None)
 
 
 def test_conf_file_read():
@@ -12,11 +21,39 @@ def test_conf_file_read():
         assert configuration['General']['TestValue'] == '132'
 
 
-def test_base_functionality():
-    test_value = np.zeros(100, dtype=np.complex128)
-    result = np.zeros(100, dtype=bool)
+def test_partial_data_input():
+    test_data = raw_data.RawDataInterface(None, load_on_init=False)
+    test_data.data = np.ones([1, 10, 10], dtype=np.complex128)
+    test_data.axis['channels'] = 0
+    test_data.axis['samples'] = 1
+    test_data.axis['pulses'] = 2
+    test_filter_output = {
+        'powmaxall': np.ones([36, 5], dtype=np.complex128),
+        'sample_length': 10,
+        'pulse_length': 5
+    }
     configuration = conf.generate_event_search_config()
-    assert np.array_equal(base.search(test_value, configuration, None, None), result)
+
+    class TestSearch(search_objects.SearchObject):
+        def search(self, matched_filter_output):
+            if (matched_filter_output["powmaxall"].shape == (36, 10)
+                and matched_filter_output["sample_length"] == 10
+                and matched_filter_output["pulse_length"] == 10):
+                return True
+            return False
+    searcher = TestSearch()
+    result = event_search.search(test_data, configuration, test_filter_output, [searcher])
+    assert result[0]
+
+
+def test_event_search_functionality():
+    result = np.zeros(100, dtype=bool)
+
+    class TestSearch(search_objects.SearchObject):
+        def search(self, matched_filter_output):
+            return np.zeros(self.arguments["length"], dtype=bool)
+    searcher = TestSearch(length=100)
+    assert np.array_equal(event_search.search(None, None, None, [searcher]), [result])
 
 
 def test_default_config():
