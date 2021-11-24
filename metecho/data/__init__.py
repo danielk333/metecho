@@ -14,3 +14,6 @@ rest of the package.
 
 from . import mu
 from .raw_data import RawDataInterface
+from .data_store import directory_tree
+from .data_store import RawDataInterfaceFactory
+from .data_store import DataStore
