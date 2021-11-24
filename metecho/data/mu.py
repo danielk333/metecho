@@ -497,13 +497,13 @@ def load_MU_h5_data(path):
         logger.debug(f'Backend "mu_h5" opening file {path}')
         h5file = h5py.File(str(path), 'r')
     except FileNotFoundError:
-        logger.exception(f'Could not open file: {file}. File does not exist.')
+        logger.exception(f'Could not open file: {path}. File does not exist.')
         raise
     except OSError:
-        logger.exception(f'File {file} was not a h5 file, and was probably in binary format.')
+        logger.exception(f'File {path} was not a h5 file, and was probably in binary format.')
         raise
     except UnicodeDecodeError:
-        logger.exception(f'File {file} was not a h5 file.')
+        logger.exception(f'File {path} was not a h5 file.')
         raise
 
     # TODO: add MOAR meta
