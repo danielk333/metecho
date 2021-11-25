@@ -112,7 +112,6 @@ def xcorr_echo_search(
     matched_filter_output["best_peak"] = best_peak
     matched_filter_output["best_start"] = best_start
     matched_filter_output["best_doppler"] = best_doppler
-    matched_filter_output["sample_length"] = sample_signal_all.shape[0]
     matched_filter_output["pulse_length"] = sample_signal_all.shape[1]
     return matched_filter_output
 

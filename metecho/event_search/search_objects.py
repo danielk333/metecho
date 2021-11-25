@@ -7,5 +7,5 @@ class SearchObject(ABC):
         super().__init__()
 
     @abstractmethod
-    def search(self, matched_filter_output):
+    def search(self, matched_filter_output, raw_data):
         pass

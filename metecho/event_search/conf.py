@@ -54,6 +54,9 @@ DEFAULT_CONFIG = {
         'dop_min_freq': '-30000',
         'dop_max_freq': '5000',
         'dop_step_size': '1000',
+
+        # Noise limit
+        'xcorr_noise_limit': '0.5',
     }
 }
 

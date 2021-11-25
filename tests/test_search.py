@@ -1,16 +1,17 @@
 import numpy as np
+from math import isclose
 from metecho.data import raw_data
-from metecho.event_search import event_search, conf, search_objects
+from metecho.event_search import event_search, conf, search_objects, filters
 from metecho.generalized_matched_filter import signal_model
 from unittest.mock import patch, mock_open, MagicMock, Mock
 
 
 def test_search_object():
     class TestSearch(search_objects.SearchObject):
-        def search(self, matched_filter_output):
+        def search(self, matched_filter_output, raw_data):
             return self.arguments["test"]
     searcher = TestSearch(test=True)
-    assert searcher.search(None)
+    assert searcher.search(None, None)
 
 
 def test_conf_file_read():
@@ -21,28 +22,46 @@ def test_conf_file_read():
         assert configuration['General']['TestValue'] == '132'
 
 
+def test_gaussian_noise():
+    test_data = raw_data.RawDataInterface(None, load_on_init=False)
+    reals = np.zeros([1, 10, 10], dtype=np.float64)
+    imags = np.ones([1, 10, 10], dtype=np.float64)
+    test_data.data = reals + imags * 1j
+    test_data.axis['channel'] = 0
+    test_data.axis['sample'] = 1
+    test_data.axis['pulse'] = 2
+    gaussian_filter = filters.CalculateGaussianNoise()
+    return_value = gaussian_filter.filter(test_data)
+    assert return_value["mean"] == 0.5
+    assert return_value["std_dev"] == 0.5
+    assert isclose(return_value["CI"][0], 0.65, abs_tol=10**-2)
+    assert isclose(return_value["CI"][1], 0.39, abs_tol=10**-2)
+
+
 def test_partial_data_input():
     test_data = raw_data.RawDataInterface(None, load_on_init=False)
-    test_data.data = np.ones([1, 10, 10], dtype=np.complex128)
-    test_data.axis['channels'] = 0
-    test_data.axis['samples'] = 1
-    test_data.axis['pulses'] = 2
+    test_data.data = np.zeros([1, 10, 10], dtype=np.complex128)
+    test_data.axis['channel'] = 0
+    test_data.axis['sample'] = 1
+    test_data.axis['pulse'] = 2
     test_filter_output = {
         'powmaxall': np.ones([36, 5], dtype=np.complex128),
         'sample_length': 10,
         'pulse_length': 5
     }
     configuration = conf.generate_event_search_config()
+    configuration["General"]["MOVE_STD_WINDOW"] = "2"
+    signal = signal_model.barker_code_13(test_data.data.shape[1], 2)
 
     class TestSearch(search_objects.SearchObject):
-        def search(self, matched_filter_output):
+        def search(self, matched_filter_output, raw_data):
             if (matched_filter_output["powmaxall"].shape == (36, 10)
                 and matched_filter_output["sample_length"] == 10
-                and matched_filter_output["pulse_length"] == 10):
+                    and matched_filter_output["pulse_length"] == 10):
                 return True
             return False
     searcher = TestSearch()
-    result = event_search.search(test_data, configuration, test_filter_output, [searcher])
+    result = event_search.search(test_data, configuration, test_filter_output, [searcher], signal)
     assert result[0]
 
 
@@ -50,10 +69,10 @@ def test_event_search_functionality():
     result = np.zeros(100, dtype=bool)
 
     class TestSearch(search_objects.SearchObject):
-        def search(self, matched_filter_output):
+        def search(self, matched_filter_output, raw_data):
             return np.zeros(self.arguments["length"], dtype=bool)
     searcher = TestSearch(length=100)
-    assert np.array_equal(event_search.search(None, None, None, [searcher]), [result])
+    assert np.array_equal(event_search.search(None, None, None, [searcher], None), [result])
 
 
 def test_default_config():
