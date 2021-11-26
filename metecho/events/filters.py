@@ -27,7 +27,7 @@ class CalculateGaussianNoise(FilterObject):
         sig_est_freedom = len(s_noise_all) - 1
         mean = np.mean(s_noise_all)
         std_dev = np.std(s_noise_all)
-        CI = [np.sqrt(
+        confidence_interval = [np.sqrt(
             sig_est_freedom * np.square(std_dev) / chi2.ppf(
                 confidence_probability / 2,
                 sig_est_freedom)
@@ -36,4 +36,4 @@ class CalculateGaussianNoise(FilterObject):
                 1 - (confidence_probability / 2),
                 sig_est_freedom)
         )]
-        return {'mean': mean, 'std_dev': std_dev, 'CI': CI}
+        return {'mean': mean, 'std_dev': std_dev, 'confidence_interval': confidence_interval}

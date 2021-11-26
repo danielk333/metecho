@@ -1,7 +1,7 @@
 import numpy as np
 from math import isclose
 from metecho.data import raw_data
-from metecho.event_search import event_search, conf, search_objects, filters
+from metecho.events import event_search, conf, search_objects, filters
 from metecho.generalized_matched_filter import signal_model
 from unittest.mock import patch, mock_open, MagicMock, Mock
 
@@ -34,8 +34,8 @@ def test_gaussian_noise():
     return_value = gaussian_filter.filter(test_data)
     assert return_value["mean"] == 0.5
     assert return_value["std_dev"] == 0.5
-    assert isclose(return_value["CI"][0], 0.65, abs_tol=10**-2)
-    assert isclose(return_value["CI"][1], 0.39, abs_tol=10**-2)
+    assert isclose(return_value["confidence_interval"][0], 0.65, abs_tol=10**-2)
+    assert isclose(return_value["confidence_interval"][1], 0.39, abs_tol=10**-2)
 
 
 def test_partial_data_input():
