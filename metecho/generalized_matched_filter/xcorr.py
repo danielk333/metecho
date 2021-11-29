@@ -42,17 +42,18 @@ def xcorr_echo_search(
     doppler_freq_max,
     doppler_freq_step,
     signal_model,
-    xcorr_noise_limit=0.5,
 ):
     """
     # Will take a raw_data object and search for signs of a meteor echo.
     # At the moment takes a file location for testing purposes.
     """
+    matched_filter_output = {}
+    index_finish = 0
     sample_signal_all = np.sum(raw_data.data, 0)
     doppler_freq_size = int(((doppler_freq_max - doppler_freq_min) / doppler_freq_step) + 1)
     if len(signal_model.shape) == 1:
-        signal_model.shape = (signal_model.size, 1)
-    signal_model_size = signal_model.shape[0]
+        signal_model.shape = (1, signal_model.size)
+    signal_model_size = signal_model.shape[1]
     best_peak = np.zeros(sample_signal_all.shape[1], dtype=np.complex128)
     best_start = np.zeros(sample_signal_all.shape[1])
     best_doppler = np.zeros(sample_signal_all.shape[1])
@@ -61,12 +62,12 @@ def xcorr_echo_search(
          sample_signal_all.shape[1]],
         dtype=np.complex128
     )
-    filter_output = np.zeros(
+    powmaxall_norm = np.zeros(
         [sample_signal_all.shape[0] + signal_model_size,
-         doppler_freq_size,
          sample_signal_all.shape[1]],
-        dtype=np.complex128,
+        dtype=np.complex128
     )
+
     samp = np.float64(6E-6)
     logger.debug("Starting crosscorrelation echo search cycle.")
     for x in range(0, sample_signal_all.shape[1]):
@@ -101,28 +102,25 @@ def xcorr_echo_search(
             samp,
         )
         powmaxall[:, x] = np.max(pows, axis=0)
+        powmaxall_norm[:, x] = np.max(pows_normalized, axis=0)
         best_value_index = np.argmax(powmax)
         best_peak[x] = powmax[best_value_index]
         best_start[x] = maxpowind[best_value_index]
         best_doppler[x] = doppler_freq_min + (best_value_index * doppler_freq_step)
-        """
-        for x in powmaxall[:, x]:
-            if np.abs(x) > xcorr_noise_limit:
-                print(x)
-        """
-    return filter_output
+
+    matched_filter_output["powmaxall"] = powmaxall
+    matched_filter_output["powmaxall_norm"] = powmaxall_norm
+    matched_filter_output["best_peak"] = best_peak
+    matched_filter_output["best_start"] = best_start
+    matched_filter_output["best_doppler"] = best_doppler
+    matched_filter_output["pulse_length"] = sample_signal_all.shape[1]
+    return matched_filter_output
 
 
 def crosscorrelate(x, y, min_delay, max_delay):
-    libecho.crosscorrelate.argtypes = [
-        np_complex,
-        ctypes.c_int,
-        np_complex,
-        ctypes.c_int,
-        ctypes.c_int,
-        ctypes.c_int,
-        np_complex,
-    ]
+    """
+    Crosscorrelates two arrays between a max and a min delay. Does not normalize them.
+    """
     return_value = np.zeros([len(x) + len(y)], dtype=np.complex128)
     libecho.crosscorrelate(
         x,
@@ -137,14 +135,9 @@ def crosscorrelate(x, y, min_delay, max_delay):
 
 
 def crosscorrelate_single_delay(x, y, delay):
-    libecho.crosscorrelate_single_delay.argtypes = [
-        np_complex,
-        ctypes.c_int,
-        np_complex,
-        ctypes.c_int,
-        ctypes.c_int,
-        np_complex,
-    ]
+    """
+    Crosscorrelates over a single delay. Does not normalize.
+    """
     return_value = np.zeros([1], dtype=np.complex128)
     libecho.crosscorrelate_single_delay(
         x,
@@ -158,47 +151,58 @@ def crosscorrelate_single_delay(x, y, delay):
 
 
 def set_norm_coefs(abs_signal_sample_sum, start, stop, inarray):
-    libecho.set_norm_coefs.argtypes = [
-        np_complex_single,
-        ctypes.c_int,
-        ctypes.c_int,
-        np_complex,
-    ]
     libecho.set_norm_coefs(abs_signal_sample_sum, start, stop, inarray)
     return inarray
 
 
 def elementwise_cabs_square(inarray, start, stop):
-    libecho.elementwise_cabs_square.argtypes = [
-        np_complex,
-        ctypes.c_int,
-        ctypes.c_int,
-        np_complex
-    ]
     result = np.zeros([stop - start], dtype=np.complex128)
     libecho.elementwise_cabs_square(inarray, start, stop, result)
     return result
 
 
 def arange(start, stop, step):
-    libecho.arange.argtypes = [
-        ctypes.c_double,
-        ctypes.c_double,
-        ctypes.c_double,
-        np_double,
-    ]
     outarray = np.zeros([int((stop - start) / step) + 1], dtype=np.double)
     libecho.arange(start, stop, step, outarray)
     return outarray
 
 
-def complex_sum(inarray):
-    libecho.complex_sum.argtypes = [
-        np_complex,
-        ctypes.c_int,
-    ]
-    libecho.complex_sum.restype = np_double
-    temp = libecho.complex_sum(inarray, len(inarray))
-    rv = npct.as_array(temp, shape=(2, ))
-    print(rv)
-    return rv
+libecho.crosscorrelate.argtypes = [
+    np_complex,
+    ctypes.c_int,
+    np_complex,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    np_complex,
+]
+
+libecho.crosscorrelate_single_delay.argtypes = [
+    np_complex,
+    ctypes.c_int,
+    np_complex,
+    ctypes.c_int,
+    ctypes.c_int,
+    np_complex,
+]
+
+libecho.set_norm_coefs.argtypes = [
+    np_complex_single,
+    ctypes.c_int,
+    ctypes.c_int,
+    np_complex,
+]
+
+libecho.elementwise_cabs_square.argtypes = [
+    np_complex,
+    ctypes.c_int,
+    ctypes.c_int,
+    np_complex
+]
+
+libecho.arange.argtypes = [
+    ctypes.c_double,
+    ctypes.c_double,
+    ctypes.c_double,
+    np_double,
+]

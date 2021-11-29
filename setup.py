@@ -4,10 +4,6 @@ import os.path
 from distutils.core import Extension
 
 
-with open('requirements', 'r') as fh:
-    pip_req = fh.read().split('\n')
-    pip_req = [x.strip() for x in pip_req if len(x.strip()) > 0]
-
 with open('README.md', 'r') as fh:
     long_description = fh.read()
 
@@ -49,12 +45,23 @@ setuptools.setup(
         'Development Status :: 4 - Beta',
     ],
     python_requires='>=3.0',
-    install_requires=pip_req,
+    install_requires=[
+        "h5py>=3.4.0",
+        "matplotlib>=2.2.2",
+        "numpy>=1.14.3",
+        "scipy>=1.1.0",
+        "tabulate>=0.8.7",
+        "tqdm>=4.46.0",
+    ],
+    extras_require={
+        "mpi": ["mpi4py>=3.1.1"],
+        "develop": ["pytest>=5.2.2"]
+    },
     packages=setuptools.find_packages(),
     ext_modules=[libecho],
     # metadata to display on PyPI
     author='Daniel Kastinen',
     author_email='daniel.kastinen@irf.se',
     description='Keplerian orbit functions in Python',
-    license='MIT',
+    license='MIT'
 )

@@ -2,7 +2,7 @@ import numpy as np
 
 
 barker13 = np.array([1, 1, 1, 1, 1, -1, -1, 1, 1, -1, 1, -1, 1],
-                    dtype=np.complex128)
+                    dtype=np.float64)
 
 
 def barker_code_13(pulse_amount, oversampling):
