@@ -33,6 +33,9 @@ data_store = metecho.data.DataStore(data_path)
 print(data_store.tree(clean=True))
 print(data_store)
 
+for file, backend in zip(data_store._file_list, data_store._backend_list):
+    print(f'{file.name}: {backend}')
+
 factory = data_store.factory(selection=[1, 2])
 print(factory)
 
@@ -40,6 +43,16 @@ fig, axes = plt.subplots(2, 1)
 for ind, raw in enumerate(factory):
     print(f'"{raw.path.name}" loaded from factory')
     metecho.plot.rti(raw, ax=axes[ind])
+
+
+def filt(path, backend): 
+    return path.name == '2009-06-27T09.54.04.100000000.h5'
+
+
+print('Results from filtering a datastore')
+factory = data_store.factory(path_backend_filter=filt)
+for raw in factory:
+    print(raw.path)
 
 print(metecho.profiler)
 

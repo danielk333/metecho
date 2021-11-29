@@ -166,13 +166,21 @@ class DataStore:
         self._file_list = [self._backend_list[ind] for ind in order]
 
     @tools.profiling.timeing(f'{__name__}.DataStore')
-    def factory(self, selection=None, **kwargs):
+    def factory(self, selection=None, path_backend_filter=None, **kwargs):
         if selection is None:
             selected_files = self._file_list
             selected_backends = self._backend_list
         else:
             selected_files = [self._file_list[ind] for ind in selection]
             selected_backends = [self._backend_list[ind] for ind in selection]
+
+        if path_backend_filter is not None:
+            selected_tupes = [
+                (pth, back)
+                for pth, back in zip(selected_files, selected_backends)
+                if path_backend_filter(pth, back)
+            ]
+            selected_files, selected_backends = zip(*selected_tupes)
 
         factory = RawDataInterfaceFactory(
             selected_files, 
