@@ -23,7 +23,7 @@ libecho.xcorr_echo_search.argtypes = [
     ctypes.c_double,
     np_complex,
     ctypes.c_int,
-    np_double,
+    np_complex,
     ctypes.c_int,
     np_complex_2d,
     np_complex_2d,
@@ -107,6 +107,7 @@ def xcorr_echo_search(
         best_peak[x] = powmax[best_value_index]
         best_start[x] = maxpowind[best_value_index]
         best_doppler[x] = doppler_freq_min + (best_value_index * doppler_freq_step)
+
     matched_filter_output["powmaxall"] = powmaxall
     matched_filter_output["powmaxall_norm"] = powmaxall_norm
     matched_filter_output["best_peak"] = best_peak
