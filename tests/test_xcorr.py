@@ -90,13 +90,13 @@ def test_xcorr_echo_search():
     test_signal[0, 4:8, 0] = barker4
     test_data = raw_data.RawDataInterface(None, load_on_init=False)
     test_data.data = test_signal
-    test_data.axis['channels'] = 0
-    test_data.axis['samples'] = 1
-    test_data.axis['pulses'] = 2
+    test_data.axis['channel'] = 0
+    test_data.axis['sample'] = 1
+    test_data.axis['pulse'] = 2
     result = np.array([[0], [0], [0], [0], [0], [1], [0], [-1], [4],
                        [-1], [0], [1], [0], [0]], dtype=np.complex128)
     powmax = xcorr.xcorr_echo_search(test_data, -100, 100, 50, barker4)
-    assert np.allclose(np.abs(powmax), np.abs(result), rtol=1e-4)
+    assert np.allclose(np.abs(powmax["powmaxall"]), np.abs(result), rtol=1e-4)
 
 
 """
