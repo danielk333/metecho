@@ -126,7 +126,7 @@ void perform_xcorr(
             }
             output_power[j] = decoded[j]/(sqrt(norm_coefs[j])*sqrt(signal_model_abs_sum));
             output_power[j] = cpow(cabs(output_power[j]), 2);
-
+                        
             if (cabs(output_power[j]) > cabs(powmax[i])){
                 powmax[i] = output_power[j];
                 maxpowind[i] = j;

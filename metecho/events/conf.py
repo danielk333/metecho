@@ -32,17 +32,20 @@ DEFAULT_CONFIG = {
         'FIND_CRITERIA_ind_pm': '3',
 
         # 0 dop removal
-        'min_dop_allowed': '1e3 * (2 * 46.5e6) / 299792458',
+        # 1e3 * 1 * 46.5e6 / 299792458
+        'min_dop_allowed': '310.21460853428140610528634446167421596710081345675480601983656306',
         'max_start_allowed': '85 - 26 / 2',
         'min_start_allowed': '0',
 
         # Recursive "index-island" detector
-        'least_ipp_avalible': '5',
+        'least_ipp_available': '5',
         'min_ipp_separation_split': '20',
-        'min_dop_separation_split': '(10e3 * 2 * 46.5e6) / 299792458',
+        # 10e3 * 1 * 46.5e6 / 299792458
+        'min_dop_separation_split': '1551.0730426714070305264317223083710798355040672837740300991828153',
         'min_range_separation_split': '4.0',
 
-        'smoothing_window': '4',
+        'smoothing_window': '5',
+        'polyorder': '2',
 
         'IPP_extend': '10',
 

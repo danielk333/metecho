@@ -1,17 +1,20 @@
 import numpy as np
 from math import isclose
 from metecho.data import raw_data
-from metecho.events import event_search, conf, search_objects, filters
+from metecho.events import event_search, conf, search_objects
 from metecho.generalized_matched_filter import signal_model
+from metecho.noise import calc_noise
 from unittest.mock import patch, mock_open, MagicMock, Mock
 
 
 def test_search_object():
     class TestSearch(search_objects.SearchObject):
-        def search(self, matched_filter_output, raw_data):
+        required = False
+
+        def search(self, matched_filter_output, raw_data, config):
             return self.arguments["test"]
     searcher = TestSearch(test=True)
-    assert searcher.search(None, None)
+    assert searcher.search(None, None, None)
 
 
 def test_conf_file_read():
@@ -30,8 +33,8 @@ def test_gaussian_noise():
     test_data.axis['channel'] = 0
     test_data.axis['sample'] = 1
     test_data.axis['pulse'] = 2
-    gaussian_filter = filters.CalculateGaussianNoise()
-    return_value = gaussian_filter.filter(test_data)
+    gauss_calc = calc_noise.CalculateGaussianNoise()
+    return_value = gauss_calc.calc(test_data)
     assert return_value["mean"] == 0.5
     assert return_value["std_dev"] == 0.5
     assert isclose(return_value["confidence_interval"][0], 0.65, abs_tol=10**-2)
@@ -40,39 +43,53 @@ def test_gaussian_noise():
 
 def test_partial_data_input():
     test_data = raw_data.RawDataInterface(None, load_on_init=False)
-    test_data.data = np.zeros([1, 10, 10], dtype=np.complex128)
+    test_data.data = np.zeros([1, 30, 30], dtype=np.complex128)
+    test_data.data[:, :test_data.data.size // 2:2, :] = 1
     test_data.axis['channel'] = 0
     test_data.axis['sample'] = 1
     test_data.axis['pulse'] = 2
+    test_best_peak = np.zeros(5, dtype=np.complex128)
+    test_best_doppler = np.zeros(5, dtype=np.int32)
+    test_best_start = np.zeros(5, dtype=np.int32)
     test_filter_output = {
-        'powmaxall': np.ones([36, 5], dtype=np.complex128),
-        'sample_length': 10,
+        'max_pow_per_delay': np.ones([56, 5], dtype=np.complex128),
+        'best_doppler': test_best_doppler,
+        'best_peak': test_best_peak,
+        'best_start': test_best_start,
         'pulse_length': 5
     }
     configuration = conf.generate_event_search_config()
     configuration["General"]["MOVE_STD_WINDOW"] = "2"
+    configuration["General"]["start_std_coherr_percent"] = "3"
+    configuration["General"]["CRITERIA_N"] = "1"
     signal = signal_model.barker_code_13(test_data.data.shape[1], 2)
 
     class TestSearch(search_objects.SearchObject):
-        def search(self, matched_filter_output, raw_data):
-            if (matched_filter_output["powmaxall"].shape == (36, 10)
-                and matched_filter_output["sample_length"] == 10
-                    and matched_filter_output["pulse_length"] == 10):
-                return True
-            return False
+        required = False
+
+        def search(self, matched_filter_output, raw_data, config):
+            if (matched_filter_output["max_pow_per_delay"].shape == (56, 30)
+                    and matched_filter_output["pulse_length"] == 30):
+                return np.ones(30, dtype=bool)
+            return np.zeros(30, dtype=bool)
     searcher = TestSearch()
-    result = event_search.search(test_data, configuration, test_filter_output, [searcher], signal)
-    assert result[0]
+    result = event_search.search(test_data, configuration, test_filter_output,
+                                 signal, search_function_objects=[searcher])
+    assert np.all(result)
 
 
 def test_event_search_functionality():
     result = np.zeros(100, dtype=bool)
+    configuration = conf.generate_event_search_config()
 
     class TestSearch(search_objects.SearchObject):
-        def search(self, matched_filter_output, raw_data):
+        required = False
+
+        def search(self, matched_filter_output, raw_data, config):
             return np.zeros(self.arguments["length"], dtype=bool)
     searcher = TestSearch(length=100)
-    assert np.array_equal(event_search.search(None, None, None, [searcher], None), [result])
+    assert np.array_equal(event_search.search(None, configuration, {}, None,
+                                              search_function_objects=[searcher]), [result])
 
 
 def test_default_config():
@@ -94,7 +111,7 @@ def test_default_config():
     assert configuration['General']['min_dop_allowed'] is not None
     assert configuration['General']['max_start_allowed'] is not None
     assert configuration['General']['min_start_allowed'] is not None
-    assert configuration['General']['least_ipp_avalible'] is not None
+    assert configuration['General']['least_ipp_available'] is not None
     assert configuration['General']['min_ipp_separation_split'] is not None
     assert configuration['General']['min_dop_separation_split'] is not None
     assert configuration['General']['min_range_separation_split'] is not None

@@ -23,7 +23,7 @@ libecho.xcorr_echo_search.argtypes = [
     ctypes.c_double,
     np_complex,
     ctypes.c_int,
-    np_complex,
+    np_double,
     ctypes.c_int,
     np_complex_2d,
     np_complex_2d,
@@ -57,12 +57,12 @@ def xcorr_echo_search(
     best_peak = np.zeros(sample_signal_all.shape[1], dtype=np.complex128)
     best_start = np.zeros(sample_signal_all.shape[1])
     best_doppler = np.zeros(sample_signal_all.shape[1])
-    powmaxall = np.zeros(
+    max_pow_per_delay = np.zeros(
         [sample_signal_all.shape[0] + signal_model_size,
          sample_signal_all.shape[1]],
         dtype=np.complex128
     )
-    powmaxall_norm = np.zeros(
+    max_pow_per_delay_norm = np.zeros(
         [sample_signal_all.shape[0] + signal_model_size,
          sample_signal_all.shape[1]],
         dtype=np.complex128
@@ -79,8 +79,8 @@ def xcorr_echo_search(
             dtype=np.complex128
         )
         pows_size = np.array([doppler_freq_size, sample_signal_size + signal_model_size], dtype=np.int32)
-        powmax = np.zeros([doppler_freq_size], dtype=np.complex128)
-        powmax_size = doppler_freq_size
+        max_pow_per_doppler = np.zeros([doppler_freq_size], dtype=np.complex128)
+        max_pow_per_doppler_size = doppler_freq_size
         maxpowind = np.zeros([doppler_freq_size], dtype=np.int32)
         maxpowind_size = doppler_freq_size
         logger.debug("Calling C function.")
@@ -95,21 +95,20 @@ def xcorr_echo_search(
             pows,
             pows_normalized,
             pows_size,
-            powmax,
-            powmax_size,
+            max_pow_per_doppler,
+            max_pow_per_doppler_size,
             maxpowind,
             maxpowind_size,
             samp,
         )
-        powmaxall[:, x] = np.max(pows, axis=0)
-        powmaxall_norm[:, x] = np.max(pows_normalized, axis=0)
-        best_value_index = np.argmax(powmax)
-        best_peak[x] = powmax[best_value_index]
+        max_pow_per_delay[:, x] = np.max(pows, axis=0)
+        max_pow_per_delay_norm[:, x] = np.max(pows_normalized, axis=0)
+        best_value_index = np.argmax(max_pow_per_doppler)
+        best_peak[x] = max_pow_per_doppler[best_value_index]
         best_start[x] = maxpowind[best_value_index]
         best_doppler[x] = doppler_freq_min + (best_value_index * doppler_freq_step)
-
-    matched_filter_output["powmaxall"] = powmaxall
-    matched_filter_output["powmaxall_norm"] = powmaxall_norm
+    matched_filter_output["max_pow_per_delay"] = max_pow_per_delay
+    matched_filter_output["max_pow_per_delay_norm"] = max_pow_per_delay_norm
     matched_filter_output["best_peak"] = best_peak
     matched_filter_output["best_start"] = best_start
     matched_filter_output["best_doppler"] = best_doppler
