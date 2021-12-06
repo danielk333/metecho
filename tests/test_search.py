@@ -9,6 +9,8 @@ from unittest.mock import patch, mock_open, MagicMock, Mock
 
 def test_search_object():
     class TestSearch(search_objects.SearchObject):
+        required = False
+
         def search(self, matched_filter_output, raw_data, config):
             return self.arguments["test"]
     searcher = TestSearch(test=True)
@@ -47,27 +49,33 @@ def test_partial_data_input():
     test_data.axis['sample'] = 1
     test_data.axis['pulse'] = 2
     test_best_peak = np.zeros(5, dtype=np.complex128)
+    test_best_doppler = np.zeros(5, dtype=np.int32)
+    test_best_start = np.zeros(5, dtype=np.int32)
     test_filter_output = {
-        'powmaxall': np.ones([56, 5], dtype=np.complex128),
+        'max_pow_per_delay': np.ones([56, 5], dtype=np.complex128),
+        'best_doppler': test_best_doppler,
         'best_peak': test_best_peak,
+        'best_start': test_best_start,
         'pulse_length': 5
     }
     configuration = conf.generate_event_search_config()
     configuration["General"]["MOVE_STD_WINDOW"] = "2"
     configuration["General"]["start_std_coherr_percent"] = "3"
+    configuration["General"]["CRITERIA_N"] = "1"
     signal = signal_model.barker_code_13(test_data.data.shape[1], 2)
 
     class TestSearch(search_objects.SearchObject):
+        required = False
+
         def search(self, matched_filter_output, raw_data, config):
-            print(matched_filter_output["powmaxall"].shape)
-            print(matched_filter_output["pulse_length"])
-            if (matched_filter_output["powmaxall"].shape == (56, 30)
+            if (matched_filter_output["max_pow_per_delay"].shape == (56, 30)
                     and matched_filter_output["pulse_length"] == 30):
-                return True
-            return False
+                return np.ones(30, dtype=bool)
+            return np.zeros(30, dtype=bool)
     searcher = TestSearch()
-    result = event_search.search(test_data, configuration, test_filter_output, [searcher], signal)
-    assert result[0]
+    result = event_search.search(test_data, configuration, test_filter_output,
+                                 signal, search_function_objects=[searcher])
+    assert np.all(result)
 
 
 def test_event_search_functionality():
@@ -75,10 +83,13 @@ def test_event_search_functionality():
     configuration = conf.generate_event_search_config()
 
     class TestSearch(search_objects.SearchObject):
+        required = False
+
         def search(self, matched_filter_output, raw_data, config):
             return np.zeros(self.arguments["length"], dtype=bool)
     searcher = TestSearch(length=100)
-    assert np.array_equal(event_search.search(None, configuration, {}, [searcher], None), [result])
+    assert np.array_equal(event_search.search(None, configuration, {}, None,
+                                              search_function_objects=[searcher]), [result])
 
 
 def test_default_config():
@@ -100,7 +111,7 @@ def test_default_config():
     assert configuration['General']['min_dop_allowed'] is not None
     assert configuration['General']['max_start_allowed'] is not None
     assert configuration['General']['min_start_allowed'] is not None
-    assert configuration['General']['least_ipp_avalible'] is not None
+    assert configuration['General']['least_ipp_available'] is not None
     assert configuration['General']['min_ipp_separation_split'] is not None
     assert configuration['General']['min_dop_separation_split'] is not None
     assert configuration['General']['min_range_separation_split'] is not None
