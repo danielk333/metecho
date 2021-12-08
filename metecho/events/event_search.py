@@ -106,11 +106,17 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
 
     find_indices = []
     find_indices_req = []
+    find_indices_trail = []
     if search_function_objects is None:
         search_function_objects = search_objects.get_defaults()
     for searcher in search_function_objects:
         curr = searcher.search(matched_filter_output, raw_data, config)
         events.append(curr)
+        if searcher.trailable:
+            if find_indices_trail != []:
+                find_indices_trail = np.logical_and(curr, find_indices_trail)
+            else:
+                find_indices_trail = curr
         if searcher.required:
             if find_indices_req != []:
                 find_indices_req = np.logical_and(curr, find_indices_req)
@@ -135,7 +141,42 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
         config
     )
 
+    if np.any(find_indices_trail):
+        found_indices_trail = np.argwhere(
+            np.logical_not(
+                np.logical_and(
+                    find_indices_trail,
+                    find_indices >= config.getint("General", "CRITERIA_N"))))
+    else:
+        found_indices_trail = []
+
+    if np.any(found_indices_trail):
+        start_IPP_trail, end_IPP_trail = event_select.cluster(
+            found_indices_trail,
+            matched_filter_output["best_doppler"],
+            matched_filter_output["best_start"],
+            config
+        )
+    else:
+        start_IPP_trail = []
+        end_IPP_trail = []
+
+    mets_found = len(start_IPP)
+    # if
+
     # Event search thing here
     # Cluster thing here
 
     return events
+
+
+def remove_indices(ignore_indices, mets_found, start_IPP, end_IPP, config):
+    remove_indices = []
+    if len(ignore_indices) < 1 or mets_found < 1:
+        return start_IPP, end_IPP
+    for index_1 in range(len(ignore_indices[0])):
+        for index_2 in range(0, mets_found):
+            if (start_IPP[index_2] >= ignore_indices[0][index_1]
+                    and end_IPP[index_2] <= ignore_indices[1][index_1]):
+                remove_indices.append(index_2)
+    return [5], [6]

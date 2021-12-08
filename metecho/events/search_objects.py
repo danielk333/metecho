@@ -21,9 +21,15 @@ class SearchObject(ABC):
     def required(self):
         pass
 
+    @property
+    @abstractmethod
+    def trailable(self):
+        pass
+
 
 class XcorrSigma(SearchObject):
     required = False
+    trailable = False
 
     def search(self, matched_filter_output, raw_data, config):
         self.required = False
@@ -36,6 +42,7 @@ class XcorrSigma(SearchObject):
 
 class TotpowSigma(SearchObject):
     required = False
+    trailable = False
 
     def search(self, matched_filter_output, raw_data, config):
         self.criteria = np.array(matched_filter_output["tot_pow"]
@@ -47,6 +54,7 @@ class TotpowSigma(SearchObject):
 
 class DopplerSigma(SearchObject):
     required = False
+    trailable = False
 
     def search(self, matched_filter_output, raw_data, config):
         self.doppler_coherrence = (matched_filter_output["doppler_coherrence"]
@@ -65,6 +73,7 @@ class DopplerSigma(SearchObject):
 
 class IndPm(SearchObject):
     required = False
+    trailable = False
 
     def search(self, matched_filter_output, raw_data, config):
         self.doppler_coherrence = (matched_filter_output["doppler_coherrence"]
@@ -82,6 +91,7 @@ class IndPm(SearchObject):
 
 class MinDopAllowed(SearchObject):
     required = True
+    trailable = True
 
     def search(self, matched_filter_output, raw_data, config):
         self.criteria = np.array(np.abs(matched_filter_output["best_doppler"]
@@ -91,6 +101,7 @@ class MinDopAllowed(SearchObject):
 
 class MinStartAllowed(SearchObject):
     required = True
+    trailable = False
 
     def search(self, matched_filter_output, raw_data, config):
         self.criteria = np.array(matched_filter_output["best_start"]

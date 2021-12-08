@@ -10,6 +10,7 @@ from unittest.mock import patch, mock_open, MagicMock, Mock
 def test_search_object():
     class TestSearch(search_objects.SearchObject):
         required = False
+        trailable = False
 
         def search(self, matched_filter_output, raw_data, config):
             return self.arguments["test"]
@@ -23,6 +24,24 @@ def test_conf_file_read():
         mock_file.is_file = MagicMock(return_value=True)
         configuration = conf.generate_event_search_config(file_input=mock_file)
         assert configuration['General']['TestValue'] == '132'
+
+
+def test_remove_indices():
+    configuration = conf.generate_event_search_config()
+    ignore_indices = [[1], [3]]
+    start_IPP = [1, 5, 9]
+    end_IPP = [3, 6, 11]
+    mets_found = 2
+    test1, test2 = [5], [6]
+    result1, result2 = event_search.remove_indices(
+        ignore_indices,
+        mets_found,
+        start_IPP,
+        end_IPP,
+        configuration
+    )
+    assert test1 == result1
+    assert test2 == result2
 
 
 def test_gaussian_noise():
@@ -60,12 +79,16 @@ def test_partial_data_input():
     }
     configuration = conf.generate_event_search_config()
     configuration["General"]["MOVE_STD_WINDOW"] = "2"
+    configuration["General"]["least_ipp_available"] = "3"
     configuration["General"]["start_std_coherr_percent"] = "3"
     configuration["General"]["CRITERIA_N"] = "1"
+    configuration["General"]["min_range_separation_split"] = "1e-02"
+
     signal = signal_model.barker_code_13(test_data.data.shape[1], 2)
 
     class TestSearch(search_objects.SearchObject):
         required = False
+        trailable = True
 
         def search(self, matched_filter_output, raw_data, config):
             if (matched_filter_output["max_pow_per_delay"].shape == (56, 30)
@@ -84,6 +107,7 @@ def test_event_search_functionality():
 
     class TestSearch(search_objects.SearchObject):
         required = False
+        trailable = False
 
         def search(self, matched_filter_output, raw_data, config):
             return np.zeros(self.arguments["length"], dtype=bool)
