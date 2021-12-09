@@ -20,7 +20,6 @@ def cluster(found_indices, best_doppler, best_start, config):
     doppler_diff = np.abs(np.diff(smooth_doppler))
     start_diff = np.abs(np.diff(smooth_start))
 
-
     split_metric = [
         indices_diff >= config.getfloat("General", "min_ipp_separation_split"),
         start_diff >= config.getfloat("General", "min_range_separation_split"),

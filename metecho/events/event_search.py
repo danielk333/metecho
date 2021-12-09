@@ -1,6 +1,8 @@
 import numpy as np
 import copy
-from . import conf, event_select, search_objects
+import math
+from datetime import datetime
+from . import conf, event_select, search_objects, event
 from metecho.generalized_matched_filter import xcorr, signal_model
 from metecho.noise import calc_noise
 import logging
@@ -29,7 +31,11 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
     """
     Searches for potential events from the filtered data and establishes if they can be analyzed further.
     """
+    # Initiates variables so they're never empty when used
     events = []
+    non_head = []
+    best_data = []
+    gauss_noise = {}
     matched_filter_output["doppler_coherrence"] = 0
     matched_filter_output["start_coherrence"] = 0
     if "best_doppler" not in matched_filter_output:
@@ -37,9 +43,11 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
     if "best_start" not in matched_filter_output:
         matched_filter_output["best_start"] = []
 
-    # Barker thing here
+    # Checks that we got input
     if raw_data is not None:
+        # Checks if we got partial input
         if matched_filter_output is not None:
+            # Calculates how much is already done and xcorrs the rest
             raw_data_pulse_length = raw_data.data.shape[raw_data.axis["pulse"]]
             if matched_filter_output["pulse_length"] < raw_data_pulse_length:
                 temp_raw_data = copy.deepcopy(raw_data)
@@ -57,7 +65,7 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
                 )
                 matched_filter_output = mergeDict(matched_filter_output, append_data, axis=1)
                 matched_filter_output["pulse_length"] = np.sum(matched_filter_output["pulse_length"])
-
+        # If not, xcorr everything
         else:
             matched_filter_output = xcorr.xcorr_echo_search(
                 raw_data,
@@ -104,14 +112,25 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
         matched_filter_output["tot_pow_filt"] = \
             matched_filter_output["tot_pow"][matched_filter_output["filter_indices"]]
 
+        best_data.append(matched_filter_output["best_peak"])
+        best_data.append(matched_filter_output["best_doppler"])
+        best_data.append(matched_filter_output["best_start"])
+
+        gauss_noise = matched_filter_output["gauss_noise"]
+
     find_indices = []
     find_indices_req = []
     find_indices_trail = []
+    # Checks if we got any search functions, otherwise defaults
     if search_function_objects is None:
         search_function_objects = search_objects.get_defaults()
+    # Iterates over all search functions and applies them to each respective array
+    # depending on their attributes. The Required attribute means that *all* search
+    # functions must be true on those locations to count. Trailable means that only
+    # these are required to check for meteor trails. For all others, there must be
+    # a total of CRITERIA_N matches for it to count as a found event.
     for searcher in search_function_objects:
         curr = searcher.search(matched_filter_output, raw_data, config)
-        events.append(curr)
         if searcher.trailable:
             if find_indices_trail != []:
                 find_indices_trail = np.logical_and(curr, find_indices_trail)
@@ -134,6 +153,7 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
         found_indices = np.argwhere(np.logical_and(find_indices_req, find_indices
                                                    >= config.getint("General", "CRITERIA_N")))
 
+    # Clusters the events. giving start and end points in a 2-d array.
     start_IPP, end_IPP = event_select.cluster(
         found_indices,
         matched_filter_output["best_doppler"],
@@ -141,6 +161,7 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
         config
     )
 
+    # Checks if there are any trails and tries to cluster these as well
     if np.any(find_indices_trail):
         found_indices_trail = np.argwhere(
             np.logical_not(
@@ -162,12 +183,83 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
         end_IPP_trail = []
 
     mets_found = len(start_IPP)
-    # if
 
-    # Event search thing here
-    # Cluster thing here
+    # If the "ignore_indices" variable is set in matched_filter_output,
+    # it removes these values from the start and end IPPs (if there are
+    # matches there)
+    if "ignore_indices" in matched_filter_output:
+        start_IPP, end_IPP = remove_indices(config["General"]["ignore_indices"],
+                                            mets_found,
+                                            start_IPP,
+                                            end_IPP,
+                                            config
+                                            )
+    # In case it was removed by "remove_indices"
+    mets_found = len(start_IPP)
 
-    return events
+    # If multiple meteors are found, adjust them to not overlap as much
+    if mets_found > 1:
+        for x in range(0, mets_found - 1):
+            dIPP = end_IPP[x] - start_IPP[x + 1]
+            if dIPP > config.getint("General", "event_max_overlap"):
+                contr_IPP = math.floor(0.5 * (dIPP - config.getint("General", "event_max_overlap")))
+                end_IPP[x] = end_IPP[x] - contr_IPP
+                start_IPP[x + 1] = start_IPP[x + 1] + contr_IPP
+
+    # Create trail events
+    if start_IPP_trail:
+        for x in range(0, len(start_IPP_trail)):
+            FND_INDS = [i for i in found_indices_trail.flatten()
+                        if i > start_IPP_trail[x] and i < end_IPP_trail[x]]
+
+            ev = event.Event(raw_data.data)
+
+            ev.start_IPP = start_IPP_trail[x]
+            ev.end_IPP = end_IPP_trail[x]
+            ev.found_indices = FND_INDS
+
+            if "date" in raw_data.meta:
+                ev.date = raw_data.meta["date"]
+
+            ev.event_search_executed = datetime.now()
+            ev.event_search_config = config
+
+            if raw_data is not None:
+                ev.files.append(raw_data.path)
+
+            ev.type = 'meteor:trail'
+
+            ev.noise = matched_filter_output["gauss_noise"]
+
+            non_head.append(ev)
+
+    # Create head events
+    if mets_found > 0:
+        for x in range(0, mets_found):
+            FND_INDS = [i for i in found_indices.flatten() if i > start_IPP[x] and i < end_IPP[x]]
+
+            ev = event.Event(raw_data.data)
+
+            ev.start_IPP = start_IPP[x]
+            ev.end_IPP = end_IPP[x]
+            ev.found_indices = FND_INDS
+
+            if "date" in raw_data.meta:
+                ev.date = raw_data.meta["date"]
+
+            ev.event_search_executed = datetime.now()
+            ev.event_search_config = config
+
+            if raw_data is not None:
+                ev.files.append(raw_data.path)
+
+            ev.type = 'meteor:head'
+
+            ev.noise = matched_filter_output["gauss_noise"]
+
+            events.append(ev)
+
+    return events, non_head, best_data, gauss_noise
 
 
 def remove_indices(ignore_indices, mets_found, start_IPP, end_IPP, config):
