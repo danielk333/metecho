@@ -32,7 +32,7 @@ def test_remove_indices():
     start_IPP = [1, 5, 9]
     end_IPP = [3, 6, 11]
     mets_found = 2
-    test1, test2 = [5], [6]
+    test1, test2 = [5, 9], [6, 11]
     result1, result2 = event_search.remove_indices(
         ignore_indices,
         mets_found,

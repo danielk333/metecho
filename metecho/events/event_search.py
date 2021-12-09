@@ -179,4 +179,21 @@ def remove_indices(ignore_indices, mets_found, start_IPP, end_IPP, config):
             if (start_IPP[index_2] >= ignore_indices[0][index_1]
                     and end_IPP[index_2] <= ignore_indices[1][index_1]):
                 remove_indices.append(index_2)
-    return [5], [6]
+            elif ((ignore_indices[0][index_1] - start_IPP[index_2])
+                  > config.getint("General", "allow_analysis_overlap")
+                  and end_IPP(index_2)
+                  >= ignore_indices[1, index_1]
+                  and start_IPP[index_2]
+                  >= ignore_indices[0, index_1]):
+                remove_indices.append(index_2)
+            elif ((end_IPP[index_2] - ignore_indices[0][index_1])
+                  > config.getint("General", "allow_analysis_overlap")
+                  and start_IPP[index_2]
+                  <= ignore_indices[0][index_1]
+                  and end_IPP[index_2]
+                  <= ignore_indices[1][index_1]):
+                remove_indices.append(index_2)
+    for remove_index in remove_indices:
+        del start_IPP[remove_index]
+        del end_IPP[remove_index]
+    return start_IPP, end_IPP
