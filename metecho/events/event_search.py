@@ -36,17 +36,15 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
     non_head = []
     best_data = []
     gauss_noise = {}
-    matched_filter_output["doppler_coherrence"] = 0
-    matched_filter_output["start_coherrence"] = 0
-    if "best_doppler" not in matched_filter_output:
-        matched_filter_output["best_doppler"] = []
-    if "best_start" not in matched_filter_output:
-        matched_filter_output["best_start"] = []
 
     # Checks that we got input
     if raw_data is not None:
         # Checks if we got partial input
         if matched_filter_output is not None:
+            if "best_doppler" not in matched_filter_output:
+                matched_filter_output["best_doppler"] = []
+            if "best_start" not in matched_filter_output:
+                matched_filter_output["best_start"] = []
             # Calculates how much is already done and xcorrs the rest
             raw_data_pulse_length = raw_data.data.shape[raw_data.axis["pulse"]]
             if matched_filter_output["pulse_length"] < raw_data_pulse_length:
@@ -96,6 +94,9 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
             start_std < config.getfloat("General", "start_std_coherr") / len(start_std)
         )
 
+        filtered_gauss_indices = np.argwhere(matched_filter_output["best_start"]
+                                             < config.getfloat("General", "xcorr_noise_limit"))
+
         matched_filter_output["gauss_noise"] = calc_noise.CalculateGaussianNoise().calc(raw_data)
 
         matched_filter_output["filter_indices"] = (matched_filter_output["tot_pow"]
@@ -105,7 +106,7 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
 
         if not np.any(matched_filter_output["filter_indices"]):
             logger.debug("No matches found, returning...")
-            return events
+            return [], [], [], []
 
         matched_filter_output["best_peak_filt"] = \
             matched_filter_output["best_peak"][matched_filter_output["filter_indices"]]
@@ -164,10 +165,11 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
     # Checks if there are any trails and tries to cluster these as well
     if np.any(find_indices_trail):
         found_indices_trail = np.argwhere(
-            np.logical_not(
-                np.logical_and(
-                    find_indices_trail,
-                    find_indices >= config.getint("General", "CRITERIA_N"))))
+            np.logical_and(
+                np.logical_not(find_indices_trail),
+                find_indices >= config.getint("General", "CRITERIA_N")
+            )
+        )
     else:
         found_indices_trail = []
 
@@ -285,7 +287,7 @@ def remove_indices(ignore_indices, mets_found, start_IPP, end_IPP, config):
                   and end_IPP[index_2]
                   <= ignore_indices[1][index_1]):
                 remove_indices.append(index_2)
-    for remove_index in remove_indices:
+    for remove_index in remove_indices[::-1]:
         del start_IPP[remove_index]
         del end_IPP[remove_index]
     return start_IPP, end_IPP

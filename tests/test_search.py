@@ -84,6 +84,7 @@ def test_partial_data_input():
     configuration["General"]["start_std_coherr_percent"] = "3"
     configuration["General"]["CRITERIA_N"] = "1"
     configuration["General"]["min_range_separation_split"] = "1e-02"
+    configuration["General"]["xcorr_noise_limit"] = "-0.5"
 
     signal = signal_model.barker_code_13(test_data.data.shape[1], 2)
 
