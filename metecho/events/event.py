@@ -15,6 +15,5 @@ class Event:
         self.tstart = ""
         self.event_search_executed = ""
         self.event_search_config = {}
-        self.data = []
         self.event_type = ""
         self.noise = {}

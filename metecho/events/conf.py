@@ -34,7 +34,8 @@ DEFAULT_CONFIG = {
         # 0 dop removal
         # 1e3 * 1 * 46.5e6 / 299792458
         'min_dop_allowed': '310.21460853428140610528634446167421596710081345675480601983656306',
-        'max_start_allowed': '85 - 26 / 2',
+        # 85 - 26 / 2
+        'max_start_allowed': '72',
         'min_start_allowed': '0',
 
         # Recursive "index-island" detector

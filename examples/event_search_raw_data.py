@@ -13,7 +13,7 @@ for name in logging.root.manager.loggerDict:
         print(f'logger: {name}')
 
 logger = logging.getLogger('metecho')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.WARNING)
 logger.addHandler(handler)
 
 metecho.profiler.enable('metecho')
@@ -26,5 +26,9 @@ config = metecho.events.generate_event_search_config()
 signal = metecho.generalized_matched_filter.signal_model.barker_code_13(raw.data.shape[raw.axis['pulse']], 2)
 events, nonhead, best_data, noise = metecho.events.search(raw, config, None, signal)
 
-print(events)
+for event in events:
+    print(event.start_IPP)
+    print(event.end_IPP)
+    print(event.type)
+
 print(metecho.profiler)

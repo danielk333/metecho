@@ -15,15 +15,15 @@ class NoiseObject(ABC):
 
 class CalculateGaussianNoise(NoiseObject):
     """
-    Calculates the gaussian noise for a raw_data object
+    Calculates the gaussian noise for a filtered_data object
     """
 
-    def calc(self, raw_data):
+    def calc(self, filtered_data, axis):
         confidence_probability = 0.000001
         echo_location = []
-        channel_size = raw_data.data[raw_data.axis["channel"]].size
+        channel_size = filtered_data.shape[axis]
         s_noise_all = np.array(np.concatenate(
-            (raw_data.data.real, raw_data.data.imag), axis=None), dtype=np.float64)
+            (filtered_data.real, filtered_data.imag), axis=None), dtype=np.float64)
         sig_est_freedom = len(s_noise_all) - 1
         mean = np.mean(s_noise_all)
         std_dev = np.std(s_noise_all)

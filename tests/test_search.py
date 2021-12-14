@@ -45,15 +45,12 @@ def test_remove_indices():
 
 
 def test_gaussian_noise():
-    test_data = raw_data.RawDataInterface(None, load_on_init=False)
     reals = np.zeros([1, 10, 10], dtype=np.float64)
     imags = np.ones([1, 10, 10], dtype=np.float64)
-    test_data.data = reals + imags * 1j
-    test_data.axis['channel'] = 0
-    test_data.axis['sample'] = 1
-    test_data.axis['pulse'] = 2
+    test_data = reals + imags * 1j
+    test_axis = 2
     gauss_calc = calc_noise.CalculateGaussianNoise()
-    return_value = gauss_calc.calc(test_data)
+    return_value = gauss_calc.calc(test_data, test_axis)
     assert return_value["mean"] == 0.5
     assert return_value["std_dev"] == 0.5
     assert isclose(return_value["confidence_interval"][0], 0.65, abs_tol=10**-2)
@@ -84,7 +81,7 @@ def test_partial_data_input():
     configuration["General"]["start_std_coherr_percent"] = "3"
     configuration["General"]["CRITERIA_N"] = "1"
     configuration["General"]["min_range_separation_split"] = "1e-02"
-    configuration["General"]["xcorr_noise_limit"] = "-0.5"
+    configuration["General"]["xcorr_noise_limit"] = "0.05"
 
     signal = signal_model.barker_code_13(test_data.data.shape[1], 2)
 

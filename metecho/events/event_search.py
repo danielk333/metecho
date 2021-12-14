@@ -72,7 +72,7 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
                 config.getint("General", "dop_step_size"),
                 signal
             )
-        matched_filter_output["tot_pow"] = np.squeeze(np.sum(np.square(np.abs(np.sum(raw_data.data, 0))), 1))
+        matched_filter_output["tot_pow"] = np.squeeze(np.sum(np.square(np.abs(np.sum(raw_data.data, 0))), 0))
 
         matched_filter_output["doppler_window"] = np.lib.stride_tricks.sliding_window_view(
             matched_filter_output["best_doppler"],
@@ -83,29 +83,42 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
             config.getint("General", "MOVE_STD_WINDOW")
         )
 
-        matched_filter_output["doppler_std"] = np.std(matched_filter_output["doppler_window"], axis=0)
-        start_std = np.std(matched_filter_output["start_window"], axis=0)
+        matched_filter_output["doppler_std"] = np.std(matched_filter_output["doppler_window"], axis=1)
+        matched_filter_output["start_std"] = np.std(matched_filter_output["start_window"], axis=1)
 
         matched_filter_output["doppler_coherrence"] = np.sum(
             matched_filter_output["doppler_std"] < config.getfloat(
                 "General", "dop_std_coherr") / len(matched_filter_output["doppler_std"])
         )
         matched_filter_output["start_coherrence"] = np.sum(
-            start_std < config.getfloat("General", "start_std_coherr") / len(start_std)
+            (matched_filter_output["start_std"]
+                < (config.getfloat("General", "start_std_coherr")
+                   / len(matched_filter_output["start_std"])))
         )
 
-        filtered_gauss_indices = np.argwhere(matched_filter_output["best_start"]
-                                             < config.getfloat("General", "xcorr_noise_limit"))
+        possible_matches = np.argwhere(matched_filter_output["best_peak"]
+                                       > config.getfloat("General", "xcorr_noise_limit")).flatten()
 
-        matched_filter_output["gauss_noise"] = calc_noise.CalculateGaussianNoise().calc(raw_data)
+        not_possible_matches = np.argwhere(matched_filter_output["best_peak"]
+                                           < config.getfloat("General", "xcorr_noise_limit")).flatten()
+
+        tot_pow_mean = np.mean(matched_filter_output["tot_pow"][not_possible_matches])
+        tot_pow_std = np.std(matched_filter_output["tot_pow"][not_possible_matches])
+
+        removed_possible_matches = np.delete(raw_data.data, possible_matches, axis=raw_data.axis["pulse"])
+
+        matched_filter_output["gauss_noise"] = calc_noise.CalculateGaussianNoise().calc(
+            removed_possible_matches,
+            raw_data.axis["channel"]
+        )
 
         matched_filter_output["filter_indices"] = (matched_filter_output["tot_pow"]
-                                                   < matched_filter_output["gauss_noise"]["mean"]
-                                                   + config.getfloat("General", "pow_std_est")
-                                                   * matched_filter_output["gauss_noise"]["std_dev"])
+                                                   < (tot_pow_mean
+                                                      + config.getfloat("General", "pow_std_est")
+                                                      * tot_pow_std))
 
         if not np.any(matched_filter_output["filter_indices"]):
-            logger.debug("No matches found, returning...")
+            logger.warning("No noise found, returning...")
             return [], [], [], []
 
         matched_filter_output["best_peak_filt"] = \
