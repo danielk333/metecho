@@ -26,6 +26,6 @@ raw = metecho.data.RawDataInterface(h5_mu_file)
 
 print(metecho.profiler)
 
-metecho.plot.rti(raw)
+metecho.plot.rti(raw, log=True)
 
 plt.show()

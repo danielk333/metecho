@@ -9,10 +9,10 @@ def cluster(found_indices, best_doppler, best_start, config):
     if found_indices.size < config.getint("General", "least_ipp_available"):
         return start_IPP, end_IPP
 
-    smooth_doppler = savgol_filter(best_doppler[found_indices].flatten(),
+    smooth_doppler = savgol_filter(best_doppler[found_indices.flatten()].flatten(),
                                    config.getint("General", "smoothing_window"),
                                    config.getint("General", "polyorder"))
-    smooth_start = savgol_filter(best_start[found_indices].flatten(),
+    smooth_start = savgol_filter(best_start[found_indices.flatten()].flatten(),
                                  config.getint("General", "smoothing_window"),
                                  config.getint("General", "polyorder"))
 
@@ -21,23 +21,19 @@ def cluster(found_indices, best_doppler, best_start, config):
     start_diff = np.abs(np.diff(smooth_start))
 
     split_metric = [
-        indices_diff >= config.getfloat("General", "min_ipp_separation_split"),
+        indices_diff >= config.getint("General", "min_ipp_separation_split"),
         start_diff >= config.getfloat("General", "min_range_separation_split"),
         doppler_diff >= config.getfloat("General", "min_dop_separation_split")
     ]
 
     split_indices = np.argwhere(np.sum(split_metric, 0) >= 1)
-
     split_indices = np.append(split_indices, len(found_indices))
 
     new_indices = []
     start_index = 0
 
     for x in range(len(split_indices)):
-        if split_indices[x] - start_index == 1:
-            new_indices.append(split_indices[x - 1:x])
-        else:
-            new_indices.append(found_indices.flatten()[start_index:split_indices[x]])
+        new_indices.append(found_indices.flatten()[start_index:split_indices[x]])
         start_index = split_indices[x]
 
     for x in range(len(new_indices)):

@@ -9,7 +9,7 @@ from .general import basic_matplotlib_kw
 
 logger = logging.getLogger(__name__)
 
-@basic_matplotlib_kw
+@basic_matplotlib_kw(subplot_shape=None)
 def rti(ax,
         raw_data,
         axis_font_size=15,
@@ -17,6 +17,7 @@ def rti(ax,
         tick_font_size=11,
         title='',
         index_axis=1,
+        log=False,
         ):
     """
     Simple function to plot the range-time intensity information of complex raw voltage data.
@@ -35,7 +36,7 @@ def rti(ax,
         if raw_data.axis[axis] is not None:
             summed = np.sum(summed, axis=raw_data.axis[axis])
 
-    powsum = np.abs(summed)**2
+    powsum = np.log10(np.abs(summed)**2) if log else np.abs(summed)**2
 
     """
     Sets pyplot to classic rendering, then renders the powersum unto it. We then add

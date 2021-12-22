@@ -42,12 +42,13 @@ def xcorr_echo_search(
     doppler_freq_max,
     doppler_freq_step,
     signal_model,
+    full_gmf_output=False,
 ):
     """
-    # Will take a raw_data object and search for signs of a meteor echo.
-    # At the moment takes a file location for testing purposes.
+    # Will take a raw_data object and crosscorrelate the data.
     """
     matched_filter_output = {}
+    pows_output = []
     index_finish = 0
     sample_signal_all = np.sum(raw_data.data, 0)
     doppler_freq_size = int(((doppler_freq_max - doppler_freq_min) / doppler_freq_step) + 1)
@@ -107,12 +108,16 @@ def xcorr_echo_search(
         best_peak[x] = max_pow_per_doppler[best_value_index]
         best_start[x] = maxpowind[best_value_index]
         best_doppler[x] = doppler_freq_min + (best_value_index * doppler_freq_step)
+        if full_gmf_output:
+            pows_output.append(pows)
     matched_filter_output["max_pow_per_delay"] = max_pow_per_delay
     matched_filter_output["max_pow_per_delay_norm"] = max_pow_per_delay_norm
     matched_filter_output["best_peak"] = best_peak
     matched_filter_output["best_start"] = best_start
     matched_filter_output["best_doppler"] = best_doppler
     matched_filter_output["pulse_length"] = sample_signal_all.shape[1]
+    if full_gmf_output:
+        matched_filter_output["gmf_output"] = np.stack(pows_output, axis=2)
     return matched_filter_output
 
 

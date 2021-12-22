@@ -5,8 +5,9 @@ from datetime import datetime
 from . import conf, event_select, search_objects, event
 from metecho.generalized_matched_filter import xcorr, signal_model
 from metecho.noise import calc_noise
+from matplotlib import colors
 import logging
-
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
@@ -96,19 +97,20 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
                    / len(matched_filter_output["start_std"])))
         )
 
-        possible_matches = np.argwhere(matched_filter_output["best_peak"]
-                                       > config.getfloat("General", "xcorr_noise_limit")).flatten()
+        coherent_signal_indicator = np.argwhere(matched_filter_output["best_peak"]
+                                                > config.getfloat("General", "xcorr_noise_limit")).flatten()
 
-        not_possible_matches = np.argwhere(matched_filter_output["best_peak"]
-                                           < config.getfloat("General", "xcorr_noise_limit")).flatten()
+        no_coherent_signal_indicator = np.argwhere(matched_filter_output["best_peak"]
+                                                   < config.getfloat("General", "xcorr_noise_limit")).flatten()
 
-        tot_pow_mean = np.mean(matched_filter_output["tot_pow"][not_possible_matches])
-        tot_pow_std = np.std(matched_filter_output["tot_pow"][not_possible_matches])
+        tot_pow_mean = np.mean(matched_filter_output["tot_pow"][no_coherent_signal_indicator])
+        tot_pow_std = np.std(matched_filter_output["tot_pow"][no_coherent_signal_indicator])
 
-        removed_possible_matches = np.delete(raw_data.data, possible_matches, axis=raw_data.axis["pulse"])
+        removed_coherent_signal_indicator = np.delete(
+            raw_data.data, coherent_signal_indicator, axis=raw_data.axis["pulse"])
 
         matched_filter_output["gauss_noise"] = calc_noise.CalculateGaussianNoise().calc(
-            removed_possible_matches,
+            removed_coherent_signal_indicator,
             raw_data.axis["channel"]
         )
 
@@ -145,16 +147,16 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
     # a total of CRITERIA_N matches for it to count as a found event.
     for searcher in search_function_objects:
         curr = searcher.search(matched_filter_output, raw_data, config)
-        if searcher.trailable:
-            if find_indices_trail != []:
-                find_indices_trail = np.logical_and(curr, find_indices_trail)
-            else:
-                find_indices_trail = curr
         if searcher.required:
             if find_indices_req != []:
                 find_indices_req = np.logical_and(curr, find_indices_req)
             else:
                 find_indices_req = curr
+        if searcher.required_trails:
+            if find_indices_trail != []:
+                find_indices_trail = np.logical_and(curr, find_indices_trail)
+            else:
+                find_indices_trail = curr
         else:
             if find_indices != []:
                 find_indices = curr * 1 + find_indices * 1
@@ -273,6 +275,41 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
             ev.noise = matched_filter_output["gauss_noise"]
 
             events.append(ev)
+
+    PULSE_V = np.arange(0, raw_data.data.shape[raw_data.axis['pulse']], 10)
+    not_ok = '-b'
+    ok = '-m'
+
+    fig, axs = plt.subplots(3, 3)
+    fig.set_size_inches(16, 9)
+    long_plot = axs[1, 0].get_gridspec()
+    for ax in axs[0, 1:]:
+        ax.remove()
+    long_plot_ax = fig.add_subplot(long_plot[0, 1:])
+
+    custom_fontdict = {
+        'fontsize': 18,
+        'fontweight': 'bold',
+    }
+    fig.suptitle(f'{raw_data.path.name} Matches={len(found_indices)}, \
+Non-transient coherent detection ({matched_filter_output["doppler_coherrence"]}, \
+{matched_filter_output["start_coherrence"]}), \
+{len(events)} {(mets_found > 0)+1}',
+                 fontdict=custom_fontdict,
+                 wrap=True,
+                 )
+    best_peak_filt = np.zeros(len(matched_filter_output["best_peak"]), dtype=bool)
+    best_peak_filt[found_indices] = True
+    best_peak_ok = np.ma.masked_where(best_peak_filt, matched_filter_output["best_peak"])
+
+    for point in matched_filter_output["best_peak"]:
+        color = not_ok
+        if point in best_peak_ok:
+            color = ok
+        axs[0, 0].plot(point, color)
+        print(point)
+    # fig.tight_layout()
+    plt.show()
 
     return events, non_head, best_data, gauss_noise
 

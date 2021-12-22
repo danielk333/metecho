@@ -23,13 +23,13 @@ class SearchObject(ABC):
 
     @property
     @abstractmethod
-    def trailable(self):
+    def required_trails(self):
         pass
 
 
 class XcorrSigma(SearchObject):
     required = False
-    trailable = False
+    required_trails = False
 
     def search(self, matched_filter_output, raw_data, config):
         self.required = False
@@ -42,7 +42,7 @@ class XcorrSigma(SearchObject):
 
 class TotpowSigma(SearchObject):
     required = False
-    trailable = False
+    required_trails = False
 
     def search(self, matched_filter_output, raw_data, config):
         self.criteria = np.array(matched_filter_output["tot_pow"]
@@ -54,7 +54,7 @@ class TotpowSigma(SearchObject):
 
 class DopplerSigma(SearchObject):
     required = False
-    trailable = False
+    required_trails = False
 
     def search(self, matched_filter_output, raw_data, config):
         self.doppler_coherrence = (matched_filter_output["doppler_coherrence"]
@@ -64,24 +64,23 @@ class DopplerSigma(SearchObject):
         doppler_std = (matched_filter_output["doppler_std"]
                        < config.getfloat("General", "FIND_CRITERIA_dop_STD_sigma")
                        * np.std(matched_filter_output["best_doppler"]))
-        best_doppler_plus_std = (matched_filter_output["best_doppler"]
-                                 > ((np.mean(matched_filter_output["best_doppler"])
-                                     + config.getfloat("General", "FIND_CRITERIA_dop_sigma")
-                                     * np.std(matched_filter_output["best_doppler"]))))
-        best_doppler_minus_std = (matched_filter_output["best_doppler"]
-                                  < np.mean(matched_filter_output["best_doppler"])
-                                  - config.getfloat("General",
-                                                    "FIND_CRITERIA_dop_sigma")
-                                  * np.std(matched_filter_output["best_doppler"]))
+        upper_limit = (np.mean(matched_filter_output["best_doppler"])
+                       + (config.getfloat("General", "FIND_CRITERIA_dop_sigma")
+                          * np.std(matched_filter_output["best_doppler"])))
+        lower_limit = (np.mean(matched_filter_output["best_doppler"])
+                       - (config.getfloat("General", "FIND_CRITERIA_dop_sigma")
+                          * np.std(matched_filter_output["best_doppler"])))
+        best_doppler_above_limit = matched_filter_output["best_doppler"] > upper_limit
+        best_doppler_below_limit = matched_filter_output["best_doppler"] < lower_limit
         self.criteria = (np.array(doppler_std)
                          if self.doppler_coherrence
-                         else np.logical_or(best_doppler_plus_std, best_doppler_minus_std))
+                         else np.logical_or(best_doppler_above_limit, best_doppler_below_limit))
         return self.criteria
 
 
 class IndPm(SearchObject):
     required = False
-    trailable = False
+    required_trails = False
 
     def search(self, matched_filter_output, raw_data, config):
         self.doppler_coherrence = (matched_filter_output["doppler_coherrence"]
@@ -91,21 +90,21 @@ class IndPm(SearchObject):
         start_std = (matched_filter_output["start_std"]
                      < config.getfloat("General", "FIND_CRITERIA_start_STD_sigma")
                      * np.std(matched_filter_output["best_start"]))
-        best_start_plus = (matched_filter_output["best_start"]
-                           > np.mean(matched_filter_output["best_start"])
-                           + config.getfloat("General", "FIND_CRITERIA_ind_pm"))
-        best_start_minus = (matched_filter_output["best_start"]
-                            < np.mean(matched_filter_output["best_start"])
-                            - config.getfloat("General", "FIND_CRITERIA_ind_pm"))
+        upper_limit = (np.mean(matched_filter_output["best_start"])
+                       + config.getfloat("General", "FIND_CRITERIA_ind_pm"))
+        lower_limit = (np.mean(matched_filter_output["best_start"])
+                       - config.getfloat("General", "FIND_CRITERIA_ind_pm"))
+        best_start_above_limit = matched_filter_output["best_start"] > upper_limit
+        best_start_below_limit = matched_filter_output["best_start"] < lower_limit
         self.criteria = (np.array(start_std)
                          if self.doppler_coherrence
-                         else np.logical_or(best_start_plus, best_start_minus))
+                         else np.logical_or(best_start_above_limit, best_start_below_limit))
         return self.criteria
 
 
 class MinDopAllowed(SearchObject):
     required = True
-    trailable = True
+    required_trails = True
 
     def search(self, matched_filter_output, raw_data, config):
         self.criteria = np.array(((np.abs(matched_filter_output["best_doppler"]))
@@ -115,7 +114,7 @@ class MinDopAllowed(SearchObject):
 
 class MinStartAllowed(SearchObject):
     required = True
-    trailable = False
+    required_trails = False
 
     def search(self, matched_filter_output, raw_data, config):
         self.criteria = np.logical_and((matched_filter_output["best_start"]

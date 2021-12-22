@@ -10,7 +10,7 @@ from unittest.mock import patch, mock_open, MagicMock, Mock
 def test_search_object():
     class TestSearch(search_objects.SearchObject):
         required = False
-        trailable = False
+        required_trails = False
 
         def search(self, matched_filter_output, raw_data, config):
             return self.arguments["test"]
@@ -87,7 +87,7 @@ def test_partial_data_input():
 
     class TestSearch(search_objects.SearchObject):
         required = False
-        trailable = True
+        required_trails = True
 
         def search(self, matched_filter_output, raw_data, config):
             if (matched_filter_output["max_pow_per_delay"].shape == (56, 30)
@@ -108,7 +108,7 @@ def test_event_search_functionality():
 
     class TestSearch(search_objects.SearchObject):
         required = False
-        trailable = False
+        required_trails = False
 
         def search(self, matched_filter_output, raw_data, config):
             return np.zeros(self.arguments["length"], dtype=bool)
