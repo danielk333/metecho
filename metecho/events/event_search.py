@@ -5,7 +5,7 @@ from datetime import datetime
 from . import conf, event_select, search_objects, event
 from metecho.generalized_matched_filter import xcorr, signal_model
 from metecho.noise import calc_noise
-from matplotlib import colors
+from matplotlib.patches import Polygon
 import logging
 import matplotlib.pyplot as plt
 
@@ -137,16 +137,21 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
     find_indices = []
     find_indices_req = []
     find_indices_trail = []
+    total_reqs_met = []
     # Checks if we got any search functions, otherwise defaults
     if search_function_objects is None:
         search_function_objects = search_objects.get_defaults()
     # Iterates over all search functions and applies them to each respective array
     # depending on their attributes. The Required attribute means that *all* search
-    # functions must be true on those locations to count. Trailable means that only
+    # functions must be true on those locations to count. "Required_trails" means that only
     # these are required to check for meteor trails. For all others, there must be
     # a total of CRITERIA_N matches for it to count as a found event.
     for searcher in search_function_objects:
         curr = searcher.search(matched_filter_output, raw_data, config)
+        if total_reqs_met != []:
+            total_reqs_met = total_reqs_met + curr * 1
+        else:
+            total_reqs_met = curr * 1
         if searcher.required:
             if find_indices_req != []:
                 find_indices_req = np.logical_and(curr, find_indices_req)
@@ -276,7 +281,7 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
 
             events.append(ev)
 
-    PULSE_V = np.arange(0, raw_data.data.shape[raw_data.axis['pulse']], 10)
+    PULSE_V = np.arange(raw_data.data.shape[raw_data.axis['pulse']])
     not_ok = '-b'
     ok = '-m'
 
@@ -298,20 +303,75 @@ Non-transient coherent detection ({matched_filter_output["doppler_coherrence"]},
                  fontdict=custom_fontdict,
                  wrap=True,
                  )
-    best_peak_filt = np.zeros(len(matched_filter_output["best_peak"]), dtype=bool)
-    best_peak_filt[found_indices] = True
-    best_peak_ok = np.ma.masked_where(best_peak_filt, matched_filter_output["best_peak"])
 
-    for point in matched_filter_output["best_peak"]:
-        color = not_ok
-        if point in best_peak_ok:
-            color = ok
-        axs[0, 0].plot(point, color)
-        print(point)
-    # fig.tight_layout()
+    plot_highlight_match(axs[0, 0], found_indices,
+                         matched_filter_output["best_peak"], "IPP [1]", "Xcorr Match")
+
+
+
+    summed = raw_data.data
+    remove_axis = copy.deepcopy(raw_data.DATA_AXIS)
+    remove_axis.remove('sample')
+    remove_axis.remove('pulse')
+    for axis in remove_axis:
+        if raw_data.axis[axis] is not None:
+            summed = np.sum(summed, axis=raw_data.axis[axis])
+
+    powsum = np.abs(summed)**2
+
+    pmesh = long_plot_ax.pcolormesh(powsum)
+    long_plot_ax.set_xlabel('IPP [1]')
+    long_plot_ax.set_ylabel('Sample [1]')
+
+    cbar = plt.colorbar(pmesh)
+    cbar.set_label('Power [1]')
+
+    plot_highlight_match(axs[1, 0], found_indices, matched_filter_output["tot_pow"], "IPP [1]", "Total Power")
+    plot_highlight_match(axs[1, 1], found_indices, matched_filter_output["start_std"],
+                         "IPP [1]", "Range moving STD")
+    plot_highlight_match(axs[1, 2], found_indices, matched_filter_output["doppler_std"],
+                         "IPP [1]", "Doppler shift moving STD")
+
+    criteria_mat = find_indices if find_indices_req == [] else find_indices + 1 * find_indices_req
+    axs[2, 0].plot(PULSE_V, criteria_mat)
+    axs[2, 0].set_xlabel("IPP [1]")
+    axs[2, 0].set_ylabel("Event Criteria met")
+
+    plot_highlight_match(axs[2, 1], found_indices,
+                         matched_filter_output["best_start"], "IPP [1]", "Range start")
+    plot_highlight_match(axs[2, 2, ], found_indices,
+                         matched_filter_output["best_doppler"], "IPP [1]", "Doppler shift match")
+
+    colors = plt.cm.rainbow(np.linspace(0, 1, len(start_IPP)))
+
+    for rows in axs:
+        for ax in rows:
+            for start, stop, color in zip(start_IPP, end_IPP, colors):
+                ax.axvspan(start, stop, facecolor=color, alpha=0.4)
+
+    for start, stop, color in zip(start_IPP, end_IPP, colors):
+        long_plot_ax.axvspan(start, stop, facecolor=color, alpha=0.4)
+
     plt.show()
 
     return events, non_head, best_data, gauss_noise
+
+
+def plot_highlight_match(ax, matches, data, xlabel, ylabel, ok_col="magenta", not_ok_col="blue"):
+    data_filt = np.zeros(len(data), dtype=bool)
+    data_xaxis = np.arange(len(data))
+    data_filt[matches] = True
+
+    color_filter = []
+    for ind in data_filt:
+        if ind:
+            color_filter.append(ok_col)
+        else:
+            color_filter.append(not_ok_col)
+    ax.plot(data_xaxis, data)
+    ax.scatter(data_xaxis, data, marker=".", c=color_filter)
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel(xlabel)
 
 
 def remove_indices(ignore_indices, mets_found, start_IPP, end_IPP, config):
