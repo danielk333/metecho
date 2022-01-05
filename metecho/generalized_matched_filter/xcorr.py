@@ -2,6 +2,7 @@ import ctypes
 import logging
 import numpy as np
 import numpy.ctypeslib as npct
+from .. import tools
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,7 @@ libecho.xcorr_echo_search.argtypes = [
 ]
 
 
+@tools.profiling.timeing(f'{__name__}')
 def xcorr_echo_search(
     raw_data,
     doppler_freq_min,

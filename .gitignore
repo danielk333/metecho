@@ -106,3 +106,4 @@ cache_error*
 *.mp4
 *~
 .*.sw[op]
+output/

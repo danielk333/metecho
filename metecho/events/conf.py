@@ -61,6 +61,10 @@ DEFAULT_CONFIG = {
 
         # Noise limit
         'xcorr_noise_limit': '0.5',
+
+        # Plot coloring
+        'match_found': 'magenta',
+        'match_not_found': 'blue',
     }
 }
 
