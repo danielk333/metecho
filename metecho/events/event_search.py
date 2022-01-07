@@ -302,7 +302,7 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
             'fontweight': 'bold',
         }
         # Create title
-        event_save = f'Event saved: {mets_found}' if mets_found > 0 else f'Even discarded: {mets_found}'
+        event_save = f'Event saved: {mets_found}' if mets_found > 0 else f'Events discarded'
         fig.suptitle(f'{raw_data.path.name}, Matches={len(found_indices)}, \
 Non-transient coherent detection ({matched_filter_output["doppler_coherrence"]}, \
 {matched_filter_output["start_coherrence"]}), \
@@ -368,6 +368,8 @@ def plot_highlight_match(ax, matches, data, xlabel, ylabel, config):
     """
     Takes a set a of data and plots it on a graph, then marks all the points with matches.
     """
+    if data.shape != (512,):
+        data = np.resize(data, (512,))
     data_filt = np.zeros(len(data), dtype=bool)
     data_xaxis = np.arange(len(data))
     data_filt[matches] = True

@@ -5,5 +5,17 @@
 - Run *pip install .*
 
 ## Usage
-- Go to the metecho folder
-- From there, run *python main.py* followed by any number of files or folder (eg. python main.py ./folder1 ../file2) 
+main.py [-h] [-v] [-co CONVERTED_OUTPUT] [-o OUTPUT] files [files ...]
+
+positional arguments:
+
+    files                 Input the locations of the files (or a folder) you want analyzed.
+
+optional arguments:
+
+    -h, --help            show this help message and exit
+    -v, --verbose         Increase output verbosity
+    -co CONVERTED_OUTPUT, --converted_output CONVERTED_OUTPUT
+                        The location where you want to save converted files and look for cached files
+    -o OUTPUT, --output OUTPUT
+                        The location where you want to save analyzed data
