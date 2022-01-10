@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 import math
+from pathlib import Path
 from datetime import datetime
 from . import conf, event_select, search_objects, event
 from metecho.generalized_matched_filter import xcorr, signal_model
@@ -30,7 +31,16 @@ def mergeDict(dict1, dict2, axis=None):
 
 
 @tools.profiling.timeing(f'{__name__}')
-def search(raw_data, config, matched_filter_output, signal, filters=None, search_function_objects=None, plot=True):
+def search(raw_data,
+           config,
+           matched_filter_output,
+           signal,
+           filters=None,
+           search_function_objects=None,
+           plot=True,
+           save_as_image=False,
+           save_location=""
+           ):
     """
     Searches for potential events from the filtered data and establishes if they can be analyzed further.
     Plots them as well by default.
@@ -284,7 +294,8 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
             events.append(ev)
 
     # Plots the data in a way which makes it easier to see what's happening.
-    if plot:
+    if plot or save_as_image:
+
         # Create x-axis for plots
         PULSE_V = np.arange(raw_data.data.shape[raw_data.axis['pulse']])
         # Create a 3x3 grid that's 16 times 9 inches big
@@ -298,11 +309,11 @@ def search(raw_data, config, matched_filter_output, signal, filters=None, search
         long_plot_ax = fig.add_subplot(long_plot[0, 1:])
 
         custom_fontdict = {
-            'fontsize': 18,
-            'fontweight': 'bold',
+            'size': 18,
+            'weight': 'bold',
         }
         # Create title
-        event_save = f'Event saved: {mets_found}' if mets_found > 0 else f'Events discarded'
+        event_save = f'Events saved: {mets_found}' if mets_found > 0 else f'No events found'
         fig.suptitle(f'{raw_data.path.name}, Matches={len(found_indices)}, \
 Non-transient coherent detection ({matched_filter_output["doppler_coherrence"]}, \
 {matched_filter_output["start_coherrence"]}), \
@@ -359,7 +370,15 @@ Non-transient coherent detection ({matched_filter_output["doppler_coherrence"]},
             long_plot_ax.axvspan(start, stop, facecolor=color, alpha=0.4)
 
         plt.tight_layout()
-        plt.show()
+        if plot:
+            plt.show()
+        if save_as_image and save_location != "":
+            if "." in str(save_location):
+                save_location = save_location.parent
+            if not save_location.is_dir():
+                save_location.mkdir(parents=True)
+            save_location = save_location / (raw_data.path.name + ".png")
+            plt.savefig(save_location)
 
     return events, non_head, best_data, gauss_noise
 

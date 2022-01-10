@@ -27,9 +27,15 @@ parser.add_argument("-o", "--output",
                     nargs=1,
                     default=[Path(os.path.realpath(__file__)).parent / "output/save.p"],
                     help="The location (including file name) where you want to save analyzed data")
-parser.add_argument('-p', "--plot", action="store_true",
+parser.add_argument("-p", "--plot", action="store_true",
                     help="Shows plots of the files as it runs. Warning: \
                     Currently it will pause upon each render which must be closed for it to continue.")
+parser.add_argument("-s", "--save",
+                    action="store_true",
+                    help="Saves image to the output folder if set.")
+parser.add_argument("-b", "--best_data",
+                    action="store_true",
+                    help="Stores best data in pickle if set.")
 
 
 args = parser.parse_args()
@@ -44,7 +50,7 @@ if args.verbose > 1:
     logger.setLevel(logging.DEBUG)
 
 
-@metecho.tools.profiling.timeing(f'{__name__}')
+@metecho.tools.profiling.timeing(f'{__name__}', enabled=True)
 def convert_files(save_dir, curr):
     save_dir.mkdir(exist_ok=True)
     metecho_log.debug(f'Setting output path and creating directories at location {save_dir}')
@@ -58,18 +64,21 @@ def convert_files(save_dir, curr):
     return [file for converted in h5_files for file in converted]
 
 
-@metecho.tools.profiling.timeing(f'{__name__}')
+@metecho.tools.profiling.timeing(f'{__name__}', enabled=True)
 def find_events(file, plot):
     raw = metecho.data.RawDataInterface(file)
     config = metecho.events.generate_event_search_config()
     signal = metecho.generalized_matched_filter.signal_model.barker_code_13(
         raw.data.shape[raw.axis['pulse']], 2)
     events, nonhead, best_data, noise = metecho.events.search(
-        raw, config, None, signal, plot=plot)
-    return [events, nonhead, best_data, noise]
+        raw, config, None, signal, plot=plot, save_as_image=args.save, save_location=args.output[0])
+    if args.best_data:
+        return [events, nonhead, best_data, noise]
+    else:
+        return [events, nonhead, None, noise]
 
 
-@metecho.tools.profiling.timeing(f'{__name__}')
+@metecho.tools.profiling.timeing(f'{__name__}', enabled=True)
 def metecho_main(file_name, results, save_dir, plot, indents=0):
     curr = Path(file_name)
     if curr.is_file():
@@ -118,6 +127,13 @@ output_dir = Path(args.converted_output[0]).resolve()
 for file in args.files:
     metecho_main(file, results, output_dir, args.plot)
 save_dir = Path(args.output[0]).resolve()
+if not save_dir.exists():
+    if "." not in str(save_dir):
+        create_dir = save_dir
+    else:
+        create_dir = save_dir.parent
+    if not create_dir.is_dir():
+        create_dir.mkdir(parents=True)
 if save_dir.is_dir():
     save_dir = save_dir / "save.p"
     metecho_log.warning(
