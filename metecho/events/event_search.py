@@ -39,6 +39,7 @@ def search(raw_data,
            search_function_objects=None,
            plot=True,
            save_as_image=False,
+           save_matched_filter_output=False,
            save_location=""
            ):
     """
@@ -245,25 +246,30 @@ def search(raw_data,
         for x in range(0, len(start_IPP_trail)):
             FND_INDS = [i for i in found_indices_trail.flatten()
                         if i > start_IPP_trail[x] and i < end_IPP_trail[x]]
+            
+            ev_date = raw_data.meta.get('date', None)
+            raw_date = ev_date
 
-            ev = event.Event(raw_data.data)
+            if 'T_ipp' in raw_data.meta and ev_date is not None:
+                offset_ns = int(1e9*start_IPP[x]*raw_data.meta['T_ipp'])
+                ev_date += np.timedelta64(offset_ns, 'ns')
 
-            ev.start_IPP = start_IPP_trail[x]
-            ev.end_IPP = end_IPP_trail[x]
-            ev.found_indices = FND_INDS
-
+            ev = event.Event(
+                start_IPP_trail[x], 
+                end_IPP_trail[x], 
+                [raw_data.path], 
+                ev_date, 
+                files_start_date = [raw_date],
+                found_indices = FND_INDS,
+                event_search_executed = datetime.now(),
+                event_search_config = config,
+                type = 'meteor:trail',
+                noise = matched_filter_output["gauss_noise"],
+            )
             if "date" in raw_data.meta:
-                ev.date = raw_data.meta["date"]
-
-            ev.event_search_executed = datetime.now()
-            ev.event_search_config = config
-
-            if raw_data is not None:
-                ev.files.append(raw_data.path)
-
-            ev.type = 'meteor:trail'
-
-            ev.noise = matched_filter_output["gauss_noise"]
+                ev.files_start_date = [raw_data.meta["date"]]
+            if save_matched_filter_output:
+                ev.search_data = matched_filter_output
 
             non_head.append(ev)
 
@@ -272,24 +278,27 @@ def search(raw_data,
         for x in range(0, mets_found):
             FND_INDS = [i for i in found_indices.flatten() if i > start_IPP[x] and i < end_IPP[x]]
 
-            ev = event.Event(raw_data.data)
+            ev_date = raw_data.meta.get('date', None)
+            raw_date = ev_date
 
-            ev.start_IPP = start_IPP[x]
-            ev.end_IPP = end_IPP[x]
-            ev.found_indices = FND_INDS
+            if 'T_ipp' in raw_data.meta and ev_date is not None:
+                offset_ns = int(1e9*start_IPP[x]*raw_data.meta['T_ipp'])
+                ev_date += np.timedelta64(offset_ns, 'ns')
 
-            if "date" in raw_data.meta:
-                ev.date = raw_data.meta["date"]
-
-            ev.event_search_executed = datetime.now()
-            ev.event_search_config = config
-
-            if raw_data is not None:
-                ev.files.append(raw_data.path)
-
-            ev.type = 'meteor:head'
-
-            ev.noise = matched_filter_output["gauss_noise"]
+            ev = event.Event(
+                start_IPP[x], 
+                end_IPP[x], 
+                [raw_data.path], 
+                ev_date, 
+                files_start_date = [raw_date],
+                found_indices = FND_INDS,
+                event_search_executed = datetime.now(),
+                event_search_config = config,
+                type = 'meteor:head',
+                noise = matched_filter_output["gauss_noise"],
+            )
+            if save_matched_filter_output:
+                ev.search_data = matched_filter_output
 
             events.append(ev)
 
