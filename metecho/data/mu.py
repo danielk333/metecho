@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 from .. import tools
 from . import raw_data
+from . import converters
 
 logger = logging.getLogger(__name__)
 
@@ -352,11 +353,12 @@ def _fix_date_edge_case(start_time, end_time):
     return end_time
 
 
+@converters.converter('MUI', 'mu_h5')
 @tools.MPI_target_arg(0)
 @tools.profiling.timeing(f'{__name__}')
-def convert_MUI_to_h5(file, experiment_name="mw26x6", output_location=None, skip_existing=False):
+def convert_MUI_to_h5(file, output_location, experiment_name="mw26x6", skip_existing=False):
     """
-    Converts a MU data file into a HDF5 file
+    Converts a MU data file into a HDF5 file, wrapped to support lists of files parallelized with MPI.
     """
     file_outputs_created = []
 
@@ -463,13 +465,13 @@ def convert_MUI_to_h5(file, experiment_name="mw26x6", output_location=None, skip
             for key, val in header_data.items():
                 logger.debug(f'Setting file attribute {key} to {val}')
                 if type(val) == np.datetime64:
-                    h5file.attrs[key] = str(val)
+                    h5file.attrs[key] = str(np.datetime_as_string(val))
                 else:
                     h5file.attrs[key] = val
             h5file.attrs["filename"] = pathlib.Path(file.name).name
             h5file.attrs["date"] = start_time
 
-            logger.debug(f'Creating datasets beams and data, and saving them to file')
+            logger.debug('Creating datasets beams and data, and saving them to file')
             h5file.create_dataset("beams", data=mu_beam_channel_height)
             h5file.create_dataset("data", data=mu_data)
             h5file.close()
@@ -478,16 +480,22 @@ def convert_MUI_to_h5(file, experiment_name="mw26x6", output_location=None, skip
         byte = file.read(1)
         file.seek(-1, 1)
 
-    logger.debug(f'Reached EOF, exiting loop and closing file')
+    logger.debug('Reached EOF, exiting loop and closing file')
     file.close()
     return file_outputs_created
 
 
-# TODO: This is ugly as shit, please refactor
 @raw_data.backend_validator('mu_h5')
 @tools.profiling.timeing(f'{__name__}')
 def check_if_MU_h5_data(path):
     check = len(path.name) == 32 and path.name[10] == 'T' and path.suffix == '.h5'
+    return check
+
+
+@converters.converter_validator('MUI')
+@tools.profiling.timeing(f'{__name__}')
+def check_if_MUI_data(path):
+    check = len(path.name) == 17 and path.name.startswith('MUI')
     return check
 
 
@@ -507,8 +515,20 @@ def load_MU_h5_data(path):
         logger.exception(f'File {path} was not a h5 file.')
         raise
 
-    # TODO: add MOAR meta
     meta = {}
     meta['filename'] = h5file.attrs["filename"]
+    meta['frequency'] = h5file.attrs["tx_frequency"]
+    meta['date'] = np.datetime64(h5file.attrs["date"], 'ns')
+    meta['T_samp'] = 6e-6
+    meta['T_ipp'] = 3.12e-3
+    meta['T_measure'] = 5.1e-4
+    meta['T_measure_start'] = 486e-6
+    meta['code'] = np.kron(
+        np.array(
+            [1, 1, 1, 1, 1, -1, -1, 1, 1, -1, 1, -1, 1],
+            dtype=np.float64,
+        ), 
+        np.ones(2),
+    )
 
     return h5file['data'][()], {'channel': 0, 'sample': 1, 'pulse': 2}, meta

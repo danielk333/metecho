@@ -23,18 +23,35 @@ for name in logging.root.manager.loggerDict:
         print(f'logger: {name}')
 
 logger = logging.getLogger('metecho')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 logger.addHandler(handler)
 
 metecho.profiler.enable('metecho')
 
+# We can also use the converter as all converters should be registered for use
+print('Avalible converters:')
+print(metecho.data.list_converters())
+
+print('\n\nConverting directly with converter...\n\n')
 files = metecho.data.mu.convert_MUI_to_h5(
     [in_path], 
-    output_location = str(out_path),
+    out_path,
     skip_existing = False,
 )
 
-for file in files:
-    logger.info(f'"{file}" created')
+for file in files[0]:
+    print(f'"{pathlib.Path(file).name}" created')
+
+print('\n\nConverting using the converter library...\n\n')
+
+files = metecho.data.convert(
+    [in_path], 
+    out_path,
+    backend = 'mu_h5',
+    skip_existing = False,
+)
+
+for file in files[0]:
+    print(f'"{pathlib.Path(file).name}" created')
 
 print(metecho.profiler)
