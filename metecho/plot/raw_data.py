@@ -18,6 +18,7 @@ def rti(ax,
         title='',
         index_axis=1,
         log=False,
+        colorbar=True,
         ):
     """
     Simple function to plot the range-time intensity information of complex raw voltage data.
@@ -58,9 +59,10 @@ def rti(ax,
         title = f'{raw_data.path.name} - {raw_data.meta.get("start_time", "")}'
 
     ax.set_title(title, fontsize=title_font_size)
-    cbar = plt.colorbar(pmesh)
-    cbar.set_label('Power [1]', size=axis_font_size)
-    cbar.ax.tick_params(labelsize=tick_font_size)
+    if colorbar:
+        cbar = plt.colorbar(pmesh, ax=ax)
+        cbar.set_label('Power [1]', size=axis_font_size)
+        cbar.ax.tick_params(labelsize=tick_font_size)
 
     for ax_label in ['x', 'y']:
         ax.tick_params(axis=ax_label, labelsize=tick_font_size)
