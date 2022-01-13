@@ -356,14 +356,14 @@ def _fix_date_edge_case(start_time, end_time):
 @converters.converter('MUI', 'mu_h5')
 @tools.MPI_target_arg(0)
 @tools.profiling.timeing(f'{__name__}')
-def convert_MUI_to_h5(file, output_location, experiment_name="mw26x6", skip_existing=False):
+def convert_MUI_to_h5(path, output_location, experiment_name="mw26x6", skip_existing=False):
     """
     Converts a MU data file into a HDF5 file, wrapped to support lists of files parallelized with MPI.
     """
     file_outputs_created = []
 
     try:
-        file = open(file, 'rb')
+        file = open(path, 'rb')
     except TypeError:
         logger.debug("File already open or wrong input type.")
 
@@ -468,8 +468,9 @@ def convert_MUI_to_h5(file, output_location, experiment_name="mw26x6", skip_exis
                     h5file.attrs[key] = str(np.datetime_as_string(val))
                 else:
                     h5file.attrs[key] = val
-            h5file.attrs["filename"] = pathlib.Path(file.name).name
-            h5file.attrs["date"] = start_time
+            h5file.attrs["filename"] = path.name
+            h5file.attrs["date"] = str(np.datetime_as_string(header_data["record_start_time"]))
+            h5file.attrs["path"] = str(path.resolve())
 
             logger.debug('Creating datasets beams and data, and saving them to file')
             h5file.create_dataset("beams", data=mu_beam_channel_height)
