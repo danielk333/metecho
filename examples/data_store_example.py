@@ -54,6 +54,7 @@ factory = data_store.factory(path_backend_filter=filt)
 for raw in factory:
     print(raw.path)
 
+metecho.profiler.stop('full')
 print(metecho.profiler)
 
 plt.show()

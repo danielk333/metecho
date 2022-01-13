@@ -4,6 +4,9 @@ import sys
 
 import metecho
 
+metecho.profiler.init('full', True)
+metecho.profiler.start('full')
+
 if len(sys.argv) < 3:
     raise RuntimeError('Need path to a MUI file and output to perform conversion')
 
@@ -54,4 +57,5 @@ files = metecho.data.convert(
 for file in files[0]:
     print(f'"{pathlib.Path(file).name}" created')
 
+metecho.profiler.stop('full')
 print(metecho.profiler)
