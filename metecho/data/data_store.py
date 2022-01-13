@@ -4,6 +4,7 @@ from itertools import islice
 import numpy as np
 
 from . import raw_data
+from . import converters
 from .. import tools
 
 
@@ -45,54 +46,57 @@ def directory_tree(
             limit_to_directories = False,
             length_limit = 1000,
             filter_function = None,
+            skip_empty_directories = True,
         ):
     '''Create a string that emulates the GNU `tree` tool in pure python. 
-
-    Adapted from: https://stackoverflow.com/a/59109706, CC BY-SA 4.0
     '''
 
-    space = '    '
-    branch = '│   '
-    tee = '├── '
-    last = '└── '
+    space = '   '
+    branch = '│  '
+    tee = '├─ '
+    last = '└─ '
 
     files = 0
     directories = 0
 
-    out_string = ''
+    if not path.is_dir():
+        raise ValueError(f'Given input path "{path}" is not a directory')
 
-    def inner(dir_path, prefix='', level=-1):
-        nonlocal files, directories
+    def recursive_walk(pth, lv, size):
+        f, d = 0, 0
+        if lv == level:
+            return [], 0, 0
+        ls = list(pth.glob('*'))
+        st = []
+        for ind, item in enumerate(ls):
+            sym, cont = (last, space) if ind == len(ls) - 1 else (tee, branch)
+            if len(st) + size >= length_limit:
+                break
+            if item.is_dir():
+                d += 1
+                below, bf, bd = recursive_walk(item, lv + 1, len(st) + size + 1)
+                f += bf
+                d += bd
+                if skip_empty_directories and bf == 0:
+                    continue
+                st += [sym + item.name]
+                for x in below:
+                    st += [cont + x]
+            else:
+                if filter_function is not None:
+                    if not filter_function(item):
+                        continue
+                f += 1
+                if limit_to_directories:
+                    continue
+                st += [sym + item.name]
+        return st, f, d
 
-        if not level: 
-            return  # 0, stop iterating
+    out_string, files, directories = recursive_walk(path, 0, 0)
 
-        if limit_to_directories:
-            contents = [d for d in dir_path.iterdir() if d.is_dir()]
-        else: 
-            contents = [x for x in dir_path.iterdir()]
-
-        if filter_function is not None:
-            contents = [x for x in contents if x.is_dir() or filter_function(x)]
-
-        pointers = [tee]*(len(contents) - 1) + [last]
-        for pointer, path in zip(pointers, contents):
-            if path.is_dir():
-                yield prefix + pointer + path.name
-                directories += 1
-                extension = branch if pointer == tee else space 
-                yield from inner(path, prefix=prefix + extension, level=level - 1)
-            elif not limit_to_directories:
-                yield prefix + pointer + path.name
-                files += 1
-
-    out_string += path.name + '\n'
-    iterator = inner(path, level=level)
-
-    for line in islice(iterator, length_limit):
-        out_string += line + '\n'
-    if next(iterator, None):
-        out_string += f'... length limit, {length_limit}, reached, counted:' + '\n'
+    if len(out_string) >= length_limit:
+        out_string.append('Maximum listing length reached...')
+    out_string = path.name + '\n' + '\n'.join(out_string) + '\n'
 
     summary = f'{directories} directories' + (f', {files} files' if files else '')
     out_string += summary
@@ -102,16 +106,21 @@ def directory_tree(
 class DataStore:
 
     @tools.profiling.timeing(f'{__name__}.DataStore')
-    def __init__(self, path, backends=None):
+    def __init__(self, path, backends=None, include_convertable=False):
         self.path = pathlib.Path(path)
         self.backends = backends
+        self.include_convertable = include_convertable
+        self.reload()
 
-        file_list = list(self.path.glob('**/*'))
+    @tools.profiling.timeing(f'{__name__}.DataStore')
+    def reload(self):
+        file_list = list(x for x in self.path.glob('**/*') if x.is_file())
         backend_list = [None for x in range(len(file_list))]
+        converter_list = [None for x in range(len(file_list))]
 
         for backend, (_, validate) in raw_data.BACKENDS.items():
-            if backends is not None:
-                if backend not in backends:
+            if self.backends is not None:
+                if backend not in self.backends:
                     continue
             for fid, file in enumerate(file_list):
                 if backend_list[fid] is not None:
@@ -119,8 +128,25 @@ class DataStore:
                 if validate(file):
                     backend_list[fid] = backend
 
+        if self.include_convertable:
+            for fid, file in enumerate(file_list):
+                # Only check files that do not have a backend
+                if backend_list[fid] is not None:
+                    continue
+
+                for fmt, to_backend in converters.CONVERTERS.items():
+                    if 'validator' not in to_backend:
+                        continue
+                    validator = to_backend['validator']
+                    if validator(file):
+                        converter_list[fid] = fmt
+
         self.__base_file_list = file_list
         self.__base_supported_filter = np.array([
+            True if x is not None else False 
+            for x in converter_list
+        ])
+        self.__base_convertable_filter = np.array([
             True if x is not None else False 
             for x in backend_list
         ])
@@ -135,6 +161,16 @@ class DataStore:
             for x in backend_list
             if x is not None
         ]
+        self._convertable_file_list = [
+            x 
+            for ix, x in enumerate(file_list) 
+            if converter_list[ix] is not None
+        ]
+        self._convertable_format_list = [
+            x 
+            for x in converter_list
+            if x is not None
+        ]
 
     def __str__(self):
         return f'<DataStore: {len(self._file_list)} files>'
@@ -144,6 +180,8 @@ class DataStore:
         if clean:
             def filter_function(path):
                 return path in self._file_list
+        else:
+            filter_function = None
 
         out_string = directory_tree(
             self.path,
@@ -151,9 +189,23 @@ class DataStore:
             **kwargs
         )
         l0 = out_string.rfind('\n')
-        base = out_string[l0+1:]
-        out_string = out_string[:l0+1]
-        return f'<DataStore [{base}]\n{out_string}\n>'
+        out_string = f'Raw data: [{out_string[l0+1:]}]\n{out_string[:l0+1]}'
+
+        if clean and self.include_convertable:
+            def filter_function_convert(path):
+                return path in self._convertable_file_list
+
+            out_string_convert = directory_tree(
+                self.path,
+                filter_function = filter_function_convert,
+                **kwargs
+            )
+            l0 = out_string_convert.rfind('\n')
+            out_string_convert = f'\nConvertable: [{out_string_convert[l0+1:]}]\n{out_string_convert[:l0+1]}'
+        else:
+            out_string_convert = ''
+
+        return f'<DataStore {out_string}{out_string_convert}\n>'
 
     @tools.profiling.timeing(f'{__name__}.DataStore')
     def sort(self, key_function):
@@ -163,7 +215,31 @@ class DataStore:
     @tools.profiling.timeing(f'{__name__}.DataStore')
     def reorder(self, order):
         self._file_list = [self._file_list[ind] for ind in order]
-        self._file_list = [self._backend_list[ind] for ind in order]
+        self._backend_list = [self._backend_list[ind] for ind in order]
+
+    def convert(self, output_location, backend, selection=None, path_format_filter=None, **kwargs):
+        if selection is None:
+            selected_files = self._convertable_file_list
+            selected_formats = self._convertable_format_list
+        else:
+            selected_files = [self._convertable_file_list[ind] for ind in selection]
+            selected_formats = [self._convertable_format_list[ind] for ind in selection]
+
+        if path_format_filter is not None:
+            selected_tupes = [
+                (pth, fmt)
+                for pth, fmt in zip(selected_files, selected_formats)
+                if path_format_filter(pth, fmt)
+            ]
+            selected_files, selected_formats = zip(*selected_tupes)
+
+        ret = converters.convert(
+            selected_files,
+            output_location,
+            backend = backend,
+            **kwargs
+        )
+        return ret
 
     @tools.profiling.timeing(f'{__name__}.DataStore')
     def factory(self, selection=None, path_backend_filter=None, **kwargs):

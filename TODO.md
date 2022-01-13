@@ -8,3 +8,4 @@
 - Fix better signal removal (limit to code length?)
 - Convert gaussian noise std to xcorr limit
 - Better debug logging
+- caching of data store to not have to reload file list each time one wants to access the data
