@@ -63,10 +63,11 @@ def converter_validator(name):
 
 @tools.profiling.timeing(f'{__name__}')
 def convert(input_files, output_location, backend, input_format=None, **kwargs):
-    '''Convert given list of input files or input file to a supported backend format.
+    '''Convert given list of input files or input file to a supported 
+    backend format and returns the created data files.
     '''
 
-    ret = None
+    files_created = None
     if input_format is None:
         format_found = False
 
@@ -88,7 +89,7 @@ def convert(input_files, output_location, backend, input_format=None, **kwargs):
 
                 func = backends[backend]
 
-                ret = func(sub_files, output_location, **kwargs)
+                files_created = func(sub_files, output_location, **kwargs)
                 format_found = True
                 break
             else:
@@ -102,6 +103,6 @@ def convert(input_files, output_location, backend, input_format=None, **kwargs):
 
         logger.info(f'Converting {len(input_files)} from {input_format} to {backend}...')
         func = CONVERTERS[input_format][backend]
-        ret = func(input_files, output_location, **kwargs)
+        files_created = func(input_files, output_location, **kwargs)
 
-    return ret
+    return files_created
