@@ -9,6 +9,23 @@ from .. import tools
 
 
 class RawDataInterfaceFactory:
+    '''A class for iterating trough a list of `RawDataInterface`s that 
+    instantiates and load them in sequence, used to substantially 
+    reduce memory footprint.
+
+    Args:
+        paths (list(:obj:`pathlib.Path`)): List of raw data file paths
+        backends (list(:obj:`str`), optional): List of backends for each given file, 
+            if not given a valid backend is found all registered backends.
+        backend (:obj:`str`, optional): Backend used for all files, ignored if `backends` is given.
+        **kwargs: All additional keyword arguments are passed on to the `RawDataInterface` instantiation.
+
+    Attributes:
+        paths (list(:obj:`pathlib.Path`)): List of raw data file paths
+        backends (list(:obj:`str`)): List of backends for each given file
+        loading_args (dict): Keyword arguemnts passed to the `RawDataInterface` instantiation.
+    '''
+
     @tools.profiling.timeing(f'{__name__}.RawDataInterfaceFactory')
     def __init__(self, paths, backends=None, **kwargs):
         self.paths = paths
@@ -26,6 +43,8 @@ class RawDataInterfaceFactory:
 
     @tools.profiling.timeing(f'{__name__}.RawDataInterfaceFactory')
     def get(self, index):
+        '''Get `RawDataInterface` for path with given index in the list of paths.
+        '''
         return raw_data.RawDataInterface(
             self.paths[index],
             backend=self.backends[index],
@@ -34,6 +53,8 @@ class RawDataInterfaceFactory:
 
     @tools.profiling.timeing(f'{__name__}.RawDataInterfaceFactory')
     def __iter__(self):
+        '''Iterate trough all paths and yield the `RawDataInterface`.
+        '''
         self.__current_index = 0
         for index in range(len(self.paths)):
             yield self.get(index)
