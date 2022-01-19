@@ -7,17 +7,17 @@ import pickle
 from .. import data
 from .. import tools
 from .. import events
-from .main import add_command
+from .commands import add_command
 
 logger = logging.getLogger(__name__)
 
 
 @tools.profiling.timeing(f'{__name__}')
-def raw_data_file_list(args, output_dir, radar, cli_logger):
-    if radar.lower() == 'mu':
+def raw_data_file_list(output_dir, cli_logger, args):
+    if args.radar.lower() == 'mu':
         backend = 'mu_h5'
     else:
-        raise ValueError(f'Radar "{radar}" not supported by find_events function')
+        raise ValueError(f'Radar "{args.radar}" not supported by find_events function')
 
     paths = []
     for path in args.files:
@@ -38,12 +38,12 @@ def raw_data_file_list(args, output_dir, radar, cli_logger):
 
 
 @tools.profiling.timeing(f'{__name__}')
-def find_events(file, plot, radar, args):
-    if radar.lower() == 'mu':
+def find_events(file, args):
+    if args.radar.lower() == 'mu':
         backend = 'mu_h5'
         config = events.generate_event_search_config()
     else:
-        raise ValueError(f'Radar "{radar}" not supported by find_events function')
+        raise ValueError(f'Radar "{args.radar}" not supported by find_events function')
 
     raw = data.RawDataInterface(file, backend=backend)
 
@@ -57,8 +57,8 @@ def find_events(file, plot, radar, args):
         config, 
         None, 
         signal, 
-        plot=plot, 
-        save_as_image=args.save, 
+        plot=args.plot, 
+        save_as_image=args.plot_save, 
         save_location=args.output,
     )
     if args.best_data:
@@ -70,17 +70,17 @@ def find_events(file, plot, radar, args):
 @tools.profiling.timeing(f'{__name__}')
 def main(args, cli_logger):
 
-    output_dir = Path(args.converted_output).resolve()
+    output_dir = Path(args.convert_output).resolve()
     if args.convert:
         logger.debug(f'Setting output path and converting files to "{output_dir}"')
         output_dir.mkdir(exist_ok=True)
 
-    paths = raw_data_file_list(args, output_dir, cli_logger)
+    paths = raw_data_file_list(output_dir, cli_logger, args)
 
     results = []
     for path in paths:
         logger.debug(f"Handling {path.resolve()}")
-        ret = find_events(path, args.plot)
+        ret = find_events(path, args)
         results.append(ret)
 
     save_results = Path(args.output).resolve()
@@ -96,33 +96,40 @@ def main(args, cli_logger):
     cli_logger.info(f'Saved results to pickle at {save_results}')
 
 
-parser = add_command(
+def parser_build(parser):
+    parser.add_argument('radar',
+                        default='MU', choices=['MU'],
+                        help='The radar that performed the observations')
+    parser.add_argument("files", nargs='+',
+                        help="Input the locations of the files (or folders) you want analyzed.")
+    parser.add_argument("-Co", "--convert-output",
+                        default=Path(os.path.realpath(__file__)).parent / "output",
+                        help="The location where you want to save converted files and look for cached files")
+    parser.add_argument("-o", "--output",
+                        default=Path(os.path.realpath(__file__)).parent / "output" / "events.pickle",
+                        help="The location (including file name) where you want to save analyzed data")
+    parser.add_argument("-p", "--plot", action="store_true",
+                        help="Shows plots of the files as it runs. Warning: \
+                        Currently it will pause upon each render which must be closed for it to continue.")
+    parser.add_argument("-ps", "--plot-save",
+                        action="store_true",
+                        help="Saves image to the output folder if set.")
+    parser.add_argument("-C", "--convert",
+                        action="store_true",
+                        help="Convert files if possible to supported backend formats")
+    parser.add_argument("-q", "--sequential",
+                        action="store_true",
+                        help="Make sure raw data files are analyzed sequentially and events \
+                        spanning multiple files are correctly identified.")
+    parser.add_argument("-b", "--best_data",
+                        action="store_true",
+                        help="Stores best data in pickle if set.")
+    return parser
+
+
+add_command(
     name='event_search',
     function=main,
+    parser_build=parser_build,
     command_help='Searches radar data to look for signs of meteor events.',
 )
-
-parser.add_argument("files", nargs='+',
-                    help="Input the locations of the files (or folders) you want analyzed.")
-parser.add_argument('radar',
-                    default='MU', choices=['MU'],
-                    help='The radar that performed the observations')
-parser.add_argument("-co", "--converted_output",
-                    default=Path(os.path.realpath(__file__)).parent / "output",
-                    help="The location where you want to save converted files and look for cached files")
-parser.add_argument("-o", "--output",
-                    default=Path(os.path.realpath(__file__)).parent / "output" / "events.pickle",
-                    help="The location (including file name) where you want to save analyzed data")
-parser.add_argument("-p", "--plot", action="store_true",
-                    help="Shows plots of the files as it runs. Warning: \
-                    Currently it will pause upon each render which must be closed for it to continue.")
-parser.add_argument("-s", "--save",
-                    action="store_true",
-                    help="Saves image to the output folder if set.")
-parser.add_argument("-q", "--sequential",
-                    action="store_true",
-                    help="Make sure raw data files are analyzed sequentially and events \
-                    spanning multiple files are correctly identified.")
-parser.add_argument("-b", "--best_data",
-                    action="store_true",
-                    help="Stores best data in pickle if set.")
