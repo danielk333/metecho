@@ -2,6 +2,16 @@ import argparse
 import sys
 import logging
 
+try:
+    from mpi4py import MPI
+    comm = MPI.COMM_WORLD
+except ImportError:
+    class COMM_WORLD:
+        rank = 0
+        size = 1
+
+    comm = COMM_WORLD()
+
 from ..tools import PROFILER as profiler
 
 logger = logging.getLogger(__name__)
@@ -17,7 +27,7 @@ def build_parser():
 
     subparsers = parser.add_subparsers(help='Avalible command line interfaces', dest='command')
     subparsers.required = True
-    
+
     for name, dat in COMMANDS.items():
         parser_builder, command_help = dat['parser']
         cmd_parser = subparsers.add_parser(name, help=command_help)
@@ -39,6 +49,11 @@ def main():
     args = parser.parse_args()
 
     handler = logging.StreamHandler(sys.stdout)
+    if comm.size > 1:
+        formatter = logging.Formatter(f'RANK{comm.rank} - %(asctime)s %(levelname)s %(name)s - %(message)s')
+    else:
+        formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s - %(message)s')
+    handler.setFormatter(formatter)
 
     lib_logger = logging.getLogger('metecho')
     if args.verbose > 0:
@@ -64,4 +79,4 @@ def main():
 
     if args.verbose > 0 and args.profiler:
         profiler.stop('full')
-        logger.info(profiler)
+        logger.info('\n' + str(profiler))

@@ -1,15 +1,28 @@
 from pathlib import Path
 import os
-import metecho
 import logging
 import pickle
 
 from .. import data
 from .. import tools
 from .. import events
+from .. import generalized_matched_filter
 from .commands import add_command
 
 logger = logging.getLogger(__name__)
+
+try:
+    from mpi4py import MPI
+    comm = MPI.COMM_WORLD
+except ImportError:
+    class COMM_WORLD:
+        rank = 0
+        size = 1
+    
+        def barrier(self):
+            pass
+
+    comm = COMM_WORLD()
 
 
 @tools.profiling.timeing(f'{__name__}')
@@ -23,22 +36,24 @@ def raw_data_file_list(output_dir, cli_logger, args):
     for path in args.files:
         path = Path(path).resolve()
         if path.is_dir():
-            data_store = metecho.data.DataStore(
+            data_store = data.DataStore(
                 path, 
                 include_convertable = args.convert,
             )
             paths += [file for file, backend in data_store.get_files()]
 
             if args.convert:
-                paths += data_store.convert(output_dir, backend)
+                paths += data_store.convert(output_dir, backend, MPI=comm.size > 1, MPI_root=-1)
         else:
             paths.append(path)
 
     return paths
 
 
+@tools.MPI_target_arg(0)
 @tools.profiling.timeing(f'{__name__}')
-def find_events(file, args):
+def find_events(file, args, cli_logger):
+    cli_logger.info(f"Handling {file}")
     if args.radar.lower() == 'mu':
         backend = 'mu_h5'
         config = events.generate_event_search_config()
@@ -47,7 +62,7 @@ def find_events(file, args):
 
     raw = data.RawDataInterface(file, backend=backend)
 
-    signal = metecho.generalized_matched_filter.signal_model.barker_code_13(
+    signal = generalized_matched_filter.signal_model.barker_code_13(
         raw.data.shape[raw.axis['pulse']],
         2,
     )
@@ -59,7 +74,7 @@ def find_events(file, args):
         signal, 
         plot=args.plot, 
         save_as_image=args.plot_save, 
-        save_location=args.output,
+        save_location=Path(args.plot_output).resolve(),
     )
     if args.best_data:
         return [event_list, nonhead, best_data, noise]
@@ -70,48 +85,55 @@ def find_events(file, args):
 @tools.profiling.timeing(f'{__name__}')
 def main(args, cli_logger):
 
+    default_folder = Path(os.getcwd()) / "output"
+
+    if args.convert_output is None:
+        args.convert_output = default_folder
+
+    if args.output is None:
+        args.output = default_folder / 'events.pickle'
+
     output_dir = Path(args.convert_output).resolve()
     if args.convert:
         logger.debug(f'Setting output path and converting files to "{output_dir}"')
-        output_dir.mkdir(exist_ok=True)
-
-    paths = raw_data_file_list(output_dir, cli_logger, args)
-
-    results = []
-    for path in paths:
-        logger.debug(f"Handling {path.resolve()}")
-        ret = find_events(path, args)
-        results.append(ret)
+        if comm.rank == 0:
+            output_dir.mkdir(exist_ok=True)
+        comm.barrier()
 
     save_results = Path(args.output).resolve()
     if save_results.is_dir():
         raise ValueError(f'Output results path "{save_results}" is a directory, not a file-path')
 
-    if not save_results.parent.exists():
-        save_results.parent.mkdir(parents=True)
+    cli_logger.info('Getting file list...')
+    paths = raw_data_file_list(output_dir, cli_logger, args)
 
-    with open(save_results, "wb") as fh:
-        pickle.dump(results, fh)
+    results = find_events(paths, args, cli_logger, MPI=comm.size > 1, MPI_root=0)
 
-    cli_logger.info(f'Saved results to pickle at {save_results}')
+    if comm.rank == 0:
+        if not save_results.parent.exists():
+            save_results.parent.mkdir(parents=True)
+
+        with open(save_results, "wb") as fh:
+            pickle.dump(results, fh)
+        cli_logger.info(f'Saved results to pickle at {save_results}')
+
+    comm.barrier()
 
 
 def parser_build(parser):
-    parser.add_argument('radar',
-                        default='MU', choices=['MU'],
-                        help='The radar that performed the observations')
-    parser.add_argument("files", nargs='+',
-                        help="Input the locations of the files (or folders) you want analyzed.")
     parser.add_argument("-Co", "--convert-output",
-                        default=Path(os.path.realpath(__file__)).parent / "output",
-                        help="The location where you want to save converted files and look for cached files")
+                        default=None,
+                        help="The location where you want to save converted files")
+    parser.add_argument("-Po", "--plot-output",
+                        default=None,
+                        help="The location where you want to save event search plots")
     parser.add_argument("-o", "--output",
-                        default=Path(os.path.realpath(__file__)).parent / "output" / "events.pickle",
-                        help="The location (including file name) where you want to save analyzed data")
-    parser.add_argument("-p", "--plot", action="store_true",
+                        default=None,
+                        help="The location (including file name) where you want to save event lists")
+    parser.add_argument("-P", "--plot", action="store_true",
                         help="Shows plots of the files as it runs. Warning: \
                         Currently it will pause upon each render which must be closed for it to continue.")
-    parser.add_argument("-ps", "--plot-save",
+    parser.add_argument("-Ps", "--plot-save",
                         action="store_true",
                         help="Saves image to the output folder if set.")
     parser.add_argument("-C", "--convert",
@@ -124,6 +146,10 @@ def parser_build(parser):
     parser.add_argument("-b", "--best_data",
                         action="store_true",
                         help="Stores best data in pickle if set.")
+    parser.add_argument('radar', choices=['MU'],
+                        help='The radar that performed the observations')
+    parser.add_argument("files", nargs='+',
+                        help="Input the locations of the files (or folders) you want analyzed.")
     return parser
 
 
