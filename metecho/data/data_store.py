@@ -1,5 +1,4 @@
 import pathlib
-from itertools import islice
 
 import numpy as np
 
@@ -197,6 +196,14 @@ class DataStore:
         return f'<DataStore: {len(self._file_list)} files>'
 
     @tools.profiling.timeing(f'{__name__}.DataStore')
+    def get_files(self):
+        return zip(self._file_list, self._backend_list)
+
+    @tools.profiling.timeing(f'{__name__}.DataStore')
+    def get_convertable(self):
+        return zip(self._convertable_file_list, self._convertable_format_list)
+
+    @tools.profiling.timeing(f'{__name__}.DataStore')
     def tree(self, clean=False, **kwargs):
         if clean:
             def filter_function(path):
@@ -238,6 +245,7 @@ class DataStore:
         self._file_list = [self._file_list[ind] for ind in order]
         self._backend_list = [self._backend_list[ind] for ind in order]
 
+    @tools.profiling.timeing(f'{__name__}.DataStore')
     def convert(self, output_location, backend, selection=None, path_format_filter=None, **kwargs):
         if selection is None:
             selected_files = self._convertable_file_list
