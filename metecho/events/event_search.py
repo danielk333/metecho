@@ -378,16 +378,16 @@ Non-transient coherent detection ({matched_filter_output["doppler_coherrence"]},
         for start, stop, color in zip(start_IPP, end_IPP, colors):
             long_plot_ax.axvspan(start, stop, facecolor=color, alpha=0.4)
 
-        plt.tight_layout()
-        if plot:
-            plt.show()
+        fig.tight_layout()
         if save_as_image and save_location != "":
             if "." in str(save_location):
                 save_location = save_location.parent
             if not save_location.is_dir():
                 save_location.mkdir(parents=True)
             save_location = save_location / (raw_data.path.name + ".png")
-            plt.savefig(save_location)
+            fig.savefig(save_location)
+        if plot:
+            plt.show()
 
     return events, non_head, best_data, gauss_noise
 
