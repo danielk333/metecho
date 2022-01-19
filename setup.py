@@ -26,15 +26,15 @@ def get_version(rel_path):
         raise RuntimeError("Unable to find version string.")
 
 
-xcorr = Extension(
-    name='metecho.generalized_matched_filter.xcorr',
-    sources=['metecho/generalized_matched_filter/xcorr.c'],
+libxcorr = Extension(
+    name='metecho.generalized_matched_filter.libxcorr',
+    sources=['src/libxcorr/libxcorr.c'],
 )
 
 
 setuptools.setup(
     name='metecho',
-    version=get_version("metecho/version.py"),
+    version=get_version("src/metecho/version.py"),
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/danielk333/metecho',
@@ -79,10 +79,10 @@ setuptools.setup(
     },
     packages=setuptools.find_packages(where="src"),
     package_data={"": [
-        "src/xcorr", 
+        "src/libxcorr/*", 
     ]},
     include_package_data=True,
-    ext_modules=[xcorr],
+    ext_modules=[libxcorr],
     # metadata to display on PyPI
     author='Daniel Kastinen, Kenneth Kullbrandt',
     author_email='daniel.kastinen@irf.se',

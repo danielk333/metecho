@@ -7,7 +7,7 @@
 #include <time.h>
 #include <assert.h>
 #include <float.h>
-#include "xcorr.h"
+#include "libxcorr.h"
 
 
 

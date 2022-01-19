@@ -2,8 +2,8 @@ CC=gcc
 CFLAGS=-fPIC -shared
 LIBS=-lm
 
-build: xcorr.c
-	gcc $(LIBS) -o xcorr.so xcorr.c $(CFLAGS)
+build: libxcorr.c
+	gcc $(LIBS) -o libxcorr.so libxcorr.c $(CFLAGS)
 
 .PHONY: clean
 

@@ -15,7 +15,7 @@ np_int_pointer = npct.ndpointer(np.int32, ndim=1, flags='aligned, contiguous, wr
 
 # We start by making a path to the current directory.
 script_dir = Path(__file__).resolve().parent  # os.path.dirname(os.path.realpath(__file__))
-libecho_location = list(Path(script_dir).glob('libecho.*.so'))
+libecho_location = list(Path(script_dir).glob('libxcorr.*.so'))
 # Then we open the created shared libecho file
 libecho = ctypes.CDLL(libecho_location[0])
 libecho.xcorr_echo_search.argtypes = [
