@@ -1,3 +1,7 @@
+'''
+Using the DataStore
+===================
+'''
 import pathlib
 import logging
 import sys
@@ -9,7 +13,10 @@ import matplotlib.pyplot as plt
 metecho.profiler.init('full', True)
 metecho.profiler.start('full')
 
-HERE = pathlib.Path(__file__).parent.resolve()
+try:
+    HERE = pathlib.Path(__file__).parent.resolve()
+except NameError:
+    HERE = pathlib.Path('.').parent.resolve()
 
 handler = logging.StreamHandler(sys.stdout)
 

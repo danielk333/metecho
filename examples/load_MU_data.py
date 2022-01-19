@@ -1,3 +1,7 @@
+'''
+Load MU radar data
+===================
+'''
 import pathlib
 import logging
 import sys
@@ -6,7 +10,10 @@ import matplotlib.pyplot as plt
 
 import metecho
 
-HERE = pathlib.Path(__file__).parent.resolve()
+try:
+    HERE = pathlib.Path(__file__).parent.resolve()
+except NameError:
+    HERE = pathlib.Path('.').parent.resolve()
 
 handler = logging.StreamHandler(sys.stdout)
 

@@ -1,7 +1,17 @@
+'''
+Listing directory contents
+===========================
+'''
+
 import pathlib
 import metecho
 
-data_path = pathlib.Path('/home/danielk/data/MU')
+try:
+    HERE = pathlib.Path(__file__).parent.resolve()
+except NameError:
+    HERE = pathlib.Path('.').parent.resolve()
+
+data_path = HERE / 'data'
 
 print(metecho.data.directory_tree(data_path))
 
