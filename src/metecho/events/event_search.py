@@ -251,7 +251,7 @@ def search(raw_data,
             raw_date = ev_date
 
             if 'T_ipp' in raw_data.meta and ev_date is not None:
-                offset_ns = int(1e9*start_IPP[x]*raw_data.meta['T_ipp'])
+                offset_ns = int(1e9*start_IPP_trail[x]*raw_data.meta['T_ipp'])
                 ev_date += np.timedelta64(offset_ns, 'ns')
 
             ev = event.Event(
@@ -332,7 +332,7 @@ Non-transient coherent detection ({matched_filter_output["doppler_coherrence"]},
                      )
 
         plot_highlight_match(axs[0, 0], found_indices,
-                             matched_filter_output["best_peak"], "IPP [1]", "Xcorr Match", config)
+                             np.abs(matched_filter_output["best_peak"]), "IPP [1]", "Xcorr Match", config)
 
         summed = raw_data.data
         remove_axis = copy.deepcopy(raw_data.DATA_AXIS)
