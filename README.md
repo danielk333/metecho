@@ -1,10 +1,17 @@
+# WORK IN PROGRESS REPOSITORY
+
+This repository is a porting/refactoring work in progress: do not use any of the source code until a official release has been drafted.
+
 # metecho
+
 ## Installation
+
 - Clone this repository 
 - Go to the directory where you cloned it
-- Run *pip install .*
+- Run `pip install .`
 
 ## Usage
+
 main.py [-h] [-v] [-co CONVERTED_OUTPUT] [-o OUTPUT] files [files ...]
 
 positional arguments:
