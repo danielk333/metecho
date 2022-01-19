@@ -26,9 +26,10 @@ def get_version(rel_path):
         raise RuntimeError("Unable to find version string.")
 
 
-libecho = Extension(name='metecho.generalized_matched_filter.libecho',
-                    sources=['metecho/generalized_matched_filter/xcorr_echo_search.c']
-                    )
+xcorr = Extension(
+    name='metecho.generalized_matched_filter.xcorr',
+    sources=['metecho/generalized_matched_filter/xcorr.c'],
+)
 
 
 setuptools.setup(
@@ -37,6 +38,11 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/danielk333/metecho',
+    entry_points={
+        'console_scripts': [
+            'metecho_event_search = metecho.cli.event_search:main'
+        ],
+    },
     classifiers=[
         'Programming Language :: Python :: 3.7',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
@@ -54,14 +60,32 @@ setuptools.setup(
         "tqdm>=4.46.0",
     ],
     extras_require={
-        "mpi": ["mpi4py>=3.1.1"],
-        "develop": ["pytest>=5.2.2"]
+        "mpi": [
+            "mpi4py>=3.1.1",
+        ],
+        "develop": [
+            "pytest>=5.2.2",
+            "sphinx>=4.4.0",
+            "sphinx-gallery>=0.10.1",
+            "flake8 >= 4.0.1",
+            "wheel >= 0.37.0",
+            "build >= 0.7.0",
+            "twine >= 3.4.2",
+            "coverage >= 6.0.2",
+        ]
     },
-    packages=setuptools.find_packages(),
-    ext_modules=[libecho],
+    package_dir={
+        "": "src"
+    },
+    packages=setuptools.find_packages(where="src"),
+    package_data={"": [
+        "src/xcorr", 
+    ]},
+    include_package_data=True,
+    ext_modules=[xcorr],
     # metadata to display on PyPI
-    author='Daniel Kastinen',
+    author='Daniel Kastinen, Kenneth Kullbrandt',
     author_email='daniel.kastinen@irf.se',
-    description='Keplerian orbit functions in Python',
+    description='Radar meteor analysis in Python and C',
     license='MIT'
 )
