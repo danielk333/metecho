@@ -1,6 +1,7 @@
 import copy
 import logging
 import time
+from functools import wraps
 
 file_logger = logging.getLogger(__name__)
 
@@ -72,6 +73,7 @@ def timeing(prefix, enabled=False):
         name = f'{prefix}.{func.__name__}'
         PROFILER.init(name, enabled)
 
+        @wraps(func)
         def timed_func(*args, **kwargs):
             if PROFILER.enabled[name]:
                 t0 = time.time()
@@ -93,6 +95,8 @@ def log(logger, level):
     '''
 
     def log_func(func):
+
+        @wraps(func)
         def logged_func(*args, **kwargs):
             logger.log(level, f'Function "{func.__name__}" called')
             return func(*args, **kwargs)

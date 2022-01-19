@@ -1,5 +1,6 @@
 import copy
 import logging
+from functools import wraps
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,8 @@ def MPI_target_arg(arg_index):
     If set to a negative number, no gathering is performed.
     '''
     def _mpi_wrapper(func):
+        
+        @wraps(func)
         def _mpi_wrapped_func(*args, **kwargs):
             input_list = args[arg_index]
             _args = list(args)
