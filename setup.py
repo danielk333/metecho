@@ -40,7 +40,7 @@ setuptools.setup(
     url='https://github.com/danielk333/metecho',
     entry_points={
         'console_scripts': [
-            'metecho_event_search = metecho.cli.event_search:main'
+            'metecho = metecho.cli.main:main'
         ],
     },
     classifiers=[

@@ -9,3 +9,4 @@
 - Convert gaussian noise std to xcorr limit
 - Better debug logging
 - caching of data store to not have to reload file list each time one wants to access the data
+- fix a better plug-and-play support system for different radar systems in CLI's (rather than if radar == name)
