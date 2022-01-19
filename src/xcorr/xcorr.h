@@ -1,6 +1,6 @@
 // inclusion guard
-#ifndef BARKER_XCORR_ECHO_SEARCH_H_
-#define BARKER_XCORR_ECHO_SEARCH_H_
+#ifndef XCORR_H_
+#define XCORR_H_
 #define precision double
 
 void arange(precision start, precision stop, precision step, precision *outarray);
@@ -47,4 +47,4 @@ void xcorr_echo_search(
     precision samp
 );
 
-#endif // BARKER_XCORR_ECHO_SEARCH_H_
+#endif // XCORR_H_

@@ -7,7 +7,7 @@
 #include <time.h>
 #include <assert.h>
 #include <float.h>
-#include "xcorr_echo_search.h"
+#include "xcorr.h"
 
 
 
