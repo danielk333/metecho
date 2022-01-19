@@ -72,7 +72,7 @@ def xcorr_echo_search(
     )
 
     samp = np.float64(6E-6)
-    logger.debug("Starting crosscorrelation echo search cycle.")
+    logger.debug(f"Starting crosscorrelation echo search cycle of size {sample_signal_all.shape[1]} on raw_data {raw_data}.")
     for x in range(0, sample_signal_all.shape[1]):
         sample_signal = sample_signal_all[:, x].copy()
         sample_signal_size = len(sample_signal)
@@ -86,7 +86,6 @@ def xcorr_echo_search(
         max_pow_per_doppler_size = doppler_freq_size
         maxpowind = np.zeros([doppler_freq_size], dtype=np.int32)
         maxpowind_size = doppler_freq_size
-        logger.debug("Calling C function.")
         libecho.xcorr_echo_search(
             doppler_freq_min,
             doppler_freq_max,
