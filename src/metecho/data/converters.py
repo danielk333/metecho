@@ -66,6 +66,8 @@ def convert(input_files, output_location, backend, input_format=None, **kwargs):
     '''Convert given list of input files or input file to a supported 
     backend format and returns the created data files.
     '''
+    if len(input_files) == 0:
+        return []
 
     files_created = None
     if input_format is None:
