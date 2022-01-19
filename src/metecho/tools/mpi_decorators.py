@@ -52,7 +52,9 @@ def MPI_target_arg(arg_index):
                 _args[arg_index] = input_list[ind]
                 rets[ind] = func(*_args, **kwargs)
 
-            if MPI and root >= 0:
+            if MPI and root is None:
+                pass
+            elif MPI and root >= 0:
                 if comm.rank == root:
                     for thr_id in range(comm.size):
                         if thr_id == root:
@@ -68,6 +70,9 @@ def MPI_target_arg(arg_index):
                 if comm.rank != root:
                     for ind in iter_inds:
                         rets[ind] = None
+            elif MPI and root < 0:
+                for ind in iter_inds:
+                    rets[ind] = comm.bcast(rets[ind], root=comm.rank)
 
             return rets
 
