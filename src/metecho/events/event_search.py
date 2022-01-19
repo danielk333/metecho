@@ -386,8 +386,11 @@ Non-transient coherent detection ({matched_filter_output["doppler_coherrence"]},
                 save_location.mkdir(parents=True)
             save_location = save_location / (raw_data.path.name + ".png")
             fig.savefig(save_location)
+
         if plot:
             plt.show()
+        else:
+            plt.close(fig)
 
     return events, non_head, best_data, gauss_noise
 
