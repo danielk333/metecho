@@ -43,7 +43,7 @@ def local(t, epoch, ra, dec, lon, lat, height=0.0):
         ellipsoid = None,
     )
 
-    local = coords.AltAz(
+    local_system = coords.AltAz(
         obstime = times,
         location = observer,
     )
@@ -54,4 +54,4 @@ def local(t, epoch, ra, dec, lon, lat, height=0.0):
         frame='gcrs'
     )
 
-    return radiant.transform_to(local)
+    return radiant.transform_to(local_system)
