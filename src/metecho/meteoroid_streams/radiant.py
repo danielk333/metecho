@@ -16,8 +16,7 @@ if astropy is not None:
 
 
 def local(t, epoch, ra, dec, lon, lat, height=0.0):
-    '''Calculate the local coordinates and velocity of meteor shower radiant,
-    including velocity shift due to Earth rotation rate.
+    '''Calculate the local coordinates of meteor shower radiant.
 
     Args:
         t (numpy.ndarray): Time in seconds relative the epoch at which to evaluate the radiant.
@@ -27,10 +26,7 @@ def local(t, epoch, ra, dec, lon, lat, height=0.0):
         lat (float): Latitude in degrees of the local observer
         ra (float): Right ascension in degrees of the meteor shower radiant in J2000 GCRS coordinates
         dec (float): Declination in degrees of the meteor shower radiant in J2000 GCRS coordinates
-        vel (float): Geocentric velocity in meters per second of the meteor shower radiant
-        lat (height, optional): Height in meters above the ellipsoid of the local observer, defaults to `0`
-        **kwargs: All additional keyword arguments are passed on to the `RawDataInterface` instantiation.
-
+        height (float, optional): Height in meters above the ellipsoid of the local observer, defaults to `0`
 
     '''
     if astropy is None:
