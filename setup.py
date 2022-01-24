@@ -63,6 +63,10 @@ setuptools.setup(
         "mpi": [
             "mpi4py>=3.1.1",
         ],
+        "extra": [
+            "pandas>=1.4.0",
+            "astropy>=5.0",
+        ],
         "develop": [
             "pytest>=5.2.2",
             "sphinx>=4.4.0",
