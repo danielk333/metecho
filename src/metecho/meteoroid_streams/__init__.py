@@ -1,4 +1,2 @@
-try:
-    from . import iau
-except ImportError:
-    iau = None
+from . import iau
+from . import radiant
