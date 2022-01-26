@@ -23,6 +23,13 @@ except ImportError:
 
 
 def main(args, cli_logger):
+    if args.list:
+        print(data.list_converters())
+        cli_logger.info('Listing complete, exiting...')
+        return
+    if len(args.files) == 0:
+        cli_logger.info('No input paths, exiting...')
+
     output_dir = Path(args.output).resolve()
     paths = []
     converted_count = 0
@@ -59,8 +66,14 @@ def parser_build(parser):
         help="Target backend format to convert to",
     )
     parser.add_argument(
+        "-l", "--list",
+        action="store_true",
+        help="List avalible convertable formats and target backends",
+    )
+    parser.add_argument(
         "files",
-        nargs='+',
+        nargs='*',
+        default=[],
         help="Input the locations of the files (or folders) to be converted",
     )
     parser.add_argument(
