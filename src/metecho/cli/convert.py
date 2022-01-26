@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+import os
 
 from .. import data
 from .. import tools
@@ -52,12 +53,21 @@ def main(args, cli_logger):
 
 
 def parser_build(parser):
-    parser.add_argument("backend",
-                        help="Target backend format to convert to")
-    parser.add_argument("output",
-                        help="The output location of the converted files")
-    parser.add_argument("files", nargs='+',
-                        help="Input the locations of the files (or folders) you want analyzed.")
+    parser.add_argument(
+        "-b", "--backend",
+        default=None,
+        help="Target backend format to convert to",
+    )
+    parser.add_argument(
+        "files",
+        nargs='+',
+        help="Input the locations of the files (or folders) to be converted",
+    )
+    parser.add_argument(
+        "-o", "--output",
+        default=str(Path(os.getcwd()).resolve()),
+        help="The output location of the converted files",
+    )
 
     return parser
 
