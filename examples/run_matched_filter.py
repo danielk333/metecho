@@ -1,3 +1,8 @@
+'''
+Running a matched filter
+=========================
+'''
+
 import pathlib
 import logging
 import sys
@@ -11,7 +16,10 @@ import metecho.generalized_matched_filter as mgmf
 metecho.profiler.init('full', True)
 metecho.profiler.start('full')
 
-HERE = pathlib.Path(__file__).parent.resolve()
+try:
+    HERE = pathlib.Path(__file__).parent.resolve()
+except NameError:
+    HERE = pathlib.Path('.').parent.resolve()
 
 handler = logging.StreamHandler(sys.stdout)
 

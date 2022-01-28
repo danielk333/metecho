@@ -70,7 +70,9 @@ coverage.xml
 *.pot
 
  # Sphinx documentation
-docs/_build/
+docs/build/
+docs/source/_autodoc
+docs/source/auto_gallery
 
 # Jupyter Notebook
 .ipynb_checkpoints

@@ -1,10 +1,18 @@
+'''
+Searching for meteor events
+============================
+'''
+
 import pathlib
 import logging
 import sys
 
 import metecho
 
-HERE = pathlib.Path(__file__).parent.resolve()
+try:
+    HERE = pathlib.Path(__file__).parent.resolve()
+except NameError:
+    HERE = pathlib.Path('.').parent.resolve()
 
 handler = logging.StreamHandler(sys.stdout)
 
