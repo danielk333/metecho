@@ -13,9 +13,9 @@ rest of the package.
 '''
 
 from . import mu
-from .raw_data import RawDataInterface
+from .raw_data import RawDataInterface, check_if_raw_data
 from .data_store import directory_tree
 from .data_store import RawDataInterfaceFactory
 from .data_store import DataStore
-from .converters import convert
+from .converters import convert, check_if_convertable
 from .converters import list_converters

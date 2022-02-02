@@ -12,6 +12,15 @@ logger = logging.getLogger(__name__)
 BACKENDS = OrderedDict()
 
 
+def check_if_raw_data(path):
+    '''Checks if the given path is a supported raw data file and returns the backend if it exists, else returns None.
+    '''
+    for backend, (_, validate) in BACKENDS.items():
+        if validate(path):
+            return backend
+    return None
+
+
 def backend_loader(name):
     '''Decorator to register function as a raw-data backend loader
 

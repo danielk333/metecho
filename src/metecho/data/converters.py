@@ -61,6 +61,18 @@ def converter_validator(name):
     return converter_wrapper
 
 
+def check_if_convertable(path):
+    '''Checks if the given path can be converted to a supported backend and returns the detected format, else returns None.
+    '''
+    for fmt, backends in CONVERTERS.items():
+        if 'validator' not in backends:
+            continue
+        validator = backends['validator']
+        if validator(path):
+            return fmt
+    return None
+
+
 @tools.profiling.timeing(f'{__name__}')
 def convert(input_files, output_location, backend=None, input_format=None, **kwargs):
     '''Convert given list of input files or input file to a supported 
