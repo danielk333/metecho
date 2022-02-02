@@ -45,7 +45,24 @@ def raw_data_file_list(output_dir, cli_logger, args):
             if args.convert:
                 paths += data_store.convert(output_dir, backend, MPI=comm.size > 1, MPI_root=-1)
         else:
-            paths.append(path)
+            input_fmt = data.check_if_convertable(path)
+            if input_fmt is not None and args.convert:
+                paths += data.convert(
+                    [path], 
+                    output_dir, 
+                    backend=backend, 
+                    input_format=input_fmt, 
+                    MPI=comm.size > 1, 
+                    MPI_root=-1,
+                )[0]
+                continue
+
+            backend_fmt = data.check_if_raw_data(path)
+            if backend_fmt is not None:
+                paths.append(path)
+            else:
+                cli_logger.warning(f'Input path "{path}" was not convertable (or conversions are not enabled) \
+                    nor a file of a supported raw data format and therefor skipped')
 
     return paths
 
@@ -74,7 +91,7 @@ def find_events(file, args, cli_logger):
         signal, 
         plot=args.plot, 
         save_as_image=args.plot_save, 
-        save_location=Path(args.plot_output).resolve(),
+        save_location=args.plot_output,
     )
     if args.best_data:
         return [event_list, nonhead, best_data, noise]
@@ -87,18 +104,25 @@ def main(args, cli_logger):
 
     default_folder = Path(os.getcwd()) / "output"
 
-    if args.convert_output is None:
-        args.convert_output = default_folder
-
-    if args.output is None:
+    if len(args.output) == 0:
         args.output = default_folder / 'events.pickle'
+    if len(args.convert_output) == 0:
+        args.convert_output = default_folder / 'convert'
+    if len(args.plot_output) == 0:
+        args.plot_output = default_folder / 'plots'
+    else:
+        args.plot_save = True
+        args.plot_output = Path(args.plot_output).resolve()
 
-    output_dir = Path(args.convert_output).resolve()
     if args.convert:
+        output_dir = Path(args.convert_output).resolve()
+
         logger.debug(f'Setting output path and converting files to "{output_dir}"')
         if comm.rank == 0:
             output_dir.mkdir(exist_ok=True)
         comm.barrier()
+    else:
+        output_dir = None
 
     save_results = Path(args.output).resolve()
     if save_results.is_dir():
@@ -122,13 +146,13 @@ def main(args, cli_logger):
 
 def parser_build(parser):
     parser.add_argument("-Co", "--convert-output",
-                        default=None,
+                        default='',
                         help="The location where you want to save converted files")
     parser.add_argument("-Po", "--plot-output",
-                        default=None,
+                        default='',
                         help="The location where you want to save event search plots")
     parser.add_argument("-o", "--output",
-                        default=None,
+                        default='',
                         help="The location (including file name) where you want to save event lists")
     parser.add_argument("-P", "--plot", action="store_true",
                         help="Shows plots of the files as it runs. Warning: \
