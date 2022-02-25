@@ -1,5 +1,6 @@
 import ctypes
 import logging
+import sysconfig
 import numpy as np
 import numpy.ctypeslib as npct
 from .. import tools
@@ -13,11 +14,17 @@ np_complex_2d = npct.ndpointer(np.complex128, ndim=2, flags='aligned, c_contiguo
 np_complex_single = npct.ndpointer(np.complex128, ndim=0)
 np_int_pointer = npct.ndpointer(np.int32, ndim=1, flags='aligned, contiguous, writeable')
 
+# Find suffix
+suffix = sysconfig.get_config_var('EXT_SUFFIX')
+if suffix is None:
+    suffix = ".so"
+
 # We start by making a path to the current directory.
-script_dir = Path(__file__).resolve().parent  # os.path.dirname(os.path.realpath(__file__))
-libecho_location = list(Path(script_dir).glob('libxcorr.*.so'))
+pymodule_dir = Path(__file__).resolve().parent 
+__libpath__ = pymodule_dir / ('libxcorr' + suffix)
+
 # Then we open the created shared libecho file
-libecho = ctypes.CDLL(libecho_location[0])
+libecho = ctypes.CDLL(__libpath__)
 libecho.xcorr_echo_search.argtypes = [
     ctypes.c_double,
     ctypes.c_double,
