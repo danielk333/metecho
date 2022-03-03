@@ -11,7 +11,7 @@ data
 
 .. autosummary::
    :template: autosummary/module.rst
-   :toctree: _autodoc/metecho/data
+   :toctree: autosummary/data
 
 
     metecho.data.raw_data
@@ -24,7 +24,7 @@ events
 
 .. autosummary::
    :template: autosummary/module.rst
-   :toctree: _autodoc/metecho/events
+   :toctree: autosummary/events
 
 
     metecho.events.event
@@ -39,7 +39,7 @@ events
 
 .. autosummary::
    :template: autosummary/module.rst
-   :toctree: _autodoc/metecho/generalized_matched_filter
+   :toctree: autosummary/generalized_matched_filter
 
 
     metecho.generalized_matched_filter.signal_model
@@ -52,7 +52,7 @@ Command-line interfaces
 
 .. autosummary::
    :template: autosummary/module.rst
-   :toctree: _autodoc/metecho/cli
+   :toctree: autosummary/cli
 
 
     metecho.cli.event_search

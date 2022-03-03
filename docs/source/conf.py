@@ -43,7 +43,7 @@ extensions = [
 ]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ['templates']
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -56,12 +56,16 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'bizstyle'
+html_theme = 'basic'
+html_css_files = [
+    'https://www.irf.se/branding/irf.css',
+    'https://www.irf.se/branding/irf-sphinx-basic.css',
+]
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ['static']
 
 # Remove matplotlib agg warnings from generated doc when using plt.show
 warnings.filterwarnings("ignore", category=UserWarning,
@@ -72,7 +76,7 @@ warnings.filterwarnings("ignore", category=UserWarning,
 # -- Options for gallery extension ---------------------------------------
 sphinx_gallery_conf = {
      'examples_dirs': '../../examples',   # path to your example scripts
-     'gallery_dirs': 'auto_gallery',  # path where to save gallery generated examples
+     'gallery_dirs': 'autogallery',  # path where to save gallery generated examples
      'filename_pattern': '/*.py',
      'ignore_pattern': r'.*__no_gallery\.py',
 }
