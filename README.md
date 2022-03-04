@@ -1,4 +1,4 @@
-## WORK IN PROGRESS REPOSITORY
+## WORK IN PROGRESS PACKAGE
 
 This repository is a porting/refactoring work in progress: do not use any of the source code until a official release has been drafted.
 
