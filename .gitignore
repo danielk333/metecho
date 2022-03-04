@@ -5,6 +5,10 @@
 # Compiled source #
 ###################
 
+#gitlab ci
+*_report
+
+
 #Sublime
 *.sublime*
 
