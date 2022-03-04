@@ -47,7 +47,7 @@ cache:
   - pip install .[develop]
   #install extras dependancies
   - apt update
-  - apt install openmpi
+  - apt install -y openmpi-bin libopenmpi3 libopenmpi-dev openmpi-bin openmpi-doc
   #install extras
   - pip install .[all]
 
