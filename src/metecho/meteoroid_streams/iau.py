@@ -17,10 +17,10 @@ def download_streams(target_path=None):
     logger.info('Downloading IAU meteoroid streams list...')
 
     if target_path is None:
-        if not IAU_DEFAULT_LOCATION.parent.is_dir():
-            IAU_DEFAULT_LOCATION.parent.mkdir()
         target_path = IAU_DEFAULT_LOCATION
-
+    if not target_path.parent.is_dir():
+        target_path.parent.mkdir(exist_ok=True, parents=True)
+    
     data = requests.get(IAU_SHOWER_URL, allow_redirects=True).text
 
     with open(target_path, 'w') as fh:
