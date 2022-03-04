@@ -29,6 +29,7 @@ def get_version(rel_path):
 libxcorr = Extension(
     name='metecho.generalized_matched_filter.libxcorr',
     sources=['src/libxcorr/libxcorr.c'],
+    include_dirs=['src/libxcorr/'],
 )
 
 
