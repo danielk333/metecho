@@ -45,6 +45,7 @@ cache:
   - source venv/bin/activate
   # install the develop dependancies
   - pip install .[develop]
+  - pip install .[all]
 
 
 default:
@@ -61,16 +62,28 @@ default:
   stage: test
   allow_failure: true
   script: 
-    - coverage run -m pytest
-    - coverage report -m
+    - pytest
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
 
 
-#Run flake8 to check code-style adherance to PEP8
-# check-flake8:
-#   stage: test
-#   script: 
-#     - python -m flake8 --extend-exclude venv
-#   allow_failure: true
+# Run all diagnostics
+diagnostics:
+  stage: test
+  script: 
+    - coverage run -m pytest > pytest_report
+    - coverage report -m > coverage_report
+    - python -m flake8 --extend-exclude venv pyorb > flake8_report
+    - radon cc -a pyorb/ > radon_cc_report
+    - radon raw -s pyorb/ > radon_raw_report
+    - radon mi -s pyorb/ > radon_mi_report
+    - radon hal pyorb/ > radon_hal_report
+  allow_failure: true
+  artifacts:
+    paths:
+      - "*_report"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_COMMIT_TAG
 
 
 ##########################
@@ -92,9 +105,6 @@ default:
 #   <<: *python-test # Merge the contents of the alias
 #   image: python:3.7
 
-# python:
-#   <<: *python-test # Merge the contents of the alias
-
 # python3.9:
 #   <<: *python-test # Merge the contents of the alias
 #   image: python:3.9
@@ -104,14 +114,13 @@ default:
 package:
   stage: release
   script:
-    - apt update
-    - apt install -y make build-essential gfortran 
     - python -m build
     - python -m twine check dist/*
   artifacts:
     paths:
       - dist/*
-
+  # rules:
+  #   - if: $CI_COMMIT_BRANCH == "main" && $CI_COMMIT_TAG
 
 #Compile documentation for publication
 pages:
@@ -124,8 +133,7 @@ pages:
     paths:
       - public
   rules:
-    - if: $CI_COMMIT_TAG
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_COMMIT_TAG
 
 #Publish package on local PyPI if
 # the commit has a version tag
@@ -139,5 +147,4 @@ upload:
       --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi
       dist/*
   rules:
-    - if: $CI_COMMIT_TAG
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_COMMIT_TAG
