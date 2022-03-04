@@ -45,6 +45,10 @@ cache:
   - source venv/bin/activate
   # install the develop dependancies
   - pip install .[develop]
+  #install extras dependancies
+  - apt update
+  - apt install openmpi
+  #install extras
   - pip install .[all]
 
 
