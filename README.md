@@ -1,8 +1,6 @@
-# WORK IN PROGRESS REPOSITORY
+## WORK IN PROGRESS REPOSITORY
 
 This repository is a porting/refactoring work in progress: do not use any of the source code until a official release has been drafted.
-
-# metecho
 
 ## Installation
 
@@ -12,17 +10,27 @@ This repository is a porting/refactoring work in progress: do not use any of the
 
 ## Usage
 
-main.py [-h] [-v] [-co CONVERTED_OUTPUT] [-o OUTPUT] files [files ...]
+### Scripting
+
+See the `/examples` folder that is also included as package data for scripting or the examples gallery in the web-documentation.
+
+### CLI
+
+The package also has a command line interface bound to `metecho`:
+
+```
+usage: metecho [-h] [-p] [-v] {convert,event_search} ...
+
+Radar meteor echo analysis toolbox
 
 positional arguments:
-
-    files                 Input the locations of the files (or a folder) you want analyzed.
+  {convert,event_search}
+                        Avalible command line interfaces
+    convert             Convert the target files to a supported backend format
+    event_search        Searches radar data to look for signs of meteor events.
 
 optional arguments:
-
-    -h, --help            show this help message and exit
-    -v, --verbose         Increase output verbosity
-    -co CONVERTED_OUTPUT, --converted_output CONVERTED_OUTPUT
-                        The location where you want to save converted files and look for cached files
-    -o OUTPUT, --output OUTPUT
-                        The location where you want to save analyzed data
+  -h, --help            show this help message and exit
+  -p, --profiler        Run profiler
+  -v, --verbose         Increase output verbosity
+```
