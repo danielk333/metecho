@@ -1,2 +1,2 @@
 include src/libxcorr/*
-exclude docs
+include README.md
