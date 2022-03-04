@@ -31,6 +31,7 @@ author = 'Daniel Kastinen, Kenneth Kullbrandt'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'm2r2',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
@@ -61,6 +62,7 @@ html_css_files = [
     'https://www.irf.se/branding/irf.css',
     'https://www.irf.se/branding/irf-sphinx-basic.css',
 ]
+html_logo = 'static/logo.png'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

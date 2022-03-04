@@ -13,6 +13,7 @@ help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 html:
+	cp ../README.md $(SOURCEDIR)/
 	sphinx-build -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS)
 
 clean:
