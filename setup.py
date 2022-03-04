@@ -1,29 +1,27 @@
 import setuptools
 import codecs
-import os.path
+import pathlib
 from distutils.core import Extension
 
+HERE = pathlib.Path(__file__).resolve().parents[0]
 
 with open('README.md', 'r') as fh:
     long_description = fh.read()
 
-# from
-# https://packaging.python.org/guides/single-sourcing-package-version/#single-sourcing-the-version
 
-
-def read(rel_path):
-    here = os.path.abspath(os.path.dirname(__file__))
-    with codecs.open(os.path.join(here, rel_path), 'r') as fp:
-        return fp.read()
-
-
-def get_version(rel_path):
-    for line in read(rel_path).splitlines():
-        if line.startswith('__version__'):
-            delim = '"' if '"' in line else "'"
-            return line.split(delim)[1]
-    else:
-        raise RuntimeError("Unable to find version string.")
+def get_version(path):
+    '''Read version from python version file
+    
+    Code originally from:
+    https://packaging.python.org/guides/single-sourcing-package-version/#single-sourcing-the-version
+    '''
+    with codecs.open(path, 'r') as fp:
+        for line in fp.read().splitlines():
+            if line.startswith('__version__'):
+                delim = '"' if '"' in line else "'"
+                return line.split(delim)[1]
+        else:
+            raise RuntimeError("Unable to find version string.")
 
 
 libxcorr = Extension(
@@ -34,6 +32,6 @@ libxcorr = Extension(
 
 
 setuptools.setup(
-    version=get_version("src/metecho/version.py"),
+    version=get_version(HERE / 'src' / 'metecho' / 'version.py'),
     ext_modules=[libxcorr],
 )
