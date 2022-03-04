@@ -8,5 +8,9 @@ libxcorr = Extension(
 )
 
 setuptools.setup(
+    package_dir={
+        "": "src"
+    },
+    packages=setuptools.find_packages(where="src"),
     ext_modules=[libxcorr],
 )
