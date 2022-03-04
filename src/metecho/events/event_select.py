@@ -9,12 +9,16 @@ def cluster(found_indices, best_doppler, best_start, config):
     if found_indices.size < config.getint("General", "least_ipp_available"):
         return start_IPP, end_IPP
 
-    smooth_doppler = savgol_filter(best_doppler[found_indices.flatten()].flatten(),
-                                   config.getint("General", "smoothing_window"),
-                                   config.getint("General", "polyorder"))
-    smooth_start = savgol_filter(best_start[found_indices.flatten()].flatten(),
-                                 config.getint("General", "smoothing_window"),
-                                 config.getint("General", "polyorder"))
+    smooth_doppler = savgol_filter(
+        best_doppler[found_indices.flatten()].flatten(),
+        config.getint("General", "smoothing_window"),
+        config.getint("General", "polyorder"),
+    )
+    smooth_start = savgol_filter(
+        best_start[found_indices.flatten()].flatten(),
+        config.getint("General", "smoothing_window"),
+        config.getint("General", "polyorder"),
+    )
 
     indices_diff = np.diff(found_indices.flatten())
     doppler_diff = np.abs(np.diff(smooth_doppler))
@@ -33,12 +37,17 @@ def cluster(found_indices, best_doppler, best_start, config):
     start_index = 0
 
     for x in range(len(split_indices)):
-        new_indices.append(found_indices.flatten()[start_index:split_indices[x]])
+        new_indices.append(
+            found_indices.flatten()[start_index:split_indices[x]]
+        )
         start_index = split_indices[x]
 
+    least_ipp_available = config.getint("General", "least_ipp_available")
+    IPP_extend = config.getint("General", "IPP_extend")
+
     for x in range(len(new_indices)):
-        if len(new_indices[x]) > config.getint("General", "least_ipp_available"):
-            start_IPP.append(np.amin(new_indices[x]) - config.getint("General", "IPP_extend"))
-            end_IPP.append(np.amax(new_indices[x]) + config.getint("General", "IPP_extend"))
+        if len(new_indices[x]) > least_ipp_available:
+            start_IPP.append(np.amin(new_indices[x]) - IPP_extend)
+            end_IPP.append(np.amax(new_indices[x]) + IPP_extend)
 
     return start_IPP, end_IPP
