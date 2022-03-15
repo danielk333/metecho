@@ -7,3 +7,4 @@ from . import events
 from . import meteoroid_streams
 
 from .tools import PROFILER as profiler
+from .tools import debug
