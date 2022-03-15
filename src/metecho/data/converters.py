@@ -32,7 +32,6 @@ def converter(name, backend):
 
     def converter_wrapper(func):
         logger.debug(f'Registering converter from {name} to {backend} backend')
-        global CONVERTERS
         if name in CONVERTERS:
             CONVERTERS[name][backend] = func
         else:
@@ -51,7 +50,6 @@ def converter_validator(name):
 
     def converter_wrapper(func):
         logger.debug(f'Registering validator for {name} backend')
-        global CONVERTERS
         if name in CONVERTERS:
             CONVERTERS[name]['validator'] = func
         else:

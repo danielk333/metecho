@@ -29,7 +29,6 @@ def backend_loader(name):
 
     def backend_wrapper(func):
         logger.debug(f'Registering loader for {name} backend')
-        global BACKENDS
         if name in BACKENDS:
             BACKENDS[name][0] = func
         else:
@@ -47,7 +46,6 @@ def backend_validator(name):
 
     def backend_wrapper(func):
         logger.debug(f'Registering validator for {name} backend')
-        global BACKENDS
         if name in BACKENDS:
             BACKENDS[name][1] = func
         else:
