@@ -1,5 +1,4 @@
 import pathlib
-import logging
 import sys
 
 import metecho
@@ -19,17 +18,7 @@ if not out_path.is_dir():
 if not in_path.is_file():
     raise ValueError(f'Input path "{in_path}" does not exist')
 
-handler = logging.StreamHandler(sys.stdout)
-
-for name in logging.root.manager.loggerDict:
-    if name.startswith('metecho'):
-        print(f'logger: {name}')
-
-logger = logging.getLogger('metecho')
-logger.setLevel(logging.INFO)
-logger.addHandler(handler)
-
-metecho.profiler.enable('metecho')
+metecho.debug()
 
 # We can also use the converter as all converters should be registered for use
 print('Avalible converters:')

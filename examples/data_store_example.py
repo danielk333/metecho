@@ -3,12 +3,9 @@ Using the DataStore
 ===================
 '''
 import pathlib
-import logging
-import sys
+import matplotlib.pyplot as plt
 
 import metecho
-
-import matplotlib.pyplot as plt
 
 metecho.profiler.init('full', True)
 metecho.profiler.start('full')
@@ -18,17 +15,7 @@ try:
 except NameError:
     HERE = pathlib.Path('.').parent.resolve()
 
-handler = logging.StreamHandler(sys.stdout)
-
-for name in logging.root.manager.loggerDict:
-    if name.startswith('metecho'):
-        print(f'logger: {name}')
-
-logger = logging.getLogger('metecho')
-logger.setLevel(logging.DEBUG)
-logger.addHandler(handler)
-
-metecho.profiler.enable('metecho')
+metecho.debug()
 
 data_path = HERE / 'data'
 
