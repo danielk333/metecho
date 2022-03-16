@@ -1,4 +1,5 @@
 # Todos
+
 - Fix event printer
 - Flag to enable best_data saving
 - Disable best_data saving by default
@@ -12,3 +13,6 @@
 - fix a better plug-and-play support system for different radar systems in CLI's (rather than if radar == name)
 - Clean up even_search function and fix better granularity
 - move from too much OOP formalism in sub-packages
+
+- in metecho.data, change RawDataInterface to RawData, change `backend` to `format`,
+- Extract converter from DataStore and separate it, separation of concenrns
