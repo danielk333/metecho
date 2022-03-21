@@ -2,14 +2,16 @@
 API Reference
 ==============
 
-.. autoapi::
+.. autopackages:: package
    :template: autosummary/module.rst
    :toctree: autosummary
+   :exclude: metecho.cli
 
     metecho
 
-.. autoapi::
+.. autopackages:: cli
    :template: autosummary/module.rst
    :toctree: autosummary
+   :title: Command-line Interface
 
     metecho.cli

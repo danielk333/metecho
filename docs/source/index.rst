@@ -29,7 +29,7 @@ API Reference
 .. toctree::
    :maxdepth: 2
 
-   auto_api
+   api
 
 
 When used for publications
