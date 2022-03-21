@@ -12,8 +12,15 @@
 #
 import warnings
 from datetime import date
+import sys
+import pathlib
 
 import metecho
+
+# According to non-pypi extensions
+# Ref: https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-extensions
+ext_paths = (pathlib.Path(__file__).parent / 'exts').resolve()
+sys.path.append(str(ext_paths))
 
 # -- Project information -----------------------------------------------------
 
@@ -32,6 +39,7 @@ author = 'Daniel Kastinen, Kenneth Kullbrandt'
 # ones.
 extensions = [
     'm2r2',
+    'autopackages',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
@@ -83,6 +91,23 @@ sphinx_gallery_conf = {
      'ignore_pattern': r'.*__no_gallery\.py',
 }
 
+# Autopackages settings
+autopackages_toctree = 'autopackages'
+
+# Napoleon settings
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = True
+napoleon_include_private_with_doc = False
+napoleon_include_special_with_doc = False
+napoleon_use_admonition_for_examples = False
+napoleon_use_admonition_for_notes = False
+napoleon_use_admonition_for_references = False
+napoleon_use_ivar = False
+napoleon_use_param = True
+napoleon_use_rtype = True
+napoleon_use_keyword = True
+napoleon_custom_sections = None
 
 # -----------------------------------------------------------------------------
 # Autosummary

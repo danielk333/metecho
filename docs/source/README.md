@@ -1,4 +1,4 @@
-## WORK IN PROGRESS REPOSITORY
+## WORK IN PROGRESS PACKAGE
 
 This repository is a porting/refactoring work in progress: do not use any of the source code until a official release has been drafted.
 
@@ -34,3 +34,11 @@ optional arguments:
   -p, --profiler        Run profiler
   -v, --verbose         Increase output verbosity
 ```
+
+## Contributing
+
+Please refer to the style and contribution guidelines documented in the 
+[IRF Software Contribution Guide](https://danielk.developer.irf.se/software_contribution_guide/). 
+Generally external code-contributions are made trough a "Fork-and-pull" 
+workflow, while internal contributions follow the branching strategy outlined 
+in the contribution guide.
