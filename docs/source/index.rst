@@ -15,6 +15,7 @@ Examples
    :maxdepth: 2
 
    autogallery/index
+   ipynbgallery
 
 API Reference
 ==============

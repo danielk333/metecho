@@ -40,6 +40,8 @@ author = 'Daniel Kastinen, Kenneth Kullbrandt'
 extensions = [
     'm2r2',
     'irf.autopackages',
+    'nbsphinx',
+    'sphinx_gallery.load_style',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
@@ -90,6 +92,8 @@ sphinx_gallery_conf = {
      'filename_pattern': '/*.py',
      'ignore_pattern': r'.*__no_gallery\.py',
 }
+
+nbsphinx_kernel_name = 'python3'
 
 # Autopackages settings
 irf_autopackages_toctree = 'autopackages'
