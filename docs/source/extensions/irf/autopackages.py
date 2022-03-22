@@ -13,6 +13,10 @@ from docutils.parsers.rst import directives
 from sphinx.directives.other import TocTree
 from sphinx.util.docutils import SphinxDirective
 from sphinx.util.typing import OptionSpec
+from sphinx.parsers import RSTParser
+from sphinx.util import logging
+
+logger = logging.getLogger(__name__)
 
 python_extensions = ['py', 'pyx']
 title_chars = {
@@ -23,7 +27,7 @@ title_chars = {
 
 pattern = re.compile(r'^\.\. irf_autopackages::.*')
 
-GLOBAL_ENV = None
+GLOBAL_ENV = {'generated_rst_files': []}
 
 
 def generate_autosummary_directive(
@@ -187,19 +191,27 @@ class AutoPackages(SphinxDirective):
             if x.strip() and re.search(r'^[~a-zA-Z_]', x.strip()[0])
         ]
 
+        # We dont have an env yet, still in build stage
         try:
             env = self.env
-        except:
-            env = GLOBAL_ENV
-        autopackages_dir = self.config['irf_autopackages_toctree']
+            config = self.config
+            docname = env.docname
+        except AttributeError:
+            env = GLOBAL_ENV['env']
+            config = GLOBAL_ENV['config']
+            docname = GLOBAL_ENV['docname']
+
+        autopackages_dir = config.irf_autopackages_toctree
         src_dir = Path(env.srcdir)
 
-        source_file = (src_dir / env.docname).resolve()
+        # This might not work when source files are not in the 
+        # dir as the file with the dirictive?
+        source_dir = (src_dir / docname).resolve().parent
         out_dir = (src_dir / autopackages_dir).resolve()
         out_dir.mkdir(exist_ok=True)
         out_rst = out_dir / (fname + '.rst')
 
-        level_diff = len(out_dir.parts) - len(source_file.parent.parts)
+        level_diff = len(out_dir.parts) - len(source_dir.parts)
 
         title = self.options.get('title', None)
         maxdepth = self.options.get('maxdepth', 3)
@@ -213,16 +225,21 @@ class AutoPackages(SphinxDirective):
             'toctree': toctree,
         }
 
-        if not hasattr(env, 'irf_autopackages_generated'):
-            env.irf_autopackages_generated = []
-        if fname not in env.irf_autopackages_generated:
+        if fname not in GLOBAL_ENV['generated_rst_files']:
             src_content = generate_package_rst(
                 names, excludes, 
                 title, autosummary_opts,
             )
+            logger.info(f'[autopackages] Writing {out_rst}')
             with open(out_rst, 'w') as fh:
                 fh.write(src_content)
-            env.irf_autopackages_generated.append(fname)
+            
+            # Add the new file to the enviornment
+            fpath = str(Path(autopackages_dir) / fname)
+            env.found_docs.add(fpath)
+
+            # Remember we were here when we parse the source files
+            GLOBAL_ENV['generated_rst_files'].append(fname)
             out_nodes = []
         else:
             block_text, content = generate_toc_directive(
@@ -246,13 +263,12 @@ class AutoPackages(SphinxDirective):
         return out_nodes
 
 
-def parse_rst(text):
-    parser = docutils.parsers.rst.Parser()
-    components = (docutils.parsers.rst.Parser,)
+def parse_rst(text, app):
+    parser = RSTParser()
+    parser.set_application(app)
+    components = (RSTParser,)
     settings = docutils.frontend.OptionParser(components=components).get_default_values()
-
     document = docutils.utils.new_document('', settings=settings)
-    
     parser.parse(text, document)
     return document
 
@@ -262,31 +278,31 @@ def generate_rst_files(app):
     the current set of source files for this build.
     '''
 
+    logger.info('[autopackages] Generating AutoPackages RST files')
+
     env = app.builder.env
-    global GLOBAL_ENV
-    GLOBAL_ENV = env
+    GLOBAL_ENV['env'] = env
+    GLOBAL_ENV['config'] = app.config
 
     src_dir = Path(env.srcdir)
     source_docs = [
-        src_dir / env.doc2path(x, base=None) 
+        env.doc2path(x, base=None) 
         for x in env.found_docs
         if Path(env.doc2path(x)).is_file()
     ]
 
     found_derictives = []
-
-    directives.register_directive('irf_autopackages', AutoPackages)
-
     # Find all autopackages derictives in the files
     for file in source_docs:
-        fh = open(file, 'r')
+        logger.info(f'[autopackages] Searching {file}')
+        fh = open(src_dir / file, 'r')
         derictive = None
         for line in fh:
             if derictive is not None:
                 if line.startswith(' '*3) or len(line.strip()) == 0:
                     derictive += line
                 else:
-                    found_derictives.append(derictive)
+                    found_derictives.append((derictive, file))
                     derictive = None
 
             if derictive is None:
@@ -296,16 +312,18 @@ def generate_rst_files(app):
                 derictive = line
         fh.close()
 
-    for autopackages_text in found_derictives:
-        parse_rst(autopackages_text)
+    for autopackages_text, file in found_derictives:
+        logger.info(f'[autopackages] Parsing {file}')
+        GLOBAL_ENV['docname'] = file
+        parse_rst(autopackages_text, app)
     
 
 def setup(app):
     app.add_directive("irf_autopackages", AutoPackages)
     app.add_config_value('irf_autopackages_toctree', 'autopackages', True)
-    app.connect('builder-inited', generate_rst_files, priority=300)
+    app.connect('builder-inited', generate_rst_files, priority=90)
     return {
         'version': '0.1',
-        'parallel_read_safe': True,
-        'parallel_write_safe': True,
+        'parallel_read_safe': False,
+        'parallel_write_safe': False,
     }
