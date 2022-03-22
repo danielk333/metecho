@@ -4,13 +4,6 @@ metecho
 :Release: |release|
 :Date: |today|
 
-.. toctree::
-   :maxdepth: 3
-   
-   README.md
-   autogallery/index
-   api
-
 
 .. mdinclude:: README.md
 
