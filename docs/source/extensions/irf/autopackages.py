@@ -294,7 +294,7 @@ def generate_rst_files(app):
     found_derictives = []
     # Find all autopackages derictives in the files
     for file in source_docs:
-        logger.info(f'[autopackages] Searching {file}')
+        # logger.info(f'[autopackages] Searching {file}')
         fh = open(src_dir / file, 'r')
         derictive = None
         for line in fh:
