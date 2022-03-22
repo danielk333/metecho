@@ -1,18 +1,14 @@
-from docutils.nodes import Node
-from docutils.parsers.rst import directives
-# from sphinx.locale import _
-from sphinx.util.docutils import SphinxDirective
-from sphinx.util.typing import OptionSpec
-from sphinx.directives.other import TocTree
-
+from collections import OrderedDict
 from typing import List
 import re
 import importlib
 from pathlib import Path
 
-'''
-TODO: make sure this works with a rst from any subdirectory (and not just next to conf.py)
-'''
+import docutils.nodes as nodes
+from docutils.parsers.rst import directives
+from docutils.parsers.rst.directives.misc import Include
+from sphinx.util.docutils import SphinxDirective
+from sphinx.util.typing import OptionSpec
 
 
 python_extensions = ['py', 'pyx']
@@ -23,19 +19,21 @@ title_chars = {
 }
 
 
-def generate_toc_directive(autopackages_dir, fname):
-    toc_directive = f'''
-.. toctree::
-    :maxdepth: 3
-
+def generate_autosummary_directive(
+                subpackage, module_list, 
+                template, toctree, 
+                title_char, title = None,
+            ):
+    '''Generate an autosummary rst directive that includes all subpackages 
+    and leads with an automodule of the top package.
     '''
-    content = [f'{autopackages_dir}/{fname}']
-    toc_directive += '    ' + '\n    '.join(content)
-    return toc_directive, content
+    autosummary_directive = ''
 
+    if title is None:
+        title = subpackage.split('.')[-1]
+    if len(title) > 0:
+        autosummary_directive += title + '\n' + title_char*len(title)
 
-def generate_autosummary_rst(subpackage, module_list, template, toctree, title_char):
-    autosummary_directive = subpackage + '\n' + title_char*len(subpackage)
     autosummary_directive += f'''
 
 .. automodule::
@@ -55,6 +53,9 @@ def generate_autosummary_rst(subpackage, module_list, template, toctree, title_c
 
 
 def get_module_tree(name):
+    '''Uses an importable name to find the underlying structure of python files
+    of that package and groups the modules according to subpackage.
+    '''
     package = importlib.import_module(name)
     if not hasattr(package, '__path__'):
         raise AttributeError(f'Given package {name} is not a package or a \
@@ -74,8 +75,9 @@ sub-package ({name} has no __path__, most likley a module)')
     for file in files:
         sub_package = '.'.join(file.parts[top_ind:-1])
         module = sub_package
-        if file.stem != '__init__':
-            module += '.' + file.stem
+        module += '.' + file.stem
+        if file.stem == '__init__':
+            continue
 
         if sub_package in module_tree:
             module_tree[sub_package].append(module)
@@ -84,10 +86,16 @@ sub-package ({name} has no __path__, most likley a module)')
 
     for sub_package in module_tree:
         module_tree[sub_package].sort()
+    
+    module_tree = OrderedDict(sorted(module_tree.items()))
     return module_tree
 
 
 class AutoPackages(SphinxDirective):
+    '''Automatically genereate rst-files similar to autosummary but for the 
+    subpackage structure of the input content. The rst file is saved to the 
+    filename in the first rst argument.
+    '''
     has_content = True
     required_arguments = 1
     optional_arguments = 0
@@ -100,7 +108,7 @@ class AutoPackages(SphinxDirective):
         'title': directives.unchanged,
     }
 
-    def run(self) -> List[Node]:
+    def run(self) -> List[nodes.Node]:
         assert len(self.arguments) > 0, 'output file name needed as argument'
         fname = self.arguments[0]
         names = [
@@ -108,51 +116,66 @@ class AutoPackages(SphinxDirective):
             if x.strip() and re.search(r'^[~a-zA-Z_]', x.strip()[0])
         ]
 
-        autopackages_dir = self.config['autopackages_toctree']
+        autopackages_dir = self.config['irf_autopackages_toctree']
         src_dir = Path(self.env.srcdir)
+        source_file = (src_dir / self.env.docname).resolve()
         out_dir = (src_dir / autopackages_dir).resolve()
         out_dir.mkdir(exist_ok=True)
+        out_rst = out_dir / (fname + '.rst')
 
-        level_diff = len(out_dir.parts) - len(src_dir.parts)
+        level_diff = len(out_dir.parts) - len(source_file.parts)
 
         title = self.options.get('title', None)
+        depth = self.options.get('tocdepth', 2)
         template = self.options.get('template', None)
         toctree = self.options.get('toctree', 'autosummary')
         excludes = self.options.get('exclude', '').split()
         toctree = '../'*level_diff + toctree
 
         h1 = title_chars['section']
-        h2 = title_chars['subsection'] if title is None else title_chars['section']
-        h3 = title_chars['subsubsection'] if title is None else title_chars['subsection']
+        h2 = title_chars['subsection']
+        h3 = title_chars['subsubsection']
 
         src_content = ''
-        if title is not None:
-            src_content += title + '\n'
-            src_content += h1*len(title) + '\n'*2
         for name in names:
             module_tree = get_module_tree(name)
+
+            # Exclude subpackages and modules according to option
             for exclude in excludes:
                 if exclude in module_tree:
                     module_tree.pop(exclude)
+            for subpackage, modules in module_tree.items():
+                for exclude in excludes:
+                    if exclude in modules:
+                        modules.remove(exclude)
+
+            # Subpackage was removed, skip
             if name not in module_tree:
                 continue
-            modules = module_tree.pop(name)
 
-            src_content += generate_autosummary_rst(
-                name, 
-                modules, 
-                template, 
-                toctree,
-                h2,
-            )
+            # Autosummary the top level
+            modules = module_tree.pop(name)
+            if len(modules) > 0:
+                src_content += generate_autosummary_directive(
+                    name, 
+                    modules, 
+                    template, 
+                    toctree,
+                    h1,
+                    title=title
+                )
+            else:
+                _title = name.split('.')[-1] if title is None else title
+                src_content = _title + '\n' + h1*len(_title)
             src_content += '\n'*2
 
+            # If there are subpackages, autosummary them
             if len(module_tree) > 0:
                 src_content += 'Sub-packages' + '\n'
                 src_content += h2*len('Sub-packages') + '\n'*2
 
             for subpackage, modules in module_tree.items():
-                src_content += generate_autosummary_rst(
+                src_content += generate_autosummary_directive(
                     subpackage, 
                     modules, 
                     template, 
@@ -160,32 +183,30 @@ class AutoPackages(SphinxDirective):
                     h3,
                 )
                 src_content += '\n'*2
-        with open(out_dir / (fname + '.rst'), 'w') as fh:
+
+        with open(out_rst, 'w') as fh:
             fh.write(src_content)
 
-        block_text, content = generate_toc_directive(autopackages_dir, fname)
-        toc = TocTree(
+        # Include the autopackages outputs
+        toc = Include(
             name = self.name, 
-            arguments = [], 
-            options = {
-                'maxdepth': 3,
-            }, 
-            content = content, 
+            arguments = [f'{autopackages_dir}/{fname}.rst'], 
+            options = {}, 
+            content = None, 
             lineno = self.lineno,
             content_offset = self.content_offset, 
-            block_text = block_text, 
+            block_text = '', 
             state = self.state, 
             state_machine = self.state_machine,
         )
 
         out_nodes = toc.run()
-
         return out_nodes
 
 
 def setup(app):
-    app.add_directive("autopackages", AutoPackages)
-    app.add_config_value('autopackages_toctree', 'autopackages', True)
+    app.add_directive("irf_autopackages", AutoPackages)
+    app.add_config_value('irf_autopackages_toctree', 'autopackages', True)
     return {
         'version': '0.1',
         'parallel_read_safe': True,
