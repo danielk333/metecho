@@ -115,6 +115,7 @@ napoleon_custom_sections = None
 
 autosummary_generate = True
 autosummary_generate_overwrite = True
+autosummary_imported_members = False
 
 # -----------------------------------------------------------------------------
 # Intersphinx configuration

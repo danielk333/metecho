@@ -118,15 +118,15 @@ class AutoPackages(SphinxDirective):
 
         autopackages_dir = self.config['irf_autopackages_toctree']
         src_dir = Path(self.env.srcdir)
+
         source_file = (src_dir / self.env.docname).resolve()
         out_dir = (src_dir / autopackages_dir).resolve()
         out_dir.mkdir(exist_ok=True)
         out_rst = out_dir / (fname + '.rst')
 
-        level_diff = len(out_dir.parts) - len(source_file.parts)
+        level_diff = len(out_dir.parts) - len(source_file.parent.parts)
 
         title = self.options.get('title', None)
-        depth = self.options.get('tocdepth', 2)
         template = self.options.get('template', None)
         toctree = self.options.get('toctree', 'autosummary')
         excludes = self.options.get('exclude', '').split()

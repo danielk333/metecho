@@ -1,3 +1,11 @@
+'''
+Package-wide execution time profiling system.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Module containing profiling systems using a singleton instance and convenience 
+wrappers for the profiler.
+
+'''
 import copy
 import logging
 import time
