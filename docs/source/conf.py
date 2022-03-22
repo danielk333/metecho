@@ -19,7 +19,7 @@ import metecho
 
 # According to non-pypi extensions
 # Ref: https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-extensions
-ext_paths = (pathlib.Path(__file__).parent / 'exts').resolve()
+ext_paths = (pathlib.Path(__file__).parent / 'extensions').resolve()
 sys.path.append(str(ext_paths))
 
 # -- Project information -----------------------------------------------------
