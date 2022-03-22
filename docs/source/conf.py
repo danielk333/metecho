@@ -39,7 +39,7 @@ author = 'Daniel Kastinen, Kenneth Kullbrandt'
 # ones.
 extensions = [
     'm2r2',
-    'autopackages',
+    'irf.autopackages',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
@@ -47,7 +47,7 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    'sphinx.ext.napoleon',
+    'numpydoc',
     'sphinx_gallery.gen_gallery',
 ]
 
@@ -92,7 +92,7 @@ sphinx_gallery_conf = {
 }
 
 # Autopackages settings
-autopackages_toctree = 'autopackages'
+irf_autopackages_toctree = 'autopackages'
 
 # Napoleon settings
 napoleon_google_docstring = False
