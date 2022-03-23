@@ -43,10 +43,11 @@ cache:
   - pip install -U pip
   - virtualenv venv
   - source venv/bin/activate
+  - apt update
   # install the develop dependancies
   - pip install .[develop]
+  - apt install -y pandoc
   #install extras dependancies
-  - apt update
   - apt install -y openmpi-bin libopenmpi3 libopenmpi-dev openmpi-bin openmpi-doc
   #install extras
   - pip install .[all]
