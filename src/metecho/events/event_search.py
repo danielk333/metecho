@@ -44,7 +44,26 @@ def search(raw_data,
            ):
     """
     Searches for potential events from the filtered data and establishes if they can be analyzed further.
-    Plots them as well by default.
+    Plots them as well by default. Search algorithm adapted from [1]_.
+
+    Parameters
+    ----------
+    raw_data : metecho.RawData
+        The raw radar data to search for head echoes in
+    config : configparser.ConfigParser
+        The search configuration
+    matched_filter_output : dict
+        Output data from the matched filter analysis
+    signal : np.ndarray
+        `shape=(samples, pulses)` model if the transmitted signals.
+
+    Returns
+    -------
+    float
+        Negative of the generalized match function absolute value.
+
+    .. [1] Kastinen, Daniel et. al
+
     """
     # Initiates variables so they're never empty when used
     events = []

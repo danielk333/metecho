@@ -20,3 +20,4 @@ clean:
 	rm -rv $(BUILDDIR)
 	rm -rv $(SOURCEDIR)/autogallery
 	rm -rv $(SOURCEDIR)/autosummary
+	rm -rv $(SOURCEDIR)/autopackages

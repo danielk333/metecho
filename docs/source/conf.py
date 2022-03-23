@@ -12,8 +12,15 @@
 #
 import warnings
 from datetime import date
+import sys
+import pathlib
 
 import metecho
+
+# According to non-pypi extensions
+# Ref: https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-extensions
+ext_paths = (pathlib.Path(__file__).parent / 'extensions').resolve()
+sys.path.append(str(ext_paths))
 
 # -- Project information -----------------------------------------------------
 
@@ -32,14 +39,16 @@ author = 'Daniel Kastinen, Kenneth Kullbrandt'
 # ones.
 extensions = [
     'm2r2',
+    'irf.autopackages',
+    'nbsphinx',
+    'sphinx_gallery.load_style',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    'sphinx.ext.napoleon',
+    'numpydoc',
     'sphinx_gallery.gen_gallery',
 ]
 
@@ -49,7 +58,7 @@ templates_path = ['templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = ['autogallery/*.ipynb', 'examples']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -77,12 +86,18 @@ warnings.filterwarnings("ignore", category=UserWarning,
 
 # -- Options for gallery extension ---------------------------------------
 sphinx_gallery_conf = {
-     'examples_dirs': '../../examples',   # path to your example scripts
+     'examples_dirs': 'examples',   # path to your example scripts
      'gallery_dirs': 'autogallery',  # path where to save gallery generated examples
      'filename_pattern': '/*.py',
      'ignore_pattern': r'.*__no_gallery\.py',
 }
 
+nbsphinx_kernel_name = 'python3'
+
+# Autopackages settings
+irf_autopackages_toctree = 'autopackages'
+
+# Numpydoc settings
 
 # -----------------------------------------------------------------------------
 # Autosummary
@@ -90,6 +105,7 @@ sphinx_gallery_conf = {
 
 autosummary_generate = True
 autosummary_generate_overwrite = True
+autosummary_imported_members = False
 
 # -----------------------------------------------------------------------------
 # Intersphinx configuration

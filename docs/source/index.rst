@@ -4,13 +4,6 @@ metecho
 :Release: |release|
 :Date: |today|
 
-.. toctree::
-   :maxdepth: 3
-   
-   README.md
-   autogallery/index
-   api
-
 
 .. mdinclude:: README.md
 
@@ -22,14 +15,24 @@ Examples
    :maxdepth: 2
 
    autogallery/index
+   ipynbgallery
 
 API Reference
 ==============
 
-.. toctree::
-   :maxdepth: 2
+.. irf_autopackages:: package
+   :template: autosummary/module.rst
+   :toctree: autosummary
+   :exclude: metecho.cli metecho.version
 
-   api
+   metecho
+
+.. irf_autopackages:: cli
+   :template: autosummary/module.rst
+   :toctree: autosummary
+   :title: Command-line Interface
+
+   metecho.cli
 
 
 When used for publications

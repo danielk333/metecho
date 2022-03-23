@@ -43,10 +43,11 @@ cache:
   - pip install -U pip
   - virtualenv venv
   - source venv/bin/activate
+  - apt update
   # install the develop dependancies
   - pip install .[develop]
+  - apt install -y pandoc
   #install extras dependancies
-  - apt update
   - apt install -y openmpi-bin libopenmpi3 libopenmpi-dev openmpi-bin openmpi-doc
   #install extras
   - pip install .[all]
@@ -75,10 +76,10 @@ default:
 diagnostics:
   stage: test
   script: 
-    - radon cc -a pyorb/ > radon_cc_report
-    - radon raw -s pyorb/ > radon_raw_report
-    - radon mi -s pyorb/ > radon_mi_report
-    - radon hal pyorb/ > radon_hal_report
+    - radon cc -a src/metecho/ > radon_cc_report
+    - radon raw -s src/metecho/ > radon_raw_report
+    - radon mi -s src/metecho/ > radon_mi_report
+    - radon hal src/metecho/ > radon_hal_report
     - coverage run -m pytest > pytest_report || true
     - coverage report -m > coverage_report
     - python -m flake8 --extend-exclude venv src/metecho > flake8_report || true
