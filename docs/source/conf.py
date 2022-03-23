@@ -46,7 +46,6 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'numpydoc',
@@ -59,7 +58,7 @@ templates_path = ['templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = ['autogallery/*.ipynb', 'examples']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -87,7 +86,7 @@ warnings.filterwarnings("ignore", category=UserWarning,
 
 # -- Options for gallery extension ---------------------------------------
 sphinx_gallery_conf = {
-     'examples_dirs': '../../examples',   # path to your example scripts
+     'examples_dirs': 'examples',   # path to your example scripts
      'gallery_dirs': 'autogallery',  # path where to save gallery generated examples
      'filename_pattern': '/*.py',
      'ignore_pattern': r'.*__no_gallery\.py',
@@ -98,20 +97,7 @@ nbsphinx_kernel_name = 'python3'
 # Autopackages settings
 irf_autopackages_toctree = 'autopackages'
 
-# Napoleon settings
-napoleon_google_docstring = False
-napoleon_numpy_docstring = True
-napoleon_include_init_with_doc = True
-napoleon_include_private_with_doc = False
-napoleon_include_special_with_doc = False
-napoleon_use_admonition_for_examples = False
-napoleon_use_admonition_for_notes = False
-napoleon_use_admonition_for_references = False
-napoleon_use_ivar = False
-napoleon_use_param = True
-napoleon_use_rtype = True
-napoleon_use_keyword = True
-napoleon_custom_sections = None
+# Numpydoc settings
 
 # -----------------------------------------------------------------------------
 # Autosummary
