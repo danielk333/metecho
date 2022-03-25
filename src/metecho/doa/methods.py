@@ -10,6 +10,8 @@ indecies = np.array([start_values])
 IPP_n = meteor.ipp(indecies)   # what happens here??
 DATA_n = math.floor(ndecies)
 
+simultaneous_meteors = 1
+
 # so here they seem to be creating empty lists for values that are to be calculated?
 # is this really nessesary? and then why work with NaN and nog just .empty or .zero
 MUSIC_peaks = np.empty(len(IPP_n),simultaneous_meteors)
@@ -46,15 +48,17 @@ def MUSIC_IPP(raw_data, I, DATA_n, IPP_n, p):
 
 
 
+
 for i in range(1,len(IPP_n)):
 
+    eigs = np.append(eigs, i)
     eigs(:,i) = eigs_out;
     MUSIC_peaks(i,:) = transpose(peaks_out(:))
     azimuth(i,:) = transpose(azimuth_out(:))
     elevation(i,:) = transpose(elevation_out(:))
     
     for dim in range(1,3):
-        k_vector(dim, I, :) = k_vector_out(dim, :)
+        k_vector = np.append(k_vector, k_vector_out, dim)
 
 
 
