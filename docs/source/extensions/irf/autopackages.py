@@ -49,20 +49,22 @@ def generate_autosummary_directive(
 
 .. automodule::
     {subpackage}
+'''
 
-.. autosummary::'''
+    if len(module_list) > 0:
+        autosummary_directive += '.. autosummary::'
 
-    template = autosummary_opts['template']
-    toctree = autosummary_opts['toctree']
+        template = autosummary_opts['template']
+        toctree = autosummary_opts['toctree']
 
-    if template is not None:
-        autosummary_directive += f'\n   :template: {template}'
-    if toctree is not None:
-        toc = subpackage.replace('.', '/')
-        autosummary_directive += f'\n   :toctree: {toctree}/{toc}'
+        if template is not None:
+            autosummary_directive += f'\n   :template: {template}'
+        if toctree is not None:
+            toc = subpackage.replace('.', '/')
+            autosummary_directive += f'\n   :toctree: {toctree}/{toc}'
 
-    autosummary_directive += '\n' * 2 + '    '
-    autosummary_directive += '\n    '.join(module_list)
+        autosummary_directive += '\n' * 2 + '    '
+        autosummary_directive += '\n    '.join(module_list)
     return autosummary_directive
 
 
@@ -139,17 +141,17 @@ def generate_package_rst(names, excludes, title, autosummary_opts):
 
         # Autosummary the top level
         modules = module_tree.pop(name)
-        if len(modules) > 0:
-            src_content += generate_autosummary_directive(
-                name,
-                modules,
-                autosummary_opts,
-                title_char=title_chars['section'],
-                title=title
-            )
-        else:
+        src_content += generate_autosummary_directive(
+            name,
+            modules,
+            autosummary_opts,
+            title_char=title_chars['section'],
+            title=title,
+        )
+        if len(modules) == 0:
             _title = name.split('.')[-1] if title is None else title
             src_content += _title + '\n' + title_chars['section'] * len(_title)
+
         src_content += '\n' * 2
         tests.append(src_content)
 

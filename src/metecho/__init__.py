@@ -1,3 +1,6 @@
+'''Analysis of meteors in radar data.
+
+'''
 from .version import __version__
 
 from . import tools
