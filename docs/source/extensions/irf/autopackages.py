@@ -122,7 +122,6 @@ def generate_package_rst(names, excludes, title, autosummary_opts):
     input package names.
     '''
     src_content = ''
-    tests = []
     for name in names:
         module_tree = get_module_tree(name)
 
@@ -148,12 +147,7 @@ def generate_package_rst(names, excludes, title, autosummary_opts):
             title_char=title_chars['section'],
             title=title,
         )
-        if len(modules) == 0:
-            _title = name.split('.')[-1] if title is None else title
-            src_content += _title + '\n' + title_chars['section'] * len(_title)
-
         src_content += '\n' * 2
-        tests.append(src_content)
 
         for subpackage, modules in module_tree.items():
             src_content += generate_autosummary_directive(
@@ -163,7 +157,6 @@ def generate_package_rst(names, excludes, title, autosummary_opts):
                 title_char=title_chars['subsection'],
             )
             src_content += '\n' * 2
-        tests.append(src_content)
 
     return src_content
 
