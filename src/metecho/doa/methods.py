@@ -88,7 +88,7 @@ print('nhigh: ', nhigh)
 
 
 # use IPP's to calc R-matrix func
-def calc_k_vector(raw_data, I, DATA_n, IPP_n, p):
+def R_matrix(raw_data, I, DATA_n, IPP_n, p):
     """ Calculates R-matrix
 
     """
@@ -107,11 +107,11 @@ def calc_k_vector(raw_data, I, DATA_n, IPP_n, p):
         np.delete(select_range_gates, select_range_gates > nhigh)
 
 
-    # option 2
-    # if element in select_range_gates > nhigh, delete it from array
-    select_range_gates = np.delete(select_range_gates, np.where(
-        (select_range_gates[-1] > nhigh) & (select_range_gates > nhigh))
-    )
+    # # option 2
+    # # if element in select_range_gates > nhigh, delete it from array
+    # select_range_gates = np.delete(select_range_gates, np.where(
+    #     (select_range_gates[-1] > nhigh) & (select_range_gates > nhigh))
+    # )
 
 
 
@@ -125,9 +125,8 @@ def calc_k_vector(raw_data, I, DATA_n, IPP_n, p):
     return R_matrix
 
 
-
 # prepare storage array for k_vector_out
-k_vector_out = np.empty(3, 1)
+k_vector_out = np.empty((3, 1))
 k_vector_out.fill(np.NaN)
 
 
@@ -147,10 +146,15 @@ def MUSIC_grid_search(R_matrix, num, radar, varargin):
     N = np.shape(R_matrix, 1)
 
     # Compute eigendecomposition of covariance matrix
-    Q ,D = eig(R_matrix)
+    Q ,D = np.linalg.eig(R_matrix)
 
     # Find r largest eigenvalues
-    D,I = sort(diag(D),1,'descend')
+    I = numpy.sort(np.diag(D))[::-1]
+
+    # # n maximum indecies
+    # n = 2
+    # indecies = (-D).argsort()[:n]
+    # I = Q[indecies]
 
 
     kx, ky = meshgrid(np.linspace(restriction(1, 1),restriction(1, 2), num), 
@@ -159,41 +163,58 @@ def MUSIC_grid_search(R_matrix, num, radar, varargin):
     kz = np.sqrt(1 - kx**2 - ky**2)
 
     # Sort the eigenvectors to put signal eigenvectors first
-    Q = Q (:,I)
+    Q = Q[:, I]
 
     # Get the signal eigenvectors
     # Qs = Q (:,1:met_n)
-    if met_n > 1:
-        Qn = cell(met_n,1)
-        for ind in np.arange(1, met_n):
-            Qn[ind] = Q[
-            :,
-            [1:(ind-1), (ind+1):N]
-            ]
-    else:
-        # Get the noise eigenvectors
-        Qn = Q(:, np.arange(2, N+1))
 
     if met_n > 1:
+
+        Qn = np.empty(met_n, 1)
+        Qn.fill(np.NaN)
+
+        for ind in np.arange(1, met_n + 1):
+            Qn[ind] = Q[:, 
+            [np.arange(1, [ind-1] + 1), np.arange([ind+1], N + 1)]
+            ]
+    else:
+
+        # Get the noise eigenvectors
+        Qn = Q[:, np.arange(2, N + 1)]
+
+    if met_n > 1:
+
         F_vals = np.zeros([num, num, met_n])
         
         for xi in np.arange(1, num + 1):
+
             for yi in np.arange(1, num + 1):
-                if kx[xi,yi]**2 + ky[xi,yi]**2 <= np.cos(elevation_limit):
-                    a = radar.beam.gain([kx(xi,yi), ky(xi,yi), kz(xi,yi)].T)
+
+                if kx[xi, yi]**2 + ky[xi, yi]**2 <= np.cos(elevation_limit):
+
+                    a = radar.beam.gain(
+                        [kx[xi, yi], 
+                        ky[xi, yi], 
+                        kz[xi, yi].T]
+                        )
                     
-                    for ind in np.arange(1, met_n):
-                        F_vals(xi,yi, ind) = (a @ a) / (a @ Qn{ind}*Qn{ind}'*a)
+                    for ind in np.arange(1, met_n + 1):
+
+                        F_vals[xi, yi, ind] = (a.T @ a) / (a.T @ Qn[ind] @ Qn[ind].T @ a)
         
 
-    else
-        F_vals = zeros(num,num)
+    else:
+        F_vals = np.zeros([num, num])
         
-        for xi = 1:num
-            for yi = 1:num
-                if kx(xi,yi)^2 + ky(xi,yi)^2 <= cos(elevation_limit)
-                    a = radar.beam.gain([kx(xi,yi), ky(xi,yi), kz(xi,yi)].')
-                    F_vals(xi,yi) = (a'*a)/(a'*Qn*Qn'*a)
+        for xi in np.arange(1, num + 1):
+
+            for yi in np.arange(1, num + 1):
+
+                if kx[xi, yi]**2 + ky[xi, yi]**2 <= np.cos(elevation_limit):
+
+                    a = radar.beam.gain([kx(xi, yi), ky(xi, yi), kz(xi, yi)].T)
+
+                    F_vals[xi, yi] = (a.T @ a) / (a.T @ Qn @ Qn.T @ a)
 
     return F_vals, kx, ky
 
