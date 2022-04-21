@@ -19,7 +19,7 @@ np.set_printoptions(threshold=sys.maxsize)
 # h5_mu_file = pathlib.Path('.').home() / 'clones' / 'metecho_clone' / 'metecho' / 'docs' / 'source' / 'examples' / 'data' / 'MU_h5' / '2009' / '06' / '27' / '2009-06-27T09.54.05.690000000.h5'
 
 
-h5_mu_file = pathlib.Path('.').home() / 'clones' / 'metecho_clone' / 'metecho' / 'docs' / 'source' / 'examples' / 'data' / 'MU_h5' / '2009' / '06' / '27' / '2009-06-27T09.54.05.690000000.h5'
+h5_mu_file = pathlib.Path().home() / 'clones' / 'metecho_clone' / 'metecho' / 'docs' / 'source' / 'examples' / 'data' / 'MU_h5' / '2009' / '06' / '27' / '2009-06-27T09.54.05.690000000.h5'
 
 raw = metecho.data.RawDataInterface(h5_mu_file)
 raw_data = raw.data
@@ -30,6 +30,8 @@ radarsystem = 'MU_radar'
 antenna_pos = get_antenna_positions(radarsystem, requested_positions='req_ant_pos')
 beam = calc_antenna_gain(radarsystem, antenna_positions=antenna_pos[0])[0]
 
+
+print('beam: ', beam)
 
 #indexing = [slice(), slice(), slice()]
 #indexing[raw.axis['channel']] = 1
@@ -80,12 +82,18 @@ k_vector_out = np.empty((3, 1))
 k_vector_out.fill(np.NaN)
 
 
+
+
 # function calls for testing if making 1 grid works
 
-R_matrix = calc_R_matrix(raw, 10, DATA_n, IPP_n) 
+R_matrix = calc_R_matrix(raw, 10, DATA_n, IPP_n)
+
+np.save('Rmatrix', R_matrix)
+
 
 print('R_matrix_shape: ', R_matrix.shape)
 print('r_matrix_type: ', type(R_matrix))
+print('R_matrix: ', R_matrix)
 
 F_vals_all, kx, ky = MUSIC_grid_search(
     R_matrix,
@@ -97,58 +105,54 @@ print('F_vals_all_shape: ', np.shape(F_vals_all))
 print('kx_shape: ', np.shape(kx))
 print('ky_shape: ', np.shape(ky))
 
-# # save data in temp npy file
-# np.save('temp_grid_data', arr=[F_vals_all, kx, ky])
-
-
-
-
-
-max_f_val_array = np.array([[],[]])
-x_max_array = np.array([])
-y_max_array = np.array([])
-
-
-for I in range(0, 2 - 1):
-#for I in range(0, len(IPP_n) - 1):
-
-    F_vals_all, kx, ky = MUSIC_grid_search(
-    R_matrix,
-    beam,  
-    num=200, 
-    )
-
-    print('F_vals_all: ', F_vals_all)
-
-    x, y = kx[0, :], ky[:, 0]
-
-    # calc maximum of F_vals_all to find meteor loc
-    max_f_val = np.amax(F_vals_all)
-
-    # calc max value indices
-    max_index = np.where(F_vals_all == max_f_val)
-    print('max_index: ', max_index)
-
-    # get x index max and y index max
-    x_max_index = np.asscalar(max_index[0])
-    y_max_index = np.asscalar(max_index[1])
-
-    # actual x and y values for max
-    x_max = x[np.asscalar(max_index[0])]
-    y_max = y[np.asscalar(max_index[1])]
-
-
-    max_f_val_array = np.append(max_f_val_array, F_vals_all[x_max_index, 0], axis=0)
-    max_f_val_array = np.append(max_f_val_array, F_vals_all[0, y_max_index], axis=1)
-    x_max_array = np.append(x_max_array, x_max)
-    y_max_array = np.append(y_max_array, y_max)
-
-
 # save data in temp npy file
-np.save('temp_multi_grid_data', arr=[max_f_val_array, x_max_array, y_max_array])
+np.save('temp_grid_data', arr=[F_vals_all, kx, ky])
 
 
 
+
+
+max_f_val_array = np.zeros((200,200))
+
+# for I in range(0, 10 - 1):
+# #for I in range(0, len(IPP_n) - 1):
+    
+#     # calc R_matrix for I in loop
+#     R_matrix = calc_R_matrix(raw, I, DATA_n, IPP_n) 
+
+#     # calc F_vals_all with different R_matrix every loop
+#     F_vals_all, kx, ky = MUSIC_grid_search(
+#     R_matrix,
+#     beam,  
+#     num=200, 
+#     )
+
+#     x, y = kx[0, :], ky[:, 0]
+
+#     # calc maximum of F_vals_all to find meteor loc
+#     max_f_val = np.amax(F_vals_all)
+
+#     # calc max value indices
+#     max_index = np.where(F_vals_all == max_f_val)
+
+#     # get x index max and y index max
+#     x_max_index = np.asscalar(max_index[0])
+#     y_max_index = np.asscalar(max_index[1])
+
+#     # save values for max values in array and use logical indexing for location
+#     max_f_val_array[x_max_index, y_max_index] = max_f_val
+
+
+# # save data in temp npy file
+# np.save('temp_multi_grid_data', arr=[max_f_val_array])
+
+
+# # plotting here, bc some weird shit with saving 2D arrays, dont wanna deal with that rn
+# plt.figure()
+
+# plt.pcolormesh(kx[0,:], ky[:, 0], np.log10(np.abs(max_f_val_array)))
+
+# plt.show()
 
 
 # # down here when peak finder is implemented, a number of grids is generated in 

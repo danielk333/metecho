@@ -36,17 +36,17 @@ print('max_fals_index: ', np.where(F_vals_all == max_f_val_array))
 
 
 
-# # plot of multiple grids
-# plt.figure()
-
-# plt.pcolormesh(x_max_array, y_max_array, np.log10(np.abs(max_f_val_array)))
-
-# plt.show()
-
-
-# 2D plot
+# plot of multiple grids
 plt.figure()
 
-plt.pcolormesh(kx[0,154], ky[72, 0], np.log10(np.abs(F_vals_all[[154],[72]])))
+plt.pcolormesh(kx[0,:], ky[:, 0], np.log10(np.abs(max_f_val_array)))
 
 plt.show()
+
+
+# # 2D plot
+# plt.figure()
+
+# plt.pcolormesh(kx[0,154], ky[72, 0], np.log10(np.abs(F_vals_all[[154],[72]])))
+
+# plt.show()
