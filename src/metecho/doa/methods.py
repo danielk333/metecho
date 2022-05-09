@@ -4,7 +4,7 @@ import pathlib
 import numpy as np
 from math import floor
 import pyant
-from pyant.functions import get_antenna_positions, calc_antenna_gain, calc_R_matrix, MUSIC_grid_search
+from pyant.functions import get_antenna_positions, calc_antenna_gain, calc_R_matrix, MUSIC_grid_search, peak_finder
 from matplotlib import pyplot as plt
 import sys
 
@@ -86,46 +86,45 @@ k_vector_out.fill(np.NaN)
 
 # function calls for testing if making 1 grid works
 
-R_matrix = calc_R_matrix(raw, 10, DATA_n, IPP_n)
-
-np.save('Rmatrix', R_matrix)
-
-
-print('R_matrix_shape: ', R_matrix.shape)
-print('r_matrix_type: ', type(R_matrix))
-print('R_matrix: ', R_matrix)
-
-F_vals_all, kx, ky = MUSIC_grid_search(
-    R_matrix,
-    beam,  
-    num=200, 
-    )
-
-print('F_vals_all_shape: ', np.shape(F_vals_all))
-print('kx_shape: ', np.shape(kx))
-print('ky_shape: ', np.shape(ky))
-
-# save data in temp npy file
-np.save('temp_grid_data', arr=[F_vals_all, kx, ky])
+# R_matrix = calc_R_matrix(raw, 10, DATA_n, IPP_n)
 
 
 
+# print('R_matrix_shape: ', R_matrix.shape)
+# print('r_matrix_type: ', type(R_matrix))
+# print('R_matrix: ', R_matrix)
 
-
-max_f_val_array = np.zeros((200,200))
-
-# for I in range(0, 10 - 1):
-# #for I in range(0, len(IPP_n) - 1):
-    
-#     # calc R_matrix for I in loop
-#     R_matrix = calc_R_matrix(raw, I, DATA_n, IPP_n) 
-
-#     # calc F_vals_all with different R_matrix every loop
-#     F_vals_all, kx, ky = MUSIC_grid_search(
+# F_vals_all, kx, ky = MUSIC_grid_search(
 #     R_matrix,
 #     beam,  
 #     num=200, 
 #     )
+
+# print('F_vals_all_shape: ', np.shape(F_vals_all))
+# print('kx_shape: ', np.shape(kx))
+# print('ky_shape: ', np.shape(ky))
+
+# # save data in temp npy file
+# np.save('temp_grid_data', arr=[F_vals_all, kx, ky])
+
+# print('globals: ', globals())
+
+
+
+# max_f_val_array = np.zeros((200,200))
+
+# for I in range(0, 2 - 1):
+# ##for I in range(0, len(IPP_n) - 1):
+    
+#     # calc R_matrix for I in loop
+#     R_matrix = calc_R_matrix(raw, I, DATA_n, IPP_n) 
+
+#     # calc F_vals_all with different R_matrix every loop4
+#     F_vals_all, kx, ky = MUSIC_grid_search(
+#             R_matrix,
+#             beam,  
+#             num=200, 
+#         )
 
 #     x, y = kx[0, :], ky[:, 0]
 
@@ -155,40 +154,63 @@ max_f_val_array = np.zeros((200,200))
 # plt.show()
 
 
-# # down here when peak finder is implemented, a number of grids is generated in 
-# # the process of calculating k_vector_out
-
-# for I in range(0, len(IPP_n) - 1):
-
-#     F_vals_all, kx, ky = MUSIC_grid_search(
-#     R_matrix,
-#     beam,  
-#     num=200, 
-#     )
-
-#     x, y = kx[0, :], ky[:, 0]
-
-#     # calc maximum of F_vals_all to find meteor loc
-#     max_f_val = np.maximum(F_vals_all)
-
-#     print('max_f_val: ', max_f_val)
-
-#     x_max, y_max = np.argmax(F_vals_all), 
-
-#     # calc k_vector values
-#     k_vector_out = None
-
-#     #eigs = np.append(eigs, i)
-#     # eigs(:,i) = eigs_out;
-#     # MUSIC_peaks(i,:) = transpose(peaks_out(:))
-#     # azimuth(i,:) = transpose(azimuth_out(:))
-#     # elevation(i,:) = transpose(elevation_out(:))
-    
-#     for dim in range(0,2):
-#         k_vector[dim, I] = k_vector_out
 
 
 
+
+
+
+
+# down here when peak finder is implemented, a number of grids is generated in 
+# the process of calculating k_vector_out
+
+#for I in range(0, len(IPP_n) - 1):
+for I in range(0, 4 - 1):
+
+
+
+    # calc R_matrix for I in loop
+    R_matrix = calc_R_matrix(raw, I, DATA_n, IPP_n) 
+
+    # calc F_vals_all with different R_matrix every loop4
+    F_vals_all, kx, ky = MUSIC_grid_search(
+            R_matrix,
+            beam,  
+            num=200, 
+        )
+
+    x, y = kx[0, :], ky[:, 0]
+
+
+    # Compute eigendecomposition of covariance matrix
+    eigs_out, _ = np.linalg.eig(R_matrix)
+
+    # Find r largest eigenvalues
+    eigs_out = np.sort(eigs_out)[::-1]
+
+    peaks_out, azimuth_out, elevation_out, k_vector_out = peak_finder(R_matrix, beam, F_vals_all, kx, ky)
+
+    #eigs = np.append(eigs, i)
+    eigs[:, I] = eigs_out
+    #MUSIC_peaks[I, :] = np.reshape(peaks_out, newshape=(peaks_out.size, 1))
+    #azimuth[I,:] = np.reshape(azimuth_out, newshape=(azimuth_out.size, 1))
+    #elevation[I,:] = np.reshape(elevation_out, newshape=(azimuth_out.size, 1))
+
+    # save k_vector output values in k_vector matrix 
+    for dim in range(0,2):
+        k_vector[dim, I] = k_vector_out[dim,0]
+
+    print('peaks_out_temp: ', peaks_out)
+
+
+print('peaks_out: ', peaks_out)
+
+# plotting
+plt.figure()
+
+plt.pcolormesh(kx[0,:], ky[:, 0], np.log10(np.abs(peaks_out)))
+
+plt.show()
 
 
 
