@@ -57,28 +57,30 @@ IPP_n = ipps[data_selector]
 DATA_n = start_values[data_selector]
 DATA_n = np.floor(DATA_n)
 
+start_values = start_values[data_selector]
+
 simultaneous_meteors = 1
 
 
 # create storage arrays for numerous parameters/results
-MUSIC_peaks = np.empty(len(IPP_n))
+MUSIC_peaks = np.zeros(len(IPP_n))
 MUSIC_peaks.fill(np.NaN)
-azimuth = np.empty(len(IPP_n))
+azimuth = np.zeros(len(IPP_n))
 azimuth.fill(np.NaN)
-elevation = np.empty(len(IPP_n))
+elevation = np.zeros(len(IPP_n))
 elevation.fill(np.NaN)
 
-k_vector = np.empty(
+k_vector = np.zeros(
     (3, len(IPP_n))
 )
 k_vector.fill(np.NaN)
 
-eigs = np.empty(
+eigs = np.zeros(
     (raw.data.shape[raw.axis['channel']], len(IPP_n))
     )
 eigs.fill(np.NaN)
 
-k_vector_out = np.empty((3, 1))
+k_vector_out = np.zeros((3, 1))
 k_vector_out.fill(np.NaN)
 
 
@@ -110,48 +112,62 @@ k_vector_out.fill(np.NaN)
 # print('globals: ', globals())
 
 
+# create empty arrays for fvals and k vectors contributing to peaks (in this case just max vals)
+max_f_val_array = np.zeros(len(IPP_n))
+max_f_val_array.fill(np.NaN)
 
-# max_f_val_array = np.zeros((200,200))
+kx_new = np.zeros(len(IPP_n))
+max_f_val_array.fill(np.NaN)
 
-# for I in range(0, 2 - 1):
-# ##for I in range(0, len(IPP_n) - 1):
+ky_new = np.zeros(len(IPP_n))
+max_f_val_array.fill(np.NaN)
+
+
+for I in range(0, 10 - 1):
+#for I in range(0, len(IPP_n) - 1):
     
-#     # calc R_matrix for I in loop
-#     R_matrix = calc_R_matrix(raw, I, DATA_n, IPP_n) 
+    # calc R_matrix for I in loop
+    R_matrix = calc_R_matrix(raw, I, DATA_n, IPP_n) 
 
-#     # calc F_vals_all with different R_matrix every loop4
-#     F_vals_all, kx, ky = MUSIC_grid_search(
-#             R_matrix,
-#             beam,  
-#             num=200, 
-#         )
+    # calc F_vals_all with different R_matrix every loop4
+    F_vals_all, kx, ky = MUSIC_grid_search(
+            R_matrix,
+            beam,  
+            num=200, 
+        )
 
-#     x, y = kx[0, :], ky[:, 0]
+    #x, y = kx[0, :], ky[:, 0]
 
-#     # calc maximum of F_vals_all to find meteor loc
-#     max_f_val = np.amax(F_vals_all)
+    # calc maximum of F_vals_all to find meteor loc
+    max_index = np.unravel_index(np.argmax(F_vals_all), F_vals_all.shape)
 
-#     # calc max value indices
-#     max_index = np.where(F_vals_all == max_f_val)
+    # save values for max values in array and use logical indexing for location
+    max_f_val_array[I] = F_vals_all[max_index]
 
-#     # get x index max and y index max
-#     x_max_index = np.asscalar(max_index[0])
-#     y_max_index = np.asscalar(max_index[1])
+    kx_new[I] = kx[max_index[0], max_index[1]]
+    ky_new[I] = ky[max_index[0], max_index[1]]
 
-#     # save values for max values in array and use logical indexing for location
-#     max_f_val_array[x_max_index, y_max_index] = max_f_val
+kz_new = np.sqrt(1 - kx_new**2 - ky_new**2)
+
+k_new = np.array([kx_new, ky_new, kz_new])
+
+# calculate sample_range
+sample_range = k_new * start_values
+
+# save data in temp npy file
+np.save('temp_multi_grid_data', arr=[max_f_val_array])
 
 
-# # save data in temp npy file
-# np.save('temp_multi_grid_data', arr=[max_f_val_array])
+# plotting here, bc some weird shit with saving 2D arrays, dont wanna deal with that rn
+fig = plt.figure()
 
+ax = fig.add_subplot(projection='3d')
 
-# # plotting here, bc some weird shit with saving 2D arrays, dont wanna deal with that rn
-# plt.figure()
+#plt.pcolormesh(kx[0,:], ky[:, 0], np.log10(np.abs(max_f_val_array)))
+ax.scatter(sample_range[0], sample_range[1], sample_range[2])
 
-# plt.pcolormesh(kx[0,:], ky[:, 0], np.log10(np.abs(max_f_val_array)))
+plt.show()
 
-# plt.show()
 
 
 
@@ -164,54 +180,52 @@ k_vector_out.fill(np.NaN)
 # down here when peak finder is implemented, a number of grids is generated in 
 # the process of calculating k_vector_out
 
-#for I in range(0, len(IPP_n) - 1):
-for I in range(0, 4 - 1):
+# #for I in range(0, len(IPP_n) - 1):
+# for I in range(0, 10 - 1):
 
 
+#     # calc R_matrix for I in loop
+#     R_matrix = calc_R_matrix(raw, I, DATA_n, IPP_n) 
 
-    # calc R_matrix for I in loop
-    R_matrix = calc_R_matrix(raw, I, DATA_n, IPP_n) 
+#     # calc F_vals_all with different R_matrix every loop4
+#     F_vals_all, kx, ky = MUSIC_grid_search(
+#             R_matrix,
+#             beam,  
+#             num=200, 
+#         )
 
-    # calc F_vals_all with different R_matrix every loop4
-    F_vals_all, kx, ky = MUSIC_grid_search(
-            R_matrix,
-            beam,  
-            num=200, 
-        )
+#     peaks_out, azimuth_out, elevation_out, k_vector_out = peak_finder(R_matrix, beam, F_vals_all, kx, ky)
 
-    x, y = kx[0, :], ky[:, 0]
+#     # Compute eigendecomposition of covariance matrix
+#     eigs_out, _ = np.linalg.eig(R_matrix)
 
+#     # Find r largest eigenvalues
+#     eigs_out = np.sort(eigs_out)[::-1]
 
-    # Compute eigendecomposition of covariance matrix
-    eigs_out, _ = np.linalg.eig(R_matrix)
+#     # store data in designated arrays
+#     eigs[:, I] = eigs_out
+#     MUSIC_peaks[I] = peaks_out
+#     azimuth[I] = azimuth_out
+#     elevation[I] = elevation_out
 
-    # Find r largest eigenvalues
-    eigs_out = np.sort(eigs_out)[::-1]
-
-    peaks_out, azimuth_out, elevation_out, k_vector_out = peak_finder(R_matrix, beam, F_vals_all, kx, ky)
-
-    #eigs = np.append(eigs, i)
-    eigs[:, I] = eigs_out
-    #MUSIC_peaks[I, :] = np.reshape(peaks_out, newshape=(peaks_out.size, 1))
-    #azimuth[I,:] = np.reshape(azimuth_out, newshape=(azimuth_out.size, 1))
-    #elevation[I,:] = np.reshape(elevation_out, newshape=(azimuth_out.size, 1))
-
-    # save k_vector output values in k_vector matrix 
-    for dim in range(0,2):
-        k_vector[dim, I] = k_vector_out[dim,0]
-
-    print('peaks_out_temp: ', peaks_out)
+#     # save k_vector output values in k_vector matrix, 1st=x, 2nd=y, 3th=z in loop
+#     for dim in range(0,3):
+#         k_vector[dim, I] = k_vector_out[dim, 0]
 
 
-print('peaks_out: ', peaks_out)
+# # calculate sample_range
+# sample_range = k_vector * start_values
 
-# plotting
-plt.figure()
 
-plt.pcolormesh(kx[0,:], ky[:, 0], np.log10(np.abs(peaks_out)))
+# # plotting
+# fig = plt.figure()
 
-plt.show()
+# ax = fig.add_subplot(projection='3d')
 
+# #plt.pcolormesh(kx[0,:], ky[:, 0], np.log10(np.abs(max_f_val_array)))
+# ax.scatter(sample_range[0, :], sample_range[1, :], sample_range[2, :])
+
+# plt.show()
 
 
 
