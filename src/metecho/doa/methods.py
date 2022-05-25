@@ -92,6 +92,37 @@ def storage_arrays(IPP_n):
     return MUSIC_peaks, azimuth, elevation, k_vector, eigs, k_vector_out
 
 
+def total_func(raw, I, DATA_n, IPP_n, beam, num, eigs, MUSIC_peaks, azimuth, elevation, k_vector):
+    """ Total function for doa calculation. Implemented for mp
+    """
+    
+    # calc R_matrix for I in loop
+    R_matrix = calc_R_matrix(raw, I, DATA_n, IPP_n)
+
+    # calc F-vals and k values
+    F_vals_all, kx, ky = MUSIC_grid_search(R_matrix, beam, num)
+
+    peaks_out, azimuth_out, elevation_out, k_vector_out = peak_finder(R_matrix, beam, F_vals_all, kx, ky)
+
+    # Compute eigendecomposition of covariance matrix
+    eigs_out, _ = np.linalg.eig(R_matrix)
+
+    # Find r largest eigenvalues
+    eigs_out = np.sort(eigs_out)[::-1]
+
+    # store data in designated arrays
+    eigs[:, I] = eigs_out
+    MUSIC_peaks[I] = peaks_out
+    azimuth[I] = azimuth_out
+    elevation[I] = elevation_out
+
+    # save k_vector output values in k_vector matrix, 1st=x, 2nd=y, 3th=z in loop
+    for dim in range(0,3):
+        k_vector[dim, I] = k_vector_out[dim, 0]
+
+    return eigs_out, peaks_out, azimuth_out, elevation_out, k_vector_out 
+
+
 def calc_doa(starting_point = None):
     """ Calcuated the doa --> k vectors and peaks
     Note to self: call function with non default input for starting values
@@ -101,77 +132,59 @@ def calc_doa(starting_point = None):
     if starting_point == None: 
         # get start values
         IPP_n, DATA_n, start_values = meteor_start()
+    else: 
+        IPP_n, DATA_n, start_values = starting_point[0], starting_point[1], starting_point[2]
 
     # get storage arrays for further doa calculation
     MUSIC_peaks, azimuth, elevation, k_vector, eigs, k_vector_out = storage_arrays(IPP_n)
 
+    # create empty list to store return values from mp function calls and define num
+    input_args = []
+    num = 200
 
     #for I in range(0, len(IPP_n) - 1):
     for I in range(0, 10 - 1):
+        input_args.append((raw, I, DATA_n, IPP_n, beam, num, eigs, MUSIC_peaks, azimuth, elevation, k_vector))
+
+    with mp.Pool(processes=8) as pool:
+
+        results = pool.starmap(total_func, input_args)
+
+        print('\n\nresults: ', [x.shape for x in results[8]])
+
+        k_vector = results[0]
+        MUSIC_peaks = results[1]
+
+    print('\n\nk_vector: ', type(k_vector))
 
 
         # calc R_matrix for I in loop
-        R_matrix = calc_R_matrix(raw, I, DATA_n, IPP_n)
+        # R_matrix = calc_R_matrix(raw, I, DATA_n, IPP_n)
 
 
-        # make return dict for mp to have return statements from function call
-        manager = mp.Manager()
-        return_dict = manager.dict()
+        # # make return dict for mp to have return statements from function call
+        # manager = mp.Manager()
+        # return_dict = manager.dict()
 
-        # create lock to that multiple processes don't do same action while working in paralel
-        lock = mp.Lock()
+        # # create lock to that multiple processes don't do same action while working in paralel
+        # lock = mp.Lock()
 
-        num = 200
+        # num = 200
 
-        p1 = mp.Process(target=MUSIC_grid_search, args=(R_matrix, beam, num, return_dict, lock))
-        p2 = mp.Process(target=MUSIC_grid_search, args=(R_matrix, beam, num, return_dict, lock))
-        p3 = mp.Process(target=MUSIC_grid_search, args=(R_matrix, beam, num, return_dict, lock))
-        p4 = mp.Process(target=MUSIC_grid_search, args=(R_matrix, beam, num, return_dict, lock))
-        p5 = mp.Process(target=MUSIC_grid_search, args=(R_matrix, beam, num, return_dict, lock))
-        p6 = mp.Process(target=MUSIC_grid_search, args=(R_matrix, beam, num, return_dict, lock))
-        p7 = mp.Process(target=MUSIC_grid_search, args=(R_matrix, beam, num, return_dict, lock))
-        p8 = mp.Process(target=MUSIC_grid_search, args=(R_matrix, beam, num, return_dict, lock))
+        # p1 = mp.Process(target=MUSIC_grid_search, args=(R_matrix, beam, num, return_dict, lock))
+        # p2 = mp.Process(target=MUSIC_grid_search, args=(R_matrix, beam, num, return_dict, lock))
 
-        p1.start()
-        p2.start()
-        p3.start()
-        p4.start()
-        p5.start()
-        p6.start()
-        p7.start()
-        p8.start()
+        # p1.start()
+        # p2.start()
 
-        p1.join()
-        p2.join()
-        p3.join()
-        p4.join()
-        p5.join()
-        p6.join()
-        p7.join()
-        p8.join()
+        # p1.join()
+        # p2.join()
+
+        # F_vals_all = return_dict['F_vals']
+        # kx = return_dict['kx']
+        # ky = return_dict['ky']
 
 
-        F_vals_all = return_dict['F_vals']
-        kx = return_dict['kx']
-        ky = return_dict['ky']
-
-        peaks_out, azimuth_out, elevation_out, k_vector_out = peak_finder(R_matrix, beam, F_vals_all, kx, ky)
-
-        # Compute eigendecomposition of covariance matrix
-        eigs_out, _ = np.linalg.eig(R_matrix)
-
-        # Find r largest eigenvalues
-        eigs_out = np.sort(eigs_out)[::-1]
-
-        # store data in designated arrays
-        eigs[:, I] = eigs_out
-        MUSIC_peaks[I] = peaks_out
-        azimuth[I] = azimuth_out
-        elevation[I] = elevation_out
-
-        # save k_vector output values in k_vector matrix, 1st=x, 2nd=y, 3th=z in loop
-        for dim in range(0,3):
-            k_vector[dim, I] = k_vector_out[dim, 0]
 
     # calculate sample_range
     sample_range = k_vector * start_values
