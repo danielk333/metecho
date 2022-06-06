@@ -8,7 +8,16 @@ from pyant.functions import get_antenna_positions, calc_antenna_gain, calc_R_mat
 from matplotlib import pyplot as plt
 import sys
 import multiprocessing as mp
+from metecho import tools
 
+# init profiler
+metecho.profiler.init('IPP_and_storage', True)
+
+# init profiler
+metecho.profiler.init('input_args_appending', True)
+
+# init profiler
+metecho.profiler.init('mp_calculations', True)
 
 # numpy option to print full numpy array instead of truncation
 np.set_printoptions(threshold=sys.maxsize)
@@ -91,26 +100,49 @@ def storage_arrays(IPP_n):
 
     return MUSIC_peaks, azimuth, elevation, k_vector, eigs, k_vector_out
 
-
-def total_func(raw, I, DATA_n, IPP_n, beam, num, eigs, MUSIC_peaks, azimuth, elevation, k_vector):
+@tools.profiling.timeing(f'{__name__}')
+def total_func(all_inds, child_conn, raw, DATA_n, IPP_n, beam, num):
     """ Total function for doa calculation. Implemented for mp
     """
+
+    # create empty lists to store result values from this process's inds chunk
+    eigs_out_list = []
+    peaks_out_list = []
+    azimuth_out_list = []
+    elevation_out_list = []
+    k_vector_out_list = []
+
+    for I in all_inds:
+
+        y_list.append(y)
+        z_list.append(z)
     
-    # calc R_matrix for I in loop
-    R_matrix = calc_R_matrix(raw, I, DATA_n, IPP_n)
+        I = all_inds
 
-    # calc F-vals and k values
-    F_vals_all, kx, ky = MUSIC_grid_search(R_matrix, beam, num)
+        # calc R_matrix for I in loop
+        R_matrix = calc_R_matrix(raw, I, DATA_n, IPP_n)
 
-    peaks_out, azimuth_out, elevation_out, k_vector_out = peak_finder(R_matrix, beam, F_vals_all, kx, ky)
+        # calc F-vals and k values
+        F_vals_all, kx, ky = MUSIC_grid_search(R_matrix, beam, num)
 
-    # Compute eigendecomposition of covariance matrix
-    eigs_out, _ = np.linalg.eig(R_matrix)
+        peaks_out, azimuth_out, elevation_out, k_vector_out = peak_finder(R_matrix, beam, F_vals_all, kx, ky)
 
-    # Find r largest eigenvalues
-    eigs_out = np.sort(eigs_out)[::-1]
+        # Compute eigendecomposition of covariance matrix
+        eigs_out, _ = np.linalg.eig(R_matrix)
 
-    return eigs_out, peaks_out, azimuth_out, elevation_out, k_vector_out, I
+        # Find r largest eigenvalues
+        eigs_out = np.sort(eigs_out)[::-1]
+
+        # append result values to lists
+        eigs_out_list.append(eigs_out)
+        peaks_out_list.append(peaks_out)
+        azimuth_out_list.append(azimuth_out)
+        elevation_out_list.append(elevation_out)
+        k_vector_out_list.append(k_vector_out)
+
+    child_conn.send((eigs_out_list, peaks_out_list, azimuth_out_list, elevation_out_list, k_vector_out_list))
+
+    #return eigs_out, peaks_out, azimuth_out, elevation_out, k_vector_out
 
 
 def calc_doa(starting_point = None):
@@ -118,6 +150,7 @@ def calc_doa(starting_point = None):
     Note to self: call function with non default input for starting values
     """
 
+    metecho.profiler.start('IPP_and_storage')
     #If user doesnt input their own meteor start values (from their own algorithm), use the default
     if starting_point == None: 
         # get start values
@@ -127,16 +160,114 @@ def calc_doa(starting_point = None):
 
     # get storage arrays for further doa calculation
     MUSIC_peaks, azimuth, elevation, k_vector, eigs, k_vector_out = storage_arrays(IPP_n)
+    metecho.profiler.stop('IPP_and_storage')
 
     # create empty list to store return values from mp function calls and define num
     input_args = []
     num = 200
 
+    # metecho.profiler.start('input_args_appending')
+    # for I in range(0, len(IPP_n) - 1):
+    # #for I in range(0, 10 - 1):
+    #     input_args.append((I, raw, DATA_n, IPP_n, beam, num))
+    # metecho.profiler.stop('input_args_appending')
+
+    # metecho.profiler.start('mp_calculations')
+    # for result in mp.Pool(processes=8).starmap(total_func, input_args):
+
+    # #print('\n\nresults: ', [x.shape for x in results])
+
+    #     eigs_out, peaks_out, azimuth_out, elevation_out, k_vector_out, I = result[0], result[1], result[2], result[3], result[4], result[5]
+
+    #     #print('\n\nresults: ', [x.shape for x in results])
+    #     print('\n\nI: ', I)
+
+    #     # store data in designated arrays
+    #     eigs[:, I] = eigs_out
+    #     MUSIC_peaks[I] = peaks_out
+    #     azimuth[I] = azimuth_out
+    #     elevation[I] = elevation_out
+
+    #     # save k_vector output values in k_vector matrix, 1st=x, 2nd=y, 3th=z in loop
+    #     for dim in range(0,3):
+    #         k_vector[dim, I] = k_vector_out[dim, 0]
+
+    # metecho.profiler.stop('mp_calculations')
+
+
+    all_inds = list(range(IPP_n-1))
+
+    all_peaks_out = np.array([None]*len(all_inds))
+    all_azimuth_out = np.array([None]*len(all_inds))
+    all_elevation_out = np.array([None]*len(all_inds))
+    all_k_vector = np.array([[None]*len(all_inds), [None]*len(all_inds), [None]*len(all_inds)])
+    all_eigs_out = np.full(shape=(raw.data.shape[raw.axis['channel']], len(IPP_n)), fill_value=None)
+    all_k_vector_out = np.array([None]*3)
+
+
+    # create storage arrays for numerous parameters/results
+    MUSIC_peaks = np.zeros(len(IPP_n))
+    MUSIC_peaks.fill(np.NaN)
+    azimuth = np.zeros(len(IPP_n))
+    azimuth.fill(np.NaN)
+    elevation = np.zeros(len(IPP_n))
+    elevation.fill(np.NaN)
+    k_vector = np.zeros(
+        (3, len(IPP_n))
+    )
+    k_vector.fill(np.NaN)
+    eigs = np.zeros(
+        (raw.data.shape[raw.axis['channel']], len(IPP_n))
+        )
+    eigs.fill(np.NaN)
+    k_vector_out = np.zeros((3, 1))
+    k_vector_out.fill(np.NaN)
+
+
+
+    cores = 8
+    processes = []
+    pipes = []
+
+
+    for core in range(cores):
+
+        parent_conn, child_conn = mp.Pipe()
+        p = mp.Process(target=total_func, args=(all_inds[core::cores], child_conn, raw, DATA_n, IPP_n, beam, num))
+        processes.append(p)
+        pipes.append(parent_conn)
+
+    # start stuff
+    for p in processes:
+        p.start()
+
+    # all running
+    # wait for done
+
+
+    for p, pipe, core in zip(processes, pipes, range(cores)):
+        eigs_out_list, peaks_out_list, azimuth_out_list, elevation_out_list, k_vector_out_list = pipe.recv()
+        p.join()
+
+        for I, eigs, peaks, azimuth, elevation, k_vector in zip(all_inds[core::cores], eigs_out_list, peaks_out_list, azimuth_out_list, elevation_out_list, k_vector_out_list):
+            all_y[I]  = y
+            all_eigs_out[I] = eigs
+            all_peaks_out[I] = peaks
+            all_azimuth_out[I] = azimuth
+            all_elevation_out[I] = elevation
+            all_k_vector_out[I] = k_vector
+
+
+
+    metecho.profiler.start('input_args_appending')
     for I in range(0, len(IPP_n) - 1):
     #for I in range(0, 10 - 1):
-        input_args.append((raw, I, DATA_n, IPP_n, beam, num, eigs, MUSIC_peaks, azimuth, elevation, k_vector))
+        input_args.append((I, raw, DATA_n, IPP_n, beam, num))
+    metecho.profiler.stop('input_args_appending')
 
+    metecho.profiler.start('mp_calculations')
     for result in mp.Pool(processes=8).starmap(total_func, input_args):
+
     #print('\n\nresults: ', [x.shape for x in results])
 
         eigs_out, peaks_out, azimuth_out, elevation_out, k_vector_out, I = result[0], result[1], result[2], result[3], result[4], result[5]
@@ -154,7 +285,7 @@ def calc_doa(starting_point = None):
         for dim in range(0,3):
             k_vector[dim, I] = k_vector_out[dim, 0]
 
-        #print('\n\nresults: ', [x.shape for x in result[8]])
+    metecho.profiler.stop('mp_calculations')
 
 
     # calculate sample_range
@@ -168,7 +299,12 @@ def calc_doa(starting_point = None):
 
 k_vector, MUSIC_peaks, sample_range = calc_doa()
 
+# stop MPI right here
 
+# id of process is called rank of process --> acces by   comm.rank
+
+# if comm.rank != 0:
+#     exit()
 
 
 doa_example_data_file = pathlib.Path().home() / 'clones' / 'metecho_clone' / 'metecho' / 'src' / 'metecho' / 'data' /'doa_data_example.npy'
