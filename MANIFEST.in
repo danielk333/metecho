@@ -1,2 +1,6 @@
-include src/libxcorr/*
+recursive-include src/clibmet/**/*.c
+recursive-include src/clibmet/*.c
+recursive-include src/clibmet/**/*.h
+recursive-include src/clibmet/*.h
+include src/clibmet/Makefile
 include README.md
