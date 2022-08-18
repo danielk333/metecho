@@ -198,15 +198,3 @@ def crosscorrelate_single_delay(x, y, delay):
 def set_norm_coefs(abs_signal_sample_sum, start, stop, inarray):
     libmet.set_norm_coefs(abs_signal_sample_sum, start, stop, inarray)
     return inarray
-
-
-def elementwise_cabs_square(inarray, start, stop):
-    result = np.zeros([stop - start], dtype=np.complex128)
-    libmet.elementwise_cabs_square(inarray, start, stop, result)
-    return result
-
-
-def arange(start, stop, step):
-    outarray = np.zeros([int((stop - start) / step) + 1], dtype=np.double)
-    libmet.arange(start, stop, step, outarray)
-    return outarray

@@ -25,6 +25,8 @@ from . import data
 from . import plot
 from . import events
 from . import meteoroid_streams
+from . import model
+from . import simulation
 
 from .tools import PROFILER as profiler
 from .tools import debug
