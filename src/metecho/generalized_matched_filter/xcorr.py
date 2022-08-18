@@ -1,12 +1,15 @@
 import ctypes
 import logging
-import sysconfig
 import numpy as np
 import numpy.ctypeslib as npct
 from .. import tools
 from pathlib import Path
 
+from metecho import libmet
+
 logger = logging.getLogger(__name__)
+
+# Define the C interface
 
 np_double = npct.ndpointer(np.float64, ndim=1, flags='aligned, contiguous, writeable')
 np_complex = npct.ndpointer(np.complex128, ndim=1, flags='aligned, c_contiguous, writeable')
@@ -14,18 +17,8 @@ np_complex_2d = npct.ndpointer(np.complex128, ndim=2, flags='aligned, c_contiguo
 np_complex_single = npct.ndpointer(np.complex128, ndim=0)
 np_int_pointer = npct.ndpointer(np.int32, ndim=1, flags='aligned, contiguous, writeable')
 
-# Find suffix
-suffix = sysconfig.get_config_var('EXT_SUFFIX')
-if suffix is None:
-    suffix = ".so"
 
-# We start by making a path to the current directory.
-pymodule_dir = Path(__file__).resolve().parent 
-__libpath__ = pymodule_dir / ('libxcorr' + suffix)
-
-# Then we open the created shared libecho file
-libecho = ctypes.CDLL(__libpath__)
-libecho.xcorr_echo_search.argtypes = [
+libmet.xcorr_echo_search.argtypes = [
     ctypes.c_double,
     ctypes.c_double,
     ctypes.c_double,
@@ -41,6 +34,46 @@ libecho.xcorr_echo_search.argtypes = [
     np_int_pointer,
     ctypes.c_int,
     ctypes.c_double,
+]
+
+libmet.crosscorrelate.argtypes = [
+    np_complex,
+    ctypes.c_int,
+    np_complex,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    np_complex,
+]
+
+libmet.crosscorrelate_single_delay.argtypes = [
+    np_complex,
+    ctypes.c_int,
+    np_complex,
+    ctypes.c_int,
+    ctypes.c_int,
+    np_complex,
+]
+
+libmet.set_norm_coefs.argtypes = [
+    np_complex_single,
+    ctypes.c_int,
+    ctypes.c_int,
+    np_complex,
+]
+
+libmet.elementwise_cabs_square.argtypes = [
+    np_complex,
+    ctypes.c_int,
+    ctypes.c_int,
+    np_complex
+]
+
+libmet.arange.argtypes = [
+    ctypes.c_double,
+    ctypes.c_double,
+    ctypes.c_double,
+    np_double,
 ]
 
 
@@ -93,7 +126,7 @@ def xcorr_echo_search(
         max_pow_per_doppler_size = doppler_freq_size
         maxpowind = np.zeros([doppler_freq_size], dtype=np.int32)
         maxpowind_size = doppler_freq_size
-        libecho.xcorr_echo_search(
+        libmet.xcorr_echo_search(
             doppler_freq_min,
             doppler_freq_max,
             doppler_freq_step,
@@ -134,7 +167,7 @@ def crosscorrelate(x, y, min_delay, max_delay):
     Crosscorrelates two arrays between a max and a min delay. Does not normalize them.
     """
     return_value = np.zeros([len(x) + len(y)], dtype=np.complex128)
-    libecho.crosscorrelate(
+    libmet.crosscorrelate(
         x,
         len(x),
         y,
@@ -151,7 +184,7 @@ def crosscorrelate_single_delay(x, y, delay):
     Crosscorrelates over a single delay. Does not normalize.
     """
     return_value = np.zeros([1], dtype=np.complex128)
-    libecho.crosscorrelate_single_delay(
+    libmet.crosscorrelate_single_delay(
         x,
         len(x),
         y,
@@ -163,58 +196,17 @@ def crosscorrelate_single_delay(x, y, delay):
 
 
 def set_norm_coefs(abs_signal_sample_sum, start, stop, inarray):
-    libecho.set_norm_coefs(abs_signal_sample_sum, start, stop, inarray)
+    libmet.set_norm_coefs(abs_signal_sample_sum, start, stop, inarray)
     return inarray
 
 
 def elementwise_cabs_square(inarray, start, stop):
     result = np.zeros([stop - start], dtype=np.complex128)
-    libecho.elementwise_cabs_square(inarray, start, stop, result)
+    libmet.elementwise_cabs_square(inarray, start, stop, result)
     return result
 
 
 def arange(start, stop, step):
     outarray = np.zeros([int((stop - start) / step) + 1], dtype=np.double)
-    libecho.arange(start, stop, step, outarray)
+    libmet.arange(start, stop, step, outarray)
     return outarray
-
-
-libecho.crosscorrelate.argtypes = [
-    np_complex,
-    ctypes.c_int,
-    np_complex,
-    ctypes.c_int,
-    ctypes.c_int,
-    ctypes.c_int,
-    np_complex,
-]
-
-libecho.crosscorrelate_single_delay.argtypes = [
-    np_complex,
-    ctypes.c_int,
-    np_complex,
-    ctypes.c_int,
-    ctypes.c_int,
-    np_complex,
-]
-
-libecho.set_norm_coefs.argtypes = [
-    np_complex_single,
-    ctypes.c_int,
-    ctypes.c_int,
-    np_complex,
-]
-
-libecho.elementwise_cabs_square.argtypes = [
-    np_complex,
-    ctypes.c_int,
-    ctypes.c_int,
-    np_complex
-]
-
-libecho.arange.argtypes = [
-    ctypes.c_double,
-    ctypes.c_double,
-    ctypes.c_double,
-    np_double,
-]
