@@ -120,3 +120,12 @@ class RawDataInterface:
         self.data = data
         self.meta.update(meta)
         self.axis.update(axis)
+
+    def copy(self):
+        '''Return a copy of the current instance.
+        '''
+        return RawDataInterface(
+            data = self.data.copy,
+            axis = copy.deepcopy(self.axis),
+            meta = copy.deepcopy(self.meta),
+        )
