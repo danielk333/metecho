@@ -15,6 +15,18 @@ if astropy is not None:
     import astropy.units as units
 
 
+def ecliptic(ra, dec):
+    '''Goes to GeocentricTrueEcliptic
+    '''
+
+    radiant = coords.SkyCoord(
+        ra*units.deg, 
+        dec*units.deg, 
+        frame='gcrs'
+    )
+    return radiant.transform_to(coords.GeocentricTrueEcliptic())
+
+
 def local(t, epoch, ra, dec, lon, lat, height=0.0):
     '''Calculate the local coordinates of meteor shower radiant.
 
