@@ -421,30 +421,30 @@ def convert_MUI_to_h5(path, output_location, experiment_name="mw26x6", skip_exis
             logger.debug(f'Creating file directories for location {output_location_dated}')
             os.makedirs(output_location_dated)
 
+        if bool(output_location):
+            """
+            Checks if output_location has been set and if the directory already exists.
+            If it does, it will check if the output file already exists. If it does and
+            the "skip existing files" flag is set, it will skip those datasets.
+            """
+            # If the file already exists and you want to skip it
+            if pathlib.Path(output_file_name).is_file and skip_existing:
+                logger.debug(f'Skip existing set and file was found. Skipping file "{output_file_name}".')
+                # Skip ahead to the next block
+                file.seek(block_amount * SKIP_AMOUNT, 1)
+                byte = file.read(1)
+                file.seek(-1, 1)
+                continue
+
+        if observation_param_name.strip() != experiment_name:
+            logger.critical(f'Experiment name "{experiment_name}" was not '
+                            + f'equal to observation parameter name "{observation_param_name}". Exiting.')
+            break
+
         """
         Opening the file properly so it closes if it crashes.
         """
         with h5py.File(output_file_name, 'w') as h5file:
-
-            if bool(output_location):
-                """
-                Checks if output_location has been set and if the directory already exists.
-                If it does, it will check if the output file already exists. If it does and
-                the "skip existing files" flag is set, it will skip those datasets.
-                """
-                # If the file already exists and you want to skip it
-                if pathlib.Path(output_file_name).is_file and skip_existing:
-                    logger.debug(f'Skip existing set and file was found. Skipping file "{output_file_name}".')
-                    # Skip ahead to the next block
-                    file.seek(block_amount * SKIP_AMOUNT, 1)
-                    byte = file.read(1)
-                    file.seek(-1, 1)
-                    continue
-
-            if observation_param_name.strip() != experiment_name:
-                logger.critical(f'Experiment name "{experiment_name}" was not '
-                                + f'equal to observation parameter name "{observation_param_name}". Exiting.')
-                break
 
             """
             # Allocating variables to hold the data. mu_data is a 512 times block_amount large complex array
@@ -490,7 +490,6 @@ def convert_MUI_to_h5(path, output_location, experiment_name="mw26x6", skip_exis
             logger.debug('Creating datasets beams and data, and saving them to file')
             h5file.create_dataset("beams", data=mu_beam_channel_height)
             h5file.create_dataset("data", data=mu_data)
-            h5file.close()
             file_outputs_created.append(str(output_file_name))
 
         byte = file.read(1)
@@ -547,4 +546,7 @@ def load_MU_h5_data(path):
         np.ones(2),
     )
 
-    return h5file['data'][()], {'channel': 0, 'sample': 1, 'pulse': 2}, meta
+    data = h5file['data'][()]
+    h5file.close()
+
+    return data, {'channel': 0, 'sample': 1, 'pulse': 2}, meta
