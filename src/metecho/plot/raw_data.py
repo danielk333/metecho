@@ -1,13 +1,13 @@
 import matplotlib.pyplot as plt
-import h5py
 import logging
 import numpy as np
-import sys
 import copy
+import scipy.constants as constants
 
 from .general import basic_matplotlib_kw
 
 logger = logging.getLogger(__name__)
+
 
 @basic_matplotlib_kw(subplot_shape=None)
 def rti(ax,
@@ -16,14 +16,14 @@ def rti(ax,
         title_font_size=11,
         tick_font_size=11,
         title='',
-        index_axis=1,
+        index_axis=True,
         log=False,
         colorbar=True,
+        pcolormesh_kw={},
         ):
     """
     Simple function to plot the range-time intensity information of complex raw voltage data.
     """
-
 
     """
     File opened, starting to set pyplot settings. Presuming that the user doesn't have any other
@@ -45,14 +45,22 @@ def rti(ax,
     to plot.png.
     """
 
-    pmesh = ax.pcolormesh(powsum)
-
     if index_axis:
-        ax.set_xlabel('IPP [1]', fontsize=axis_font_size)
-        ax.set_ylabel('Sample [1]', fontsize=axis_font_size)
+        X, Y = np.meshgrid(
+            np.arange(summed.shape[1]), 
+            np.arange(summed.shape[0]),
+        )
+        ax.set_xlabel('IPP', fontsize=axis_font_size)
+        ax.set_ylabel('Sample', fontsize=axis_font_size)
     else:
-        ax.set_xlabel('$t$ [s]', fontsize=axis_font_size)
-        ax.set_ylabel('$h$ [km]', fontsize=axis_font_size)
+        X, Y = np.meshgrid(
+            np.arange(summed.shape[1])*raw_data.meta['T_ipp'],
+            0.5e-3*(np.arange(summed.shape[0])*raw_data.meta['T_samp'] + raw_data.meta['T_measure_start'])*constants.c,
+        )
+        ax.set_xlabel('Time [s]', fontsize=axis_font_size)
+        ax.set_ylabel('Range [km]', fontsize=axis_font_size)
+
+    pmesh = ax.pcolormesh(X, Y, powsum, **pcolormesh_kw)
 
     if title == '':
         # Uppdatera när jag vet hur jag ska stoppa in radarnamnet
@@ -61,7 +69,7 @@ def rti(ax,
     ax.set_title(title, fontsize=title_font_size)
     if colorbar:
         cbar = plt.colorbar(pmesh, ax=ax)
-        cbar.set_label('Power [1]', size=axis_font_size)
+        cbar.set_label('Power [arbitrary units]', size=axis_font_size)
         cbar.ax.tick_params(labelsize=tick_font_size)
 
     for ax_label in ['x', 'y']:
