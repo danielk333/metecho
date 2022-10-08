@@ -75,4 +75,4 @@ def rti(ax,
     for ax_label in ['x', 'y']:
         ax.tick_params(axis=ax_label, labelsize=tick_font_size)
 
-    return ax
+    return ax, [pmesh]

@@ -28,7 +28,7 @@ def basic_matplotlib_kw(subplot_shape=None):
             else:
                 fig = None
 
-            ax = func(ax, *args, **kwargs)
+            ax, handles = func(ax, *args, **kwargs)
 
             if output_path is not None:
                 try:
@@ -40,6 +40,6 @@ def basic_matplotlib_kw(subplot_shape=None):
             if not keep_figure:
                 fig.close()
 
-            return fig, ax
+            return fig, ax, handles
         return mpl_wrapped_func
     return mpl_decorator
