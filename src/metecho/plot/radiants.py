@@ -171,12 +171,12 @@ def hammer_iau_streams(ax, showers, mean_radiant=True, size=300, mpl_kw={}):
         ham_y.append(hy)
         if mean_radiant:
             ax.text(
-                hx + 0.02, hy + 0.01, shower,
+                hx + 0.03, hy + 0.02, shower,
             )
         else:
             for x, y, in zip(hx, hy):
                 ax.text(
-                    x + 0.02, y + 0.01, shower,
+                    x + 0.03, y + 0.02, shower,
                 )
     if not mean_radiant:
         ham_x = np.concatenate(ham_x)
