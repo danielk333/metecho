@@ -10,6 +10,7 @@ import logging
 
 import numpy as np
 from astropy.time import TimeDelta
+from tqdm import tqdm
 
 import pyorb
 
@@ -44,7 +45,7 @@ def propagate_pre_encounter(
     settings=None,
 ):
     """Propagates a state from the states backwards in time until the termination_check is true."""
-    t = -np.arange(0, max_t, dt, dtype=np.float64)
+    t = TimeDelta(-np.arange(0, max_t, dt, dtype=np.float64), format="sec")
 
     if termination_check:
 
@@ -60,7 +61,7 @@ def propagate_pre_encounter(
         in_frame=in_frame,
         out_frame=out_frame,
         time_step=dt,  # s
-        termination_check=True,
+        termination_check=True if termination_check else False,
     )
     if settings is not None:
         settings.update(reb_settings)
@@ -79,7 +80,7 @@ def propagate_pre_encounter(
     return particle_states, massive_states, t
 
 
-def rebound_orbit_determination(
+def rebound_od(
     states,
     epoch,
     kernel,
@@ -91,7 +92,10 @@ def rebound_orbit_determination(
     """Determine the orbit using rebound, states in ITRS"""
     logger.debug(f"Using JPL kernel: {kernel}")
 
-    num = len(states.shape[1])
+    if len(states.shape) == 1:
+        states.shape = (states.size, 1)
+    num = states.shape[1]
+
     results = {}
 
     check_func = distance_termination(dAU=0.01) if termination_check else None
@@ -104,6 +108,8 @@ def rebound_orbit_determination(
         out_frame="HCRS",
         kernel=kernel,
         termination_check=check_func,
+        dt=dt,
+        max_t=max_t,
     )
     results["states"] = particle_states
     results["massive_states"] = massive_states
@@ -122,7 +128,7 @@ def rebound_orbit_determination(
         num=len(t),
     )
 
-    for ind in range(num):
+    for ind in tqdm(range(num)):
         p_states_HMC = frames.convert(
             epoch + TimeDelta(t, format="sec"),
             particle_states[:, :, ind],

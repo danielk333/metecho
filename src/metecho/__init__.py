@@ -28,6 +28,8 @@ from . import meteoroid_streams
 from . import model
 from . import simulation
 from . import coordinates
+from . import frames
+from . import orbit_determination
 
 from .tools import PROFILER as profiler
 from .tools import debug

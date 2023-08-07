@@ -1,2 +1,2 @@
 from . import propagators
-from .methods import rebound_orbit_determination
+from .methods import rebound_od
