@@ -25,10 +25,10 @@ class Rebound:
 
     DEFAULT_MASSIVE = [
         "Sun",
-        "301",
+        "Moon",
         "Mercury",
         "Venus",
-        "399",
+        "Earth",
         "Mars",
         "Jupiter",
         "Saturn",
@@ -57,7 +57,6 @@ class Rebound:
         termination_check_interval=1,
         massive_objects=DEFAULT_MASSIVE,
         massive_masses=DEFAULT_MASSES,
-        earth_name="399",
         tqdm=True,
     )
 
@@ -88,7 +87,7 @@ class Rebound:
 
         self.internal_frame = "HCRS"
         self.geo_internal_frame = "GCRS"
-        self._earth_ind = self.planet_index(self.settings["earth_name"])
+        self._earth_ind = self.planet_index("Earth")
         self._sun_ind = self.planet_index("Sun")
         self.N_massive = len(self.settings["massive_objects"])
 
