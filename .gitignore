@@ -8,6 +8,8 @@
 #gitlab ci
 *_report
 
+#vscode
+.vscode
 
 #Sublime
 *.sublime*
