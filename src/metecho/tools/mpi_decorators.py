@@ -3,21 +3,23 @@ from functools import wraps
 
 logger = logging.getLogger(__name__)
 
-logger.debug('Importing MPI')
+logger.debug("Importing MPI")
 try:
     from mpi4py import MPI
+
     comm = MPI.COMM_WORLD
 except ImportError:
-    logger.warning('MPI import failed: reverting to one process')
+    logger.debug("MPI import failed: reverting to one process")
 
     class COMM_WORLD:
         rank = 0
         size = 1
+
     comm = COMM_WORLD()
 
 
 def MPI_target_arg(arg_index):
-    '''Decorates the target function to parallelize over a single input iterable
+    """Decorates the target function to parallelize over a single input iterable
     positional argument identified by the given index.
 
     If MPI is enabled and `MPI_root >= 0` it gathers the results into the `MPI_root`
@@ -30,17 +32,17 @@ def MPI_target_arg(arg_index):
     :MPI bool: Flag that enables MPI if `true`, defaults to `false`.
     :MPI_root int: Rank of the process to gather iteration results in, defaults to 0.
     If set to a negative number, no gathering is performed.
-    '''
+    """
+
     def _mpi_wrapper(func):
-        
         @wraps(func)
         def _mpi_wrapped_func(*args, **kwargs):
             input_list = args[arg_index]
             _args = list(args)
             rets = [None] * len(input_list)
 
-            MPI = kwargs.pop('MPI', False)
-            root = kwargs.pop('MPI_root', 0)
+            MPI = kwargs.pop("MPI", False)
+            root = kwargs.pop("MPI_root", 0)
 
             if MPI:
                 iter_inds = range(comm.rank, len(input_list), comm.size)
@@ -76,4 +78,5 @@ def MPI_target_arg(arg_index):
             return rets
 
         return _mpi_wrapped_func
+
     return _mpi_wrapper
