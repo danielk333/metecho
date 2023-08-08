@@ -13,6 +13,7 @@ from astropy.time import TimeDelta
 from tqdm import tqdm
 
 import pyorb
+import pyant
 
 from .propagators import Rebound
 from .. import frames
@@ -77,7 +78,7 @@ def propagate_pre_encounter(
 
     t = t[: particle_states.shape[1]]
 
-    return particle_states, massive_states, t
+    return particle_states, massive_states, t, prop
 
 
 def rebound_od(
@@ -101,7 +102,7 @@ def rebound_od(
     check_func = distance_termination(dAU=0.01) if termination_check else None
 
     logger.debug(f"propagating {num} particles from epoch: {epoch.iso}")
-    particle_states, massive_states, t = propagate_pre_encounter(
+    particle_states, massive_states, t, prop = propagate_pre_encounter(
         states,
         epoch,
         in_frame="ITRS",
@@ -111,15 +112,46 @@ def rebound_od(
         dt=dt,
         max_t=max_t,
     )
+    if len(particle_states.shape) == 2:
+        particle_states.shape = particle_states.shape + (1,)
     results["states"] = particle_states
     results["massive_states"] = massive_states
     results["t"] = t
 
+    sun_ind = prop._sun_ind
+    earth_ind = prop._earth_ind
+
     if termination_check:
-        logger.debug(f"Time to hill sphere exit: {t[-1]/3600.0:.2f} h")
+        logger.debug(f"Time to hill sphere exit: {t.sec[-1]/3600.0:.2f} h")
+
+    p_states_hmc = frames.convert(
+        epoch + TimeDelta(t[-1], format="sec"),
+        particle_states[:, -1, :],
+        in_frame="HCRS",
+        out_frame="HeliocentricMeanEcliptic",
+    )
+    m_states_hmc = frames.convert(
+        epoch + TimeDelta(t[-1], format="sec"),
+        massive_states[:, -1, :],
+        in_frame="HCRS",
+        out_frame="HeliocentricMeanEcliptic",
+    )
+    earth_hmc = m_states_hmc[:, earth_ind]
+    m_states_emc = m_states_hmc - earth_hmc[:, None]
+    p_states_emc = p_states_hmc - earth_hmc[:, None]
+
+    results["ecliptic_states"] = p_states_hmc
+    ecliptic_radiant = -1 * pyant.coordinates.cart_to_sph(
+        p_states_emc[3:, :], degrees=True
+    )
+    sun_emc = m_states_emc[:, sun_ind]
+    sun_dir = pyant.coordinates.cart_to_sph(
+        sun_emc[:3], degrees=True
+    )
+    results["ecliptic_radiant"] = ecliptic_radiant[:2, :]
+    results["ecliptic_sun_dir"] = sun_dir
 
     results["kepler"] = np.empty_like(particle_states)
-
     orb = pyorb.Orbit(
         M0=pyorb.M_sol,
         direct_update=True,
@@ -127,15 +159,14 @@ def rebound_od(
         degrees=True,
         num=len(t),
     )
-
     for ind in tqdm(range(num)):
-        p_states_HMC = frames.convert(
+        p_cart = frames.convert(
             epoch + TimeDelta(t, format="sec"),
             particle_states[:, :, ind],
             in_frame="HCRS",
             out_frame="HeliocentricMeanEcliptic",
         )
-        orb.cartesian = p_states_HMC
+        orb.cartesian = p_cart
         results["kepler"][:, :, ind] = orb.kepler
 
     return results

@@ -122,8 +122,7 @@ class Rebound:
 
         if init_massive_states is None:
             bodies = self.settings["massive_objects"]
-            if "Sun" not in bodies:
-                bodies += ["Sun"]
+            assert "Sun" in bodies, "Sun not included, aborting"
             states = frames.get_solarsystem_body_states(
                 bodies=bodies,
                 epoch=epoch,
