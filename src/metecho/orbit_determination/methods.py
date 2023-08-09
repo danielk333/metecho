@@ -85,6 +85,7 @@ def rebound_od(
     states,
     epoch,
     kernel,
+    out_frame="HCRS",
     termination_check=True,
     dt=10.0,
     max_t=10 * 24 * 3600.0,
@@ -128,13 +129,13 @@ def rebound_od(
         epoch + TimeDelta(t[-1], format="sec"),
         particle_states[:, -1, :],
         in_frame="HCRS",
-        out_frame="HeliocentricMeanEcliptic",
+        out_frame=out_frame,
     )
     m_states_hmc = frames.convert(
         epoch + TimeDelta(t[-1], format="sec"),
         massive_states[:, -1, :],
         in_frame="HCRS",
-        out_frame="HeliocentricMeanEcliptic",
+        out_frame=out_frame,
     )
     earth_hmc = m_states_hmc[:, earth_ind]
     m_states_emc = m_states_hmc - earth_hmc[:, None]
@@ -149,7 +150,7 @@ def rebound_od(
         sun_emc[:3], degrees=True
     )
     results["ecliptic_radiant"] = ecliptic_radiant[:2, :]
-    results["ecliptic_sun_dir"] = sun_dir
+    results["ecliptic_sun_dir"] = sun_dir[:2]
 
     results["kepler"] = np.empty_like(particle_states)
     orb = pyorb.Orbit(
