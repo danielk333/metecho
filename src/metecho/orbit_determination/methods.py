@@ -85,7 +85,7 @@ def rebound_od(
     states,
     epoch,
     kernel,
-    out_frame="HCRS",
+    kepler_out_frame="GeocentricMeanEcliptic",
     termination_check=True,
     dt=10.0,
     max_t=10 * 24 * 3600.0,
@@ -120,37 +120,30 @@ def rebound_od(
     results["t"] = t
 
     sun_ind = prop._sun_ind
-    earth_ind = prop._earth_ind
 
     if termination_check:
         logger.debug(f"Time to hill sphere exit: {t.sec[-1]/3600.0:.2f} h")
 
-    p_states_hmc = frames.convert(
-        epoch + TimeDelta(t[-1], format="sec"),
-        particle_states[:, -1, :],
-        in_frame="HCRS",
-        out_frame=out_frame,
-    )
-    m_states_hmc = frames.convert(
-        epoch + TimeDelta(t[-1], format="sec"),
-        massive_states[:, -1, :],
-        in_frame="HCRS",
-        out_frame=out_frame,
-    )
-    earth_hmc = m_states_hmc[:, earth_ind]
-    m_states_emc = m_states_hmc - earth_hmc[:, None]
-    p_states_emc = p_states_hmc - earth_hmc[:, None]
+    p_states_hcrs = particle_states[:, -1, :]
+    m_states_hcrs = massive_states[:, -1, :]
 
-    results["ecliptic_states"] = p_states_hmc
+    results["hcrs_states"] = p_states_hcrs
+    p_states_gcrs = frames.convert(
+        epoch + TimeDelta(t[-1], format="sec"),
+        p_states_hcrs,
+        in_frame="HCRS",
+        out_frame="GCRS",
+    )
+    results["gcrs_states"] = p_states_gcrs
     ecliptic_radiant = -1 * pyant.coordinates.cart_to_sph(
-        p_states_emc[3:, :], degrees=True
+        p_states_gcrs[3:, :], degrees=True
     )
-    sun_emc = m_states_emc[:, sun_ind]
+    sun_hcrs = m_states_hcrs[:, sun_ind]
     sun_dir = pyant.coordinates.cart_to_sph(
-        sun_emc[:3], degrees=True
+        sun_hcrs, degrees=True
     )
-    results["ecliptic_radiant"] = ecliptic_radiant[:2, :]
-    results["ecliptic_sun_dir"] = sun_dir[:2]
+    results["gcrs_radiant"] = ecliptic_radiant[:2, :]
+    results["hcrs_sun_dir"] = sun_dir
 
     results["kepler"] = np.empty_like(particle_states)
     orb = pyorb.Orbit(
@@ -165,7 +158,7 @@ def rebound_od(
             epoch + TimeDelta(t, format="sec"),
             particle_states[:, :, ind],
             in_frame="HCRS",
-            out_frame=out_frame,
+            out_frame=kepler_out_frame,
         )
         orb.cartesian = p_cart
         results["kepler"][:, :, ind] = orb.kepler
