@@ -15,6 +15,7 @@ def add_hammer_grid(
     d_lat=np.radians(15),
     res=100,
     alpha=0.2,
+    color="black",
 ):
     gird_lon = np.arange(-np.pi, np.pi + d_lon, d_lon, dtype=np.float64)
     gird_lat = np.arange(-np.pi * 0.5, np.pi * 0.5, d_lat, dtype=np.float64)
@@ -40,7 +41,7 @@ def add_hammer_grid(
     ]
 
     for hx, hy in XYg:
-        ax.plot(hx, hy, "-b", alpha=alpha)
+        ax.plot(hx, hy, "-", color=color, alpha=alpha)
 
     x_, y_ = coordinates.ecliptic_to_hammer(
         gird_lon,
@@ -54,6 +55,7 @@ def add_hammer_grid(
             x_[i] + 0.02,
             y_[i] + 0.03,
             f"{np.degrees(np.mod(1.5*np.pi - gird_lon[i], np.pi*2)):.0f}$^\\circ$",
+            color=color,
         )
 
     x_, y_ = coordinates.ecliptic_to_hammer(
@@ -68,6 +70,7 @@ def add_hammer_grid(
             x_[i] + 0.02 * np.cos(gird_lat[i]),
             y_[i] + 0.03 * np.sin(-gird_lat[i]),
             f"{np.degrees(gird_lat[i]):.0f}$^\\circ$",
+            color=color,
         )
 
 
@@ -82,6 +85,7 @@ def hammer(
     grid=True,
     grid_res=100,
     grid_alpha=0.2,
+    grid_color="black",
     d_lon=np.radians(30),
     d_lat=np.radians(15),
     size=2,
@@ -94,6 +98,7 @@ def hammer(
             d_lat=d_lat,
             res=grid_res,
             alpha=grid_alpha,
+            color=grid_color,
         )
 
     ham_x, ham_y = coordinates.ecliptic_to_hammer(
