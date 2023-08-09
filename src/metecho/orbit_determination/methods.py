@@ -90,6 +90,7 @@ def rebound_od(
     dt=10.0,
     max_t=10 * 24 * 3600.0,
     settings=None,
+    progress_bar=True,
 ):
     """Determine the orbit using rebound, states in ITRS"""
     logger.debug(f"Using JPL kernel: {kernel}")
@@ -99,6 +100,9 @@ def rebound_od(
     num = states.shape[1]
 
     results = {}
+    if settings is None:
+        settings = {}
+    settings.update(dict(tqdm=progress_bar))
 
     check_func = distance_termination(dAU=0.01) if termination_check else None
 
@@ -112,6 +116,7 @@ def rebound_od(
         termination_check=check_func,
         dt=dt,
         max_t=max_t,
+        settings=settings,
     )
     if len(particle_states.shape) == 2:
         particle_states.shape = particle_states.shape + (1,)
@@ -153,7 +158,12 @@ def rebound_od(
         degrees=True,
         num=len(t),
     )
-    for ind in tqdm(range(num), desc="Converting frame"):
+    if progress_bar:
+        pbar = tqdm(total=num, desc="Converting frame")
+
+    for ind in range(num):
+        if progress_bar:
+            pbar.update(1)
         p_cart = frames.convert(
             epoch + TimeDelta(t, format="sec"),
             particle_states[:, :, ind],
@@ -162,5 +172,8 @@ def rebound_od(
         )
         orb.cartesian = p_cart
         results["kepler"][:, :, ind] = orb.kepler
+
+    if progress_bar:
+        pbar.close()
 
     return results
