@@ -309,7 +309,7 @@ class Rebound:
         end_ind = len(t)
 
         if self.settings["tqdm"]:
-            pbar = tqdm(total=len(t))
+            pbar = tqdm(total=len(t), desc="Integrating")
 
         for ti in range(len(t)):
             self.sim.integrate(t[ti].sec)

@@ -160,12 +160,12 @@ def rebound_od(
         degrees=True,
         num=len(t),
     )
-    for ind in tqdm(range(num)):
+    for ind in tqdm(range(num), desc="Converting frame"):
         p_cart = frames.convert(
             epoch + TimeDelta(t, format="sec"),
             particle_states[:, :, ind],
             in_frame="HCRS",
-            out_frame="HeliocentricMeanEcliptic",
+            out_frame=out_frame,
         )
         orb.cartesian = p_cart
         results["kepler"][:, :, ind] = orb.kepler
