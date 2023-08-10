@@ -85,7 +85,8 @@ def rebound_od(
     states,
     epoch,
     kernel,
-    kepler_out_frame="GeocentricMeanEcliptic",
+    kepler_out_frame="ICRS",
+    radiant_out_frame="GeocentricMeanEcliptic",
     termination_check=True,
     dt=10.0,
     max_t=10 * 24 * 3600.0,
@@ -133,22 +134,29 @@ def rebound_od(
     m_states_hcrs = massive_states[:, -1, :]
 
     results["hcrs_states"] = p_states_hcrs
-    p_states_gcrs = frames.convert(
+    p_states_radiant = frames.convert(
         epoch + TimeDelta(t[-1], format="sec"),
         p_states_hcrs,
         in_frame="HCRS",
-        out_frame="GCRS",
+        out_frame=radiant_out_frame,
     )
-    results["gcrs_states"] = p_states_gcrs
-    ecliptic_radiant = -1 * pyant.coordinates.cart_to_sph(
-        p_states_gcrs[3:, :], degrees=True
+    results["radiant_states"] = p_states_radiant
+    radiant = -1 * pyant.coordinates.cart_to_sph(
+        p_states_radiant[3:, :], degrees=True
     )
-    sun_hcrs = m_states_hcrs[:, sun_ind]
-    sun_dir = pyant.coordinates.cart_to_sph(
-        sun_hcrs, degrees=True
+    m_states_radiant = frames.convert(
+        epoch + TimeDelta(t[-1], format="sec"),
+        m_states_hcrs,
+        in_frame="HCRS",
+        out_frame=radiant_out_frame,
     )
-    results["gcrs_radiant"] = ecliptic_radiant[:2, :]
-    results["hcrs_sun_dir"] = sun_dir
+    sun_radiant_state = m_states_radiant[:, sun_ind]
+    sun_radiant = pyant.coordinates.cart_to_sph(
+        sun_radiant_state, degrees=True
+    )
+    results["radiant"] = radiant[:2, :]
+    results["radiant_sun"] = sun_radiant
+    results["radiant_sun_state"] = sun_radiant_state
 
     results["kepler"] = np.empty_like(particle_states)
     orb = pyorb.Orbit(
