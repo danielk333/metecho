@@ -10,6 +10,7 @@ import logging
 
 import numpy as np
 from astropy.time import TimeDelta
+import astropy.coordinates as coords
 from tqdm import tqdm
 
 import pyorb
@@ -125,38 +126,31 @@ def rebound_od(
     results["massive_states"] = massive_states
     results["t"] = t
 
-    sun_ind = prop._sun_ind
-
     if termination_check:
         logger.debug(f"Time to hill sphere exit: {t.sec[-1]/3600.0:.2f} h")
 
-    p_states_hcrs = particle_states[:, -1, :]
-    m_states_hcrs = massive_states[:, -1, :]
-
-    results["hcrs_states"] = p_states_hcrs
+    results["hcrs_states"] = particle_states[:, -1, :]
     p_states_radiant = frames.convert(
-        epoch + TimeDelta(t[-1], format="sec"),
-        p_states_hcrs,
-        in_frame="HCRS",
+        epoch,
+        states,
+        in_frame="ITRS",
         out_frame=radiant_out_frame,
     )
     results["radiant_states"] = p_states_radiant
-    radiant = -1 * pyant.coordinates.cart_to_sph(
-        p_states_radiant[3:, :], degrees=True
+    radiant = pyant.coordinates.cart_to_sph(
+        -1 * p_states_radiant[3:, :], degrees=True
     )
-    m_states_radiant = frames.convert(
-        epoch + TimeDelta(t[-1], format="sec"),
-        m_states_hcrs,
-        in_frame="HCRS",
-        out_frame=radiant_out_frame,
-    )
-    sun_radiant_state = m_states_radiant[:, sun_ind]
-    sun_radiant = pyant.coordinates.cart_to_sph(
-        sun_radiant_state, degrees=True
-    )
+    # ra-dec radiant angles are measured from +x -> +y, not from +y -> +x
+    radiant[0, :] = 90 - radiant[0, :]
+
+    frame_cls = getattr(coords, radiant_out_frame)
+    sun_radiant = coords.get_sun(epoch)
+    sun_radiant = sun_radiant.transform_to(frame_cls())
+
     results["radiant"] = radiant[:2, :]
-    results["radiant_sun"] = sun_radiant
-    results["radiant_sun_state"] = sun_radiant_state
+    results["radiant_sun"] = np.empty((2, ), dtype=np.float64)
+    results["radiant_sun"][0] = sun_radiant.lon.deg
+    results["radiant_sun"][1] = sun_radiant.lat.deg
 
     results["kepler"] = np.empty_like(particle_states)
     orb = pyorb.Orbit(
