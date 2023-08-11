@@ -143,11 +143,25 @@ def rebound_od(
     # ra-dec radiant angles are measured from +x -> +y, not from +y -> +x
     radiant[0, :] = 90 - radiant[0, :]
 
+    p_zat_states_radiant = frames.convert(
+        epoch + t[-1],
+        results["hcrs_states"],
+        in_frame="HCRS",
+        out_frame=radiant_out_frame,
+    )
+    results["radiant_orbit_states"] = p_zat_states_radiant
+    radiant_zat = pyant.coordinates.cart_to_sph(
+        -1 * p_zat_states_radiant[3:, :], degrees=True
+    )
+    # ra-dec radiant angles are measured from +x -> +y, not from +y -> +x
+    radiant_zat[0, :] = 90 - radiant_zat[0, :]
+
     frame_cls = getattr(coords, radiant_out_frame)
     sun_radiant = coords.get_sun(epoch)
     sun_radiant = sun_radiant.transform_to(frame_cls())
 
     results["radiant"] = radiant[:2, :]
+    results["radiant_orbit"] = radiant_zat[:2, :]
     results["radiant_sun"] = np.empty((2, ), dtype=np.float64)
     results["radiant_sun"][0] = sun_radiant.lon.deg
     results["radiant_sun"][1] = sun_radiant.lat.deg
