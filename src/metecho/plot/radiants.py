@@ -155,7 +155,7 @@ def hammer_density(
 
 
 @basic_matplotlib_kw(subplot_shape=None)
-def hammer_iau_streams(ax, showers, mean_radiant=True, size=300, mpl_kw={}):
+def hammer_iau_streams(ax, showers, mean_radiant=True, size=300, text_offset=(0.03, 0.02), mpl_kw={}):
     data, _ = meteoroid_streams.iau.get_streams_data()
     all_showers = data["Code"].unique()
 
@@ -193,8 +193,8 @@ def hammer_iau_streams(ax, showers, mean_radiant=True, size=300, mpl_kw={}):
         ham_y.append(hy)
         if mean_radiant:
             ax.text(
-                hx + 0.03,
-                hy + 0.02,
+                hx + text_offset[0],
+                hy + text_offset[1],
                 shower,
             )
         else:
@@ -203,8 +203,8 @@ def hammer_iau_streams(ax, showers, mean_radiant=True, size=300, mpl_kw={}):
                 y,
             ) in zip(hx, hy):
                 ax.text(
-                    x + 0.03,
-                    y + 0.02,
+                    x + text_offset[0],
+                    y + text_offset[1],
                     shower,
                 )
     if not mean_radiant:
