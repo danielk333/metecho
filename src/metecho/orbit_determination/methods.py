@@ -126,47 +126,56 @@ def rebound_od(
     results["massive_states"] = massive_states
     results["t"] = t
 
+    results["hcrs_states"] = particle_states[:, -1, :]
+
     if termination_check:
         logger.debug(f"Time to hill sphere exit: {t.sec[-1]/3600.0:.2f} h")
 
-    results["hcrs_states"] = particle_states[:, -1, :]
-    p_states_radiant = frames.convert(
-        epoch,
-        states,
-        in_frame="ITRS",
-        out_frame=radiant_out_frame,
-    )
-    results["radiant_states"] = p_states_radiant
-    radiant = pyant.coordinates.cart_to_sph(
-        -1 * p_states_radiant[3:, :], degrees=True
-    )
-    # ra-dec radiant angles are measured from +x -> +y, not from +y -> +x
-    radiant[0, :] = 90 - radiant[0, :]
+    if not isinstance(radiant_out_frame, list):
+        radiant_out_frame = [radiant_out_frame]
 
-    p_zat_states_radiant = frames.convert(
-        epoch + t[-1],
-        results["hcrs_states"],
-        in_frame="HCRS",
-        out_frame=radiant_out_frame,
-    )
-    results["radiant_orbit_states"] = p_zat_states_radiant
-    radiant_zat = pyant.coordinates.cart_to_sph(
-        -1 * p_zat_states_radiant[3:, :], degrees=True
-    )
-    # ra-dec radiant angles are measured from +x -> +y, not from +y -> +x
-    radiant_zat[0, :] = 90 - radiant_zat[0, :]
-
-    frame_cls = getattr(coords, radiant_out_frame)
     sun_radiant = coords.get_sun(epoch)
-    sun_radiant = sun_radiant.transform_to(frame_cls())
+    for frame_name in radiant_out_frame:
 
-    results["radiant"] = radiant[:2, :]
-    results["radiant_orbit"] = radiant_zat[:2, :]
-    results["radiant_sun"] = np.empty((2, ), dtype=np.float64)
-    results["radiant_sun"][0] = sun_radiant.lon.deg
-    results["radiant_sun"][1] = sun_radiant.lat.deg
+        p_states_radiant = frames.convert(
+            epoch,
+            states,
+            in_frame="ITRS",
+            out_frame=frame_name,
+        )
+        results["radiant_obs_states_" + frame_name] = p_states_radiant
+        radiant = pyant.coordinates.cart_to_sph(
+            -1 * p_states_radiant[3:, :], degrees=True
+        )
+        # ra-dec radiant angles are measured from +x -> +y, not from +y -> +x
+        radiant[0, :] = 90 - radiant[0, :]
 
-    results["kepler"] = np.empty_like(particle_states)
+        p_zat_states_radiant = frames.convert(
+            epoch + t[-1],
+            results["hcrs_states"],
+            in_frame="HCRS",
+            out_frame=frame_name,
+        )
+        results["radiant_orbit_states_" + frame_name] = p_zat_states_radiant
+        radiant_zat = pyant.coordinates.cart_to_sph(
+            -1 * p_zat_states_radiant[3:, :], degrees=True
+        )
+        # ra-dec radiant angles are measured from +x -> +y, not from +y -> +x
+        radiant_zat[0, :] = 90 - radiant_zat[0, :]
+
+        frame_cls = getattr(coords, frame_name)
+        sun_radiant = sun_radiant.transform_to(frame_cls())
+
+        results["radiant_obs_" + frame_name] = radiant[:2, :]
+        results["radiant_orbit_" + frame_name] = radiant_zat[:2, :]
+        results["radiant_sun_" + frame_name] = np.empty((2, ), dtype=np.float64)
+        if hasattr(sun_radiant, "lon"):
+            results["radiant_sun_" + frame_name][0] = sun_radiant.lon.deg
+            results["radiant_sun_" + frame_name][1] = sun_radiant.lat.deg
+        else:
+            results["radiant_sun_" + frame_name][0] = sun_radiant.ra.deg
+            results["radiant_sun_" + frame_name][1] = sun_radiant.dec.deg
+
     orb = pyorb.Orbit(
         M0=pyorb.M_sol,
         direct_update=True,
@@ -174,22 +183,27 @@ def rebound_od(
         degrees=True,
         num=len(t),
     )
-    if progress_bar:
-        pbar = tqdm(total=num, desc="Converting frame")
+    if not isinstance(kepler_out_frame, list):
+        kepler_out_frame = [kepler_out_frame]
 
-    for ind in range(num):
+    for frame_name in kepler_out_frame:
+        results["kepler_" + frame_name] = np.empty_like(particle_states)
         if progress_bar:
-            pbar.update(1)
-        p_cart = frames.convert(
-            epoch + TimeDelta(t, format="sec"),
-            particle_states[:, :, ind],
-            in_frame="HCRS",
-            out_frame=kepler_out_frame,
-        )
-        orb.cartesian = p_cart
-        results["kepler"][:, :, ind] = orb.kepler
+            pbar = tqdm(total=num, desc="Converting frame")
 
-    if progress_bar:
-        pbar.close()
+        for ind in range(num):
+            if progress_bar:
+                pbar.update(1)
+            p_cart = frames.convert(
+                epoch + TimeDelta(t, format="sec"),
+                particle_states[:, :, ind],
+                in_frame="HCRS",
+                out_frame=frame_name,
+            )
+            orb.cartesian = p_cart
+            results["kepler_" + frame_name][:, :, ind] = orb.kepler
+
+        if progress_bar:
+            pbar.close()
 
     return results
