@@ -2,8 +2,6 @@ import ctypes
 import logging
 import numpy as np
 import numpy.ctypeslib as npct
-from .. import tools
-from pathlib import Path
 
 from metecho import libmet
 
@@ -77,7 +75,6 @@ libmet.arange.argtypes = [
 ]
 
 
-@tools.profiling.timeing(f'{__name__}')
 def xcorr_echo_search(
     raw_data,
     doppler_freq_min,
@@ -91,7 +88,6 @@ def xcorr_echo_search(
     """
     matched_filter_output = {}
     pows_output = []
-    index_finish = 0
     sample_signal_all = np.sum(raw_data.data, 0)
     doppler_freq_size = int(((doppler_freq_max - doppler_freq_min) / doppler_freq_step) + 1)
     if len(signal_model.shape) == 1:
@@ -112,7 +108,7 @@ def xcorr_echo_search(
     )
 
     samp = np.float64(6E-6)
-    logger.debug(f"Starting crosscorrelation echo search cycle of size {sample_signal_all.shape[1]} on raw_data {raw_data}.")
+    logger.debug(f"Starting echo search cycle of size {sample_signal_all.shape[1]} on raw_data {raw_data}.")
     for x in range(0, sample_signal_all.shape[1]):
         sample_signal = sample_signal_all[:, x].copy()
         sample_signal_size = len(sample_signal)

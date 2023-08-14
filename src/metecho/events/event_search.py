@@ -30,7 +30,6 @@ def mergeDict(dict1, dict2, axis=None):
     return dict3
 
 
-@tools.profiling.timeing(f'{__name__}')
 def search(raw_data,
            config,
            matched_filter_output,

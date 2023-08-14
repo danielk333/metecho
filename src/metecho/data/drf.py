@@ -1,7 +1,6 @@
 import logging
 import numpy as np
 
-from .. import tools
 from . import raw_data
 
 logger = logging.getLogger(__name__)

@@ -3,9 +3,6 @@ import logging
 from collections import OrderedDict
 
 import numpy as np
-import h5py
-
-from .. import tools
 
 logger = logging.getLogger(__name__)
 
@@ -13,8 +10,9 @@ BACKENDS = OrderedDict()
 
 
 def check_if_raw_data(path):
-    '''Checks if the given path is a supported raw data file and returns the backend if it exists, else returns None.
-    '''
+    """Checks if the given path is a supported raw data file and returns the 
+    backend if it exists, else returns None.
+    """
     for backend, (_, validate) in BACKENDS.items():
         if validate(path):
             return backend
@@ -22,13 +20,13 @@ def check_if_raw_data(path):
 
 
 def backend_loader(name):
-    '''Decorator to register function as a raw-data backend loader
+    """Decorator to register function as a raw-data backend loader
 
     #TODO: add descripiton of backend load function here (what it should return ect)
-    '''
+    """
 
     def backend_wrapper(func):
-        logger.debug(f'Registering loader for {name} backend')
+        logger.debug(f"Registering loader for {name} backend")
         if name in BACKENDS:
             BACKENDS[name][0] = func
         else:
@@ -39,13 +37,13 @@ def backend_loader(name):
 
 
 def backend_validator(name):
-    '''Decorator to register function as a raw-data backend validator
+    """Decorator to register function as a raw-data backend validator
 
     #TODO: add descripiton of backend load function here (what it should return ect)
-    '''
+    """
 
     def backend_wrapper(func):
-        logger.debug(f'Registering validator for {name} backend')
+        logger.debug(f"Registering validator for {name} backend")
         if name in BACKENDS:
             BACKENDS[name][1] = func
         else:
@@ -56,21 +54,19 @@ def backend_validator(name):
 
 
 class RawDataInterface:
-    '''Common interface between metecho functionality and different radar-data backends.
-    '''
+    """Common interface between metecho functionality and different radar-data backends."""
 
     DATA_AXIS = [
-        'channel',
-        'sample',
-        'pulse',
-        'polarization',
+        "channel",
+        "sample",
+        "pulse",
+        "polarization",
     ]
 
     META_KEYS = [
-        'start_time',
+        "start_time",
     ]
 
-    @tools.profiling.timeing(f'{__name__}.RawDataInterface')
     def __init__(self, path, backend=None, load_on_init=True, **kwargs):
         self._clear()
         if path is not None:
@@ -84,8 +80,6 @@ class RawDataInterface:
         self.axis = {key: None for key in self.DATA_AXIS}
         self.meta = {key: None for key in self.META_KEYS}
 
-
-    @tools.profiling.timeing(f'{__name__}.RawDataInterface')
     def load(self, **kwargs):
         self._clear()
 
@@ -103,19 +97,23 @@ class RawDataInterface:
                 break
 
             if not backend_found:
-                raise ValueError('No backend found for given input path')
+                raise ValueError("No backend found for given input path")
         else:
             if self.backend not in BACKENDS:
-                raise ValueError(f'Given backend {self.backend} does not exist')
+                raise ValueError(f"Given backend {self.backend} does not exist")
 
             load_func, validate = BACKENDS[self.backend]
             if validate(self.path):
                 data, axis, meta = load_func(self.path, **kwargs)
             else:
-                raise ValueError(f'Given backend {self.backend} does not validate input path')
+                raise ValueError(
+                    f"Given backend {self.backend} does not validate input path"
+                )
 
         if not isinstance(data, np.ndarray):
-            raise ValueError(f'Backend must return data as a numpy ndarray not "{type(data)}"')
+            raise ValueError(
+                f'Backend must return data as a numpy ndarray not "{type(data)}"'
+            )
 
         self.data = data
         self.meta.update(meta)
