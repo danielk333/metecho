@@ -1,13 +1,10 @@
 import numpy as np
 import copy
 import math
-from pathlib import Path
 from datetime import datetime
-from . import conf, event_select, search_objects, event
-from metecho.generalized_matched_filter import xcorr, signal_model
+from . import event_select, search_objects, event
+from metecho.generalized_matched_filter import xcorr
 from metecho.noise import calc_noise
-from .. import tools
-from matplotlib.patches import Polygon
 import logging
 import matplotlib.pyplot as plt
 
@@ -133,8 +130,9 @@ def search(raw_data,
         coherent_signal_indicator = np.argwhere(matched_filter_output["best_peak"]
                                                 > config.getfloat("General", "xcorr_noise_limit")).flatten()
 
-        no_coherent_signal_indicator = np.argwhere(matched_filter_output["best_peak"]
-                                                   < config.getfloat("General", "xcorr_noise_limit")).flatten()
+        no_coherent_signal_indicator = np.argwhere(
+            matched_filter_output["best_peak"] < config.getfloat("General", "xcorr_noise_limit")
+        ).flatten()
 
         tot_pow_mean = np.mean(matched_filter_output["tot_pow"][no_coherent_signal_indicator])
         tot_pow_std = np.std(matched_filter_output["tot_pow"][no_coherent_signal_indicator])
@@ -340,7 +338,7 @@ def search(raw_data,
             'weight': 'bold',
         }
         # Create title
-        event_save = f'Events saved: {mets_found}' if mets_found > 0 else f'No events found'
+        event_save = f'Events saved: {mets_found}' if mets_found > 0 else 'No events found'
         fig.suptitle(f'{raw_data.path.name}, Matches={len(found_indices)}, \
 Non-transient coherent detection ({matched_filter_output["doppler_coherrence"]}, \
 {matched_filter_output["start_coherrence"]}), \
