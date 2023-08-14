@@ -1,10 +1,10 @@
-def simulate_head_echo(model, radar_config, noise_sigma):
+def simulate_head_echo(t, model, pulses, experiment, radar, noise_sigma):
     
     ipp_len = length(ipp)
     ipp_total = max(ipp) + min(ipp) - 1
 
-    [position, velocity] = model.evaluate((ipp - min(ipp))*radar.encoding.T_ipp)
-    
+    [position, velocity] = model.evaluate((ipp - min(ipp))*radar.experiment["T_ipp"])
+
     k_vectors = zeros(3, ipp_len)
     DATA_r = zeros(1, ipp_len)
     az = zeros(1, ipp_len)
@@ -40,7 +40,7 @@ def simulate_head_echo(model, radar_config, noise_sigma):
     
     DATA_f = zeros(1,ipp_len)
     for i=1:ipp_len
-        DATA_f(i) = ( 2.0*norm(position(:,i))/constants.c - radar.encoding.T_samp_start ) / radar.encoding.T_samp
+        DATA_f(i) = ( 2.0*norm(position(:,i))/constants.c - radar.experiment["T_samp_start"] ) / radar.experiment["T_samp"]
     end
     DATA_n = floor(DATA_f)
     
@@ -49,7 +49,7 @@ def simulate_head_echo(model, radar_config, noise_sigma):
     amplit = zeros(size(ipp))
     code_enchance = zeros(size(ipp))
     
-    amp3 = zeros(radar.beam.channels, radar.encoding.N_measure, ipp_total)
+    amp3 = zeros(radar.beam.channels, radar.experiment["N_measure,"] ipp_total)
     
     ipp_cnt = 0
     for i=1:ipp_total
@@ -59,12 +59,12 @@ def simulate_head_echo(model, radar_config, noise_sigma):
             delta = mod(DATA_f(ipp_cnt),1)
             frac_s = 1 - delta
 
-            code28 = [0 radar.encoding.code 0 ]
+            code28 = [0 radar.experiment["code"] 0 ]
             code27 = interp1q((1:length(code28))', code28', ((1+frac_s-floor(frac_s)):(length(code28)-1+frac_s-floor(frac_s)) )')'
             
             %time component of wave needs to change as sampling of wave
             %changes with range-gate sampling
-            t = (DATA_n(ipp_cnt) + (0:radar.encoding.Bits))*radar.encoding.T_samp
+            t = (DATA_n(ipp_cnt) + (0:radar.experiment["Bits))*radar.experiment["T_samp"]"]
             t0 = 2*DATA_r(ipp_cnt)/constants.c
 
             Amplitude = amplitude_curve(i)
@@ -78,16 +78,16 @@ def simulate_head_echo(model, radar_config, noise_sigma):
                 carrier_signal = exp(1i*angle(carrier_signal))
             end
             
-            for j=1:radar.encoding.N_measure
+            for j=1:radar.experiment["N_measure"]
                 noise = (randn(radar.beam.channels,1) + 1i*randn(radar.beam.channels,1))*noise_sigma
                 
-                if j >= (DATA_n(ipp_cnt)+1) && j <= (DATA_n(ipp_cnt) + radar.encoding.N_code)
+                if j >= (DATA_n(ipp_cnt)+1) && j <= (DATA_n(ipp_cnt) + radar.experiment["N_code)"]
                     t_cnt = t_cnt + 1
                     
                     phi = DATA_dop(ipp_cnt)*t(t_cnt) - t0*radar.omega
-                    encoding_signal = code27(t_cnt)*exp( -1i*phi )
+                    experiment["signal"] = code27(t_cnt)*exp( -1i*phi )
                     
-                    signal = carrier_signal.*encoding_signal*Amplitude
+                    signal = carrier_signal.*experiment["signal*Amplitude"]
                     
                     subs(t_cnt) = sum(signal)
                     
@@ -108,14 +108,14 @@ def simulate_head_echo(model, radar_config, noise_sigma):
             code_enchance(ipp_cnt) = sum(abs(code27).^2)
 
         else
-            amp3(:,:,i) = (randn(radar.beam.channels,radar.encoding.N_measure) + 1i*randn(radar.beam.channels,radar.encoding.N_measure))*noise_sigma
+            amp3(:,:,i) = (randn(radar.beam.channels,radar.experiment["N_measure)"] + 1i*randn(radar.beam.channels,radar.experiment["N_measure))*noise_sigma"]
         end
     end
     
     raw_data.amp3 = amp3
     raw_data.radar = radar
     raw_data.date = the_date
-    raw_data.t = (1:ipp_total)*radar.encoding.T_ipp
+    raw_data.t = (1:ipp_total)*radar.experiment["T_ipp"]
 
     meteor.used_indecies = ones(size(ipp)) == 1
     meteor.ipp = ipp
@@ -141,7 +141,7 @@ def simulate_head_echo(model, radar_config, noise_sigma):
     meteor.power = power
     meteor.phase = phase
 
-    meteor.SNR = amplit.^2.*radar.encoding.Bits/(2*radar.beam.channels*noise_sigma^2)
+    meteor.SNR = amplit.^2.*radar.experiment["Bits/(2*radar.beam.channels*noise_sigma^2)"]
     meteor.SNRdB = 10*log10(meteor.SNR)
     
     meteor.channel_SNR = amplitude_curve(ipp).^2/(2*noise_sigma^2)
@@ -162,7 +162,7 @@ def simulate_head_echo(model, radar_config, noise_sigma):
     meteor.signal_amplitude = meteor.signal_amplitude(:).'
     meteor.wave_amplitude = meteor.wave_amplitude(:).'
     
-    meteor.T_ipp = radar.encoding.T_ipp
+    meteor.T_ipp = radar.experiment["T_ipp"]
     meteor.model = model
     
     meteor = meteor_analysis.noise.calculate_rcs(...

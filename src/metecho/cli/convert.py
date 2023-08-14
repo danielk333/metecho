@@ -3,7 +3,6 @@ from pathlib import Path
 import os
 
 from .. import data
-from .. import tools
 from .commands import add_command
 
 logger = logging.getLogger(__name__)

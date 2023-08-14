@@ -12,7 +12,7 @@ except ImportError:
 
     comm = COMM_WORLD()
 
-from ..tools import PROFILER as profiler
+from ..tools import profiling
 
 logger = logging.getLogger(__name__)
 
@@ -62,15 +62,13 @@ def main():
     else:
         logger.addHandler(handler)
         logger.setLevel(logging.WARNING)
-    
+
     if args.verbose > 1:
         logger.info('Logging level set to debug')
         lib_logger.setLevel(logging.DEBUG)
 
     if args.profiler:
-        profiler.init('full', True)
-        profiler.start('full')
-        profiler.enable('metecho')
+        profiling.profile()
 
     function = COMMANDS[args.command]['function']
     logger.info(f'Executing command {args.command}')
@@ -78,5 +76,6 @@ def main():
     function(args, logger)
 
     if args.verbose > 0 and args.profiler:
-        profiler.stop('full')
-        logger.info('\n' + str(profiler))
+        stats, total = profiling.get_profile()
+        profiling.print_profile(stats, total=total)
+        profiling.profile_stop()

@@ -16,3 +16,5 @@
 
 - in metecho.data, change RawDataInterface to RawData, change `backend` to `format`,
 - Extract converter from DataStore and separate it, separation of concenrns
+
+- REFACTOR the event search

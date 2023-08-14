@@ -1,6 +1,4 @@
 import configparser
-import pathlib
-import os
 
 DEFAULT_CONFIG = {
     'General': {
