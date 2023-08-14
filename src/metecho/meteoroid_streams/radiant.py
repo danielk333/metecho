@@ -16,7 +16,7 @@ if astropy is not None:
 
 
 def ecliptic(ra, dec):
-    '''Goes to GeocentricTrueEcliptic
+    '''Goes to GeocentricMeanEcliptic
     '''
 
     radiant = coords.SkyCoord(
@@ -24,7 +24,7 @@ def ecliptic(ra, dec):
         dec*units.deg, 
         frame='gcrs'
     )
-    return radiant.transform_to(coords.GeocentricTrueEcliptic())
+    return radiant.transform_to(coords.GeocentricMeanEcliptic())
 
 
 def local(t, epoch, ra, dec, lon, lat, height=0.0):
