@@ -6,7 +6,7 @@ import pickle
 from .. import data
 from .. import tools
 from .. import events
-from .. import generalized_matched_filter
+from .. import signal_model
 from .commands import add_command
 
 logger = logging.getLogger(__name__)
@@ -83,7 +83,7 @@ def find_events(file, args, cli_logger):
 
     raw = data.RawDataInterface(file, backend=backend)
 
-    signal = generalized_matched_filter.signal_model.barker_code_13(
+    signal = signal_model.phase_coding.barker_code_13(
         raw.data.shape[raw.axis["pulse"]],
         2,
     )

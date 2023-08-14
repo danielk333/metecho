@@ -165,9 +165,9 @@ def search(raw_data,
 
         gauss_noise = matched_filter_output["gauss_noise"]
 
-    find_indices = []
-    find_indices_req = []
-    find_indices_trail = []
+    find_indices = None
+    find_indices_req = None
+    find_indices_trail = None
     # Checks if we got any search functions, otherwise defaults
     if search_function_objects is None:
         search_function_objects = search_objects.get_defaults()
@@ -182,22 +182,22 @@ def search(raw_data,
         if curr.shape != (512, ):
             curr = np.resize(curr, (512,))
         if searcher.required:
-            if find_indices_req != []:
+            if find_indices_req is not None:
                 find_indices_req = np.logical_and(curr, find_indices_req)
             else:
                 find_indices_req = curr
         if searcher.required_trails:
-            if find_indices_trail != []:
+            if find_indices_trail is not None:
                 find_indices_trail = np.logical_and(curr, find_indices_trail)
             else:
                 find_indices_trail = curr
         else:
-            if find_indices != []:
+            if find_indices is not None:
                 find_indices = curr * 1 + find_indices * 1
             else:
                 find_indices = curr * 1
 
-    if find_indices_req == []:
+    if find_indices_req is not None:
         found_indices = np.argwhere(np.array(find_indices >= config.getint("General", "CRITERIA_N")))
     else:
         found_indices = np.argwhere(np.logical_and(find_indices_req, find_indices
@@ -374,7 +374,7 @@ Non-transient coherent detection ({matched_filter_output["doppler_coherrence"]},
         plot_highlight_match(axs[1, 2], found_indices, matched_filter_output["doppler_std"],
                              "IPP [1]", "Doppler shift moving STD", config)
 
-        criteria_mat = find_indices if find_indices_req == [] else find_indices + 1 * find_indices_req
+        criteria_mat = find_indices if find_indices_req is not None else find_indices + 1 * find_indices_req
         axs[2, 0].plot(PULSE_V, criteria_mat)
         axs[2, 0].set_xlabel("IPP [1]")
         axs[2, 0].set_ylabel("Event Criteria met")
@@ -394,7 +394,7 @@ Non-transient coherent detection ({matched_filter_output["doppler_coherrence"]},
         for start, stop, color in zip(start_IPP, end_IPP, colors):
             long_plot_ax.axvspan(start, stop, facecolor=color, alpha=0.4)
 
-        fig.tight_layout()
+        # fig.tight_layout()
         if save_as_image and save_location != "":
             if "." in str(save_location):
                 save_location = save_location.parent
