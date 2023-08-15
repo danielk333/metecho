@@ -7,7 +7,7 @@ import metecho
 import numpy as np
 import matplotlib.pyplot as plt
 
-model = metecho.model.ExpVelocity(
+model = metecho.meteor_model.ExpVelocity(
     p0 = np.array([0, 0, 100e3]), 
     r0 = np.array([0, -1, -1])/np.sqrt(2),
     vel_params = np.array([60e3, 200, 10]),
