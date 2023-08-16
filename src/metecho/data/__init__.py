@@ -9,6 +9,8 @@ rest of the package.
 '''
 
 from . import mu
+from . import eiscat_drf
+from . import eiscat_matlab
 from .raw_data import RawDataInterface, check_if_raw_data
 from .data_store import directory_tree
 from .data_store import RawDataInterfaceFactory

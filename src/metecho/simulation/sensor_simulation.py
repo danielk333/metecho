@@ -33,13 +33,17 @@ class SensorSimulation:
         waveform_parameters={},
         noise_parameters={},
         transmission_map_parameters=[],
+        skip=False,
+        end_shape=(),
     ):
+        t_rec = self.sampler()
+        if skip:
+            return t_rec, self.noise_generator(t_rec, end_shape, **noise_parameters)
         func_args = {
             key: [parameters[var] for var in variables]
             for key, variables in self.step_parameters.items()
         }
         transmission_map = {key: parameters[key] for key in transmission_map_parameters}
-        t_rec = self.sampler()
         t = self.samples_to_transmissions_map(t_rec, **transmission_map)
         signal = self.waveform_generator(t, **waveform_parameters)
         for step in self.STEPS:
