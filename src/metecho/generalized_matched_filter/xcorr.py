@@ -2,6 +2,7 @@ import ctypes
 import logging
 import numpy as np
 import numpy.ctypeslib as npct
+from tqdm import tqdm
 
 from metecho import libmet
 
@@ -82,6 +83,7 @@ def xcorr_echo_search(
     doppler_freq_step,
     signal_model,
     full_gmf_output=False,
+    progress_bar=True,
 ):
     """
     # Will take a raw_data object and crosscorrelate the data.
@@ -107,9 +109,13 @@ def xcorr_echo_search(
         dtype=np.complex128
     )
 
-    samp = np.float64(6E-6)
+    samp = np.float64(raw_data.meta["T_samp"])
     logger.debug(f"Starting echo search cycle of size {sample_signal_all.shape[1]} on raw_data {raw_data}.")
+    if progress_bar:
+        pbar = tqdm(total=sample_signal_all.shape[1], desc="Decoding pulse")
     for x in range(0, sample_signal_all.shape[1]):
+        if progress_bar:
+            pbar.update(1)
         sample_signal = sample_signal_all[:, x].copy()
         sample_signal_size = len(sample_signal)
         pows = np.zeros([doppler_freq_size, (sample_signal_size + signal_model_size)], dtype=np.complex128)
@@ -147,6 +153,8 @@ def xcorr_echo_search(
         best_doppler[x] = doppler_freq_min + (best_value_index * doppler_freq_step)
         if full_gmf_output:
             pows_output.append(pows)
+    if progress_bar:
+        pbar.close()
     matched_filter_output["max_pow_per_delay"] = max_pow_per_delay
     matched_filter_output["max_pow_per_delay_norm"] = max_pow_per_delay_norm
     matched_filter_output["best_peak"] = best_peak

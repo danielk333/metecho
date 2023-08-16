@@ -83,11 +83,11 @@ void perform_xcorr(
     precision complex abs_signal_samples_sum;
 
     // Setting arrays to zeroes
-    memset(pows, (precision)0, sizeof(pows[0])*pows_size[0]*pows_size[1]);
-    memset(pows_normalized, (precision)0, sizeof(pows_normalized[0])*pows_size[0]*pows_size[1]);
-    memset(powmax, (precision)0, sizeof(powmax[0])*powmax_size);
-    memset(maxpowind, (int)0, sizeof(maxpowind[0])*maxpowind_size);
-    memset(norm_coefs, (precision)0, sizeof(decoded_size)*norm_coefs[0]);
+    memset(pows, (precision complex)0, (size_t)(pows_size[0]*pows_size[1]));
+    memset(pows_normalized, (precision complex)0, (size_t)(pows_size[0]*pows_size[1]));
+    memset(powmax, (precision complex)0, (size_t)powmax_size);
+    memset(maxpowind, (int)0, (size_t)maxpowind_size);
+    memset(norm_coefs, (precision complex)0, (size_t)decoded_size);
 
 
      // Calculate the absolute value complex_sum of the signal_samples from 0 to code_size 

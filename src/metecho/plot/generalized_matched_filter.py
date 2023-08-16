@@ -51,4 +51,4 @@ def gmf(axes,
     cbar.ax.tick_params(labelsize=tick_font_size)
     """
 
-    return ax
+    return ax, []

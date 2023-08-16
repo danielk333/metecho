@@ -26,6 +26,7 @@ from . import plot
 from . import events
 from . import meteoroid_streams
 from . import meteor_model
+from . import signal_model
 from . import simulation
 from . import coordinates
 
