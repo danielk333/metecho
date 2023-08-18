@@ -9,11 +9,6 @@ import matplotlib.pyplot as plt
 import metecho
 import metecho.generalized_matched_filter as mgmf
 
-metecho.debug()
-
-metecho.profiler.init('full', True)
-metecho.profiler.start('full')
-
 try:
     HERE = pathlib.Path(__file__).parent.resolve()
 except NameError:
@@ -23,7 +18,7 @@ h5_mu_file = HERE / 'data' / 'MU_h5' / '2009' / '06' / '27' / '2009-06-27T09.54.
 
 raw = metecho.data.RawDataInterface(h5_mu_file)
 
-transmitted_waveform = mgmf.signal_model.barker_code_13(raw.data.shape[raw.axis["pulse"]], oversampling=2)
+transmitted_waveform = metecho.signal_model.phase_coding.barker_code_13(raw.data.shape[raw.axis["pulse"]], oversampling=2)
 
 matched_filter_output = mgmf.xcorr.xcorr_echo_search(
     raw,
@@ -34,9 +29,16 @@ matched_filter_output = mgmf.xcorr.xcorr_echo_search(
     full_gmf_output=True
 )
 
-metecho.profiler.stop('full')
-print(metecho.profiler)
 
-metecho.plot.gmf(matched_filter_output)
+fig = plt.figure(figsize=(12, 8))
+spec = fig.add_gridspec(3, 2)
+axes = [
+    fig.add_subplot(spec[ind, 0])
+    for ind in range(3)
+]
+ax = fig.add_subplot(spec[:, 1])
+
+metecho.plot.rti(raw, log=True, index_axis=True, ax=ax)
+metecho.plot.gmf(matched_filter_output, ax=axes)
 
 plt.show()

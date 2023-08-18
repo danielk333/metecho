@@ -8,50 +8,48 @@ from tqdm import tqdm
 import metecho
 import pyant
 
-freq = 50e6
-k0 = pyant.coordinates.sph_to_cart(np.array([0, 89, 1.0]), degrees=True)
-baud_length = 1e-6
+freq = 223.4e6
+baud_length = 1.2e-6
 Ptx = 1e6
-amp2P = 7.2e6
+amp2P = 7.2e8
 tx_area = np.pi*100**2
 A0 = Ptx/tx_area
-target_range = 90e3
-target_vel = 25e3
-delta_f = (target_vel/scipy.constants.c)*freq
-peak_rcs = 1.0**2
+peak_rcs = 25.0**2
 noise_sigma = 1e-1
-inter_freq = 5e6
-samp_freq = 20e6
-samp_time = 1/samp_freq
-out_freq = 1/(baud_length/2)
-decimation = int(samp_freq/out_freq)
-measure_time = 80e3/scipy.constants.c
+
+samp_time = baud_length
+samp_freq = 1/samp_time
+
+measure_time = 2*150e3/scipy.constants.c
 start_time = 2*80e3/scipy.constants.c
 samples = int(measure_time/samp_time)
 
-pulses = 512
-ipp = 3e-3
+pulses = 3000
+ipp = 1.5e-3
 ipps = np.arange(0, pulses)
-rcs = peak_rcs*np.exp(-((ipps - 200)/30.0)**2)
+rcs = peak_rcs*np.exp(-((ipps - 1500)/200.0)**2)
 met_inds = rcs >= peak_rcs/100
 t = np.arange(met_inds.sum())*ipp
 rcs[np.logical_not(met_inds)] = 0
 
-down_shift_freq = freq - inter_freq
-
-barker13 = np.array(
-    [1, 1, 1, 1, 1, -1, -1, 1, 1, -1, 1, -1, 1],
+manda_code = np.array([1, -1, 1, -1, -1, 1, 1, -1, -1, -1, 1, -1, -1, 1, 1, -1, 1, 1, -1, 1, 1, 1, 1, 1, -1, -1, 1, -1, 1, -1, 1, -1, 1, 1, -1, 1, 1, -1, 1, -1, 1, -1, 1, -1, 1, 1, -1, 1, -1, -1, 1, 1, 1, 1, -1, 1, -1, -1, 1, 1, 1],
     dtype=np.float64,
 )
+manda_code = np.kron(manda_code, np.ones(2))
 
-cache_path = Path("./docs/source/examples/data/mu_interp_array.npz").resolve()
-
-beam = pyant.beam_of_radar("mu", "array")
+beam = pyant.models.FiniteCylindricalParabola(
+    azimuth=0,
+    elevation=90,
+    frequency=freq,
+    width=120.0,
+    height=40.0,
+    degrees=True,
+)
 
 model = metecho.meteor_model.ExpVelocity(
-    p0 = np.array([2e3, 0, 100e3]), 
-    r0 = np.array([0, -1, -1])/np.sqrt(2),
-    vel_params = np.array([60e3, 200, 10]),
+    p0 = np.array([-0.5e3, 0, 90e3]), 
+    r0 = np.array([1, 0, -0.5])/np.linalg.norm(np.array([0, -1, -0.5])),
+    vel_params = np.array([40e3, 100, 5]),
 )
 
 r, v = model.evaluate(t)
@@ -61,11 +59,11 @@ lam = beam.wavelength
 t0 = 0
 
 
-def waveform_generator(t, oversampling=2):
-    t_ind = ((t - t0)//(baud_length*oversampling)).astype(np.int64)
+def waveform_generator(t):
+    t_ind = ((t - t0)//(baud_length)).astype(np.int64)
     s = np.zeros(t.shape, dtype=np.complex128)
-    inds = np.logical_and(t >= 0, t <= baud_length*len(barker13)*oversampling)
-    s[inds] = np.exp(-1j*2*np.pi*freq*t[inds])*barker13[t_ind[inds]]
+    inds = np.logical_and(t >= 0, t <= baud_length*len(manda_code))
+    s[inds] = np.exp(-1j*2*np.pi*freq*t[inds])*manda_code[t_ind[inds]]
     return s
 
 
@@ -93,15 +91,8 @@ def moving_hard_target(t, signal, velocity, frequency, radar_cross_section):
     return np.exp(-1j*2*np.pi*delta_f*t)*signal*radar_cross_section
 
 
-def integrating_digitizer(t, signal):
-    t_dec = t[np.arange(0, len(t), decimation)]
-    signal_dec = np.empty((signal.shape[0], len(t_dec)), dtype=np.complex128)
-    down_converter = np.exp(1j*2*np.pi*freq*t)
-    signal = signal*down_converter[None, :]
-    for chn in range(signal.shape[0]):
-        for dind, ind in zip(range(len(t_dec)), range(0, len(t), decimation)):
-            signal_dec[chn, dind] = np.sum(signal[chn, ind:(ind+decimation)])
-    return t_dec, signal_dec
+def digitizer(t, signal):
+    return t, signal
 
 
 step_functions = {
@@ -109,8 +100,8 @@ step_functions = {
     "tx-propagation": vacuum_propagation,
     "scattering": moving_hard_target,
     "rx-propagation": vacuum_propagation,
-    "reception": lambda t, s, k: amp2P*s[None, :]*beam.channel_signals(k)[:, None],
-    "digitization": integrating_digitizer,
+    "reception": lambda t, s, k: amp2P*s*beam.gain(k),
+    "digitization": digitizer,
 }
 
 sim = metecho.simulation.SensorSimulation(
@@ -128,44 +119,7 @@ sim = metecho.simulation.SensorSimulation(
     }, 
 )
 
-dr = target_vel*ipp
-meas_samples = int(samples/decimation) + 1
-
-t = sampler()
-t = samples_to_transmissions_map(t, target_range)
-s_gen = waveform_generator(t)*np.exp(1j*2*np.pi*freq*t)
-
-t_rec, s_rec = sim.evaluate(
-    parameters={
-        "distance": target_range,
-        "velocity": target_vel,
-        "frequency": freq,
-        "radar_cross_section": peak_rcs,
-        "rx_carrier_frequency": freq - delta_f,
-        "k": k0,
-    }, 
-    waveform_parameters={}, 
-    noise_parameters={},
-    transmission_map_parameters=["distance"],
-)
-s_rec = np.sum(s_rec, axis=0)
-t_rec = t_rec[np.arange(0, len(t), decimation)]
-
-fig, axes = plt.subplots(2, 1)
-axes[0].plot(t*1e3, np.real(s_gen), ls="-", color="black", label="real")
-axes[0].plot(t*1e3, np.imag(s_gen), ls="-", color="blue", label="imag")
-axes[0].set_xlabel("Time [ms]")
-axes[0].set_ylabel("Signal [1]")
-axes[0].legend()
-
-axes[1].plot(t_rec*1e3, np.real(s_rec), ls="-", color="black", label="real")
-axes[1].plot(t_rec*1e3, np.imag(s_rec), ls="-", color="blue", label="imag")
-axes[1].set_xlabel("Time [ms]")
-
-# plt.show()
-# exit()
-
-amp3 = np.zeros((beam.channels, pulses, meas_samples), dtype=np.complex128)
+amp3 = np.zeros((1, pulses, samples), dtype=np.complex128)
 
 mind = 0
 for ind in tqdm(ipps):
@@ -195,12 +149,28 @@ for ind in tqdm(ipps):
     )
     amp3[:, ind, :] = s_rec
 
+    # if met_inds[ind]:
+    #     t = sampler()
+    #     t = samples_to_transmissions_map(t, r_tx_n)
+    #     s_gen = waveform_generator(t)*np.exp(1j*2*np.pi*freq*t)
+
+    #     fig, axes = plt.subplots(2, 1)
+    #     axes[0].plot(t*1e3, np.real(s_gen), ls="-", color="black", label="real")
+    #     axes[0].plot(t*1e3, np.imag(s_gen), ls="-", color="blue", label="imag")
+    #     axes[0].set_xlabel("Time [ms]")
+    #     axes[0].set_ylabel("Signal [1]")
+    #     axes[0].legend()
+
+    #     axes[1].plot(t_rec*1e3, np.real(s_rec), ls="-", color="black", label="real")
+    #     axes[1].plot(t_rec*1e3, np.imag(s_rec), ls="-", color="blue", label="imag")
+    #     axes[1].set_xlabel("Time [ms]")
+    #     plt.show()
+
 fig, ax = plt.subplots()
 
-Imat, Rmat = np.meshgrid(ipps, np.arange(meas_samples))
+Imat, Rmat = np.meshgrid(ipps, np.arange(samples))
 amp2 = np.sum(amp3, axis=0)
 powsum = np.log10(np.abs(amp2.T))*10
-# ax.pcolor(Imat, Rmat, powsum)
 
 pmesh = ax.pcolormesh(Imat, Rmat, powsum)
 ax.set_xlabel('IPP')
