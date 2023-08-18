@@ -3,10 +3,23 @@ import logging
 import numpy as np
 import numpy.ctypeslib as npct
 from tqdm import tqdm
+import threading
 
 from metecho import libmet
 
 logger = logging.getLogger(__name__)
+
+try:
+    from mpi4py import MPI
+
+    comm = MPI.COMM_WORLD
+except ImportError:
+
+    class COMM_WORLD:
+        rank = 0
+        size = 1
+
+    comm = COMM_WORLD()
 
 # Define the C interface
 
@@ -76,44 +89,27 @@ libmet.arange.argtypes = [
 ]
 
 
-def xcorr_echo_search(
-    raw_data,
+def xcorr_worker(
+    pulse_inds,
+    progress_bar,
+    pbar,
+    sample_signal_all,
+    doppler_freq_size,
+    signal_model_size,
     doppler_freq_min,
     doppler_freq_max,
     doppler_freq_step,
     signal_model,
-    full_gmf_output=False,
-    progress_bar=True,
+    samp,
+    max_pow_per_delay,
+    max_pow_per_delay_norm,
+    best_peak,
+    best_start,
+    best_doppler,
+    full_gmf_output,
+    pows_output,
 ):
-    """
-    # Will take a raw_data object and crosscorrelate the data.
-    """
-    matched_filter_output = {}
-    pows_output = []
-    sample_signal_all = np.sum(raw_data.data, 0)
-    doppler_freq_size = int(((doppler_freq_max - doppler_freq_min) / doppler_freq_step) + 1)
-    if len(signal_model.shape) == 1:
-        signal_model.shape = (1, signal_model.size)
-    signal_model_size = signal_model.shape[1]
-    best_peak = np.zeros(sample_signal_all.shape[1], dtype=np.complex128)
-    best_start = np.zeros(sample_signal_all.shape[1])
-    best_doppler = np.zeros(sample_signal_all.shape[1])
-    max_pow_per_delay = np.zeros(
-        [sample_signal_all.shape[0] + signal_model_size,
-         sample_signal_all.shape[1]],
-        dtype=np.complex128
-    )
-    max_pow_per_delay_norm = np.zeros(
-        [sample_signal_all.shape[0] + signal_model_size,
-         sample_signal_all.shape[1]],
-        dtype=np.complex128
-    )
-
-    samp = np.float64(raw_data.meta["T_samp"])
-    logger.debug(f"Starting echo search cycle of size {sample_signal_all.shape[1]} on raw_data {raw_data}.")
-    if progress_bar:
-        pbar = tqdm(total=sample_signal_all.shape[1], desc="Decoding pulse")
-    for x in range(0, sample_signal_all.shape[1]):
+    for x in pulse_inds:
         if progress_bar:
             pbar.update(1)
         sample_signal = sample_signal_all[:, x].copy()
@@ -152,9 +148,115 @@ def xcorr_echo_search(
         best_start[x] = maxpowind[best_value_index]
         best_doppler[x] = doppler_freq_min + (best_value_index * doppler_freq_step)
         if full_gmf_output:
-            pows_output.append(pows)
-    if progress_bar:
-        pbar.close()
+            pows_output[x] = pows
+
+
+
+def xcorr_echo_search(
+    raw_data,
+    doppler_freq_min,
+    doppler_freq_max,
+    doppler_freq_step,
+    signal_model,
+    full_gmf_output=False,
+    progress_bar=True,
+    threads=None,
+):
+    """
+    # Will take a raw_data object and crosscorrelate the data.
+    """
+    matched_filter_output = {}
+    sample_signal_all = np.sum(raw_data.data, 0)
+
+    pows_output = [None]*sample_signal_all.shape[1]
+    doppler_freq_size = int(((doppler_freq_max - doppler_freq_min) / doppler_freq_step) + 1)
+    if len(signal_model.shape) == 1:
+        signal_model.shape = (1, signal_model.size)
+    signal_model_size = signal_model.shape[1]
+    best_peak = np.zeros(sample_signal_all.shape[1], dtype=np.complex128)
+    best_start = np.zeros(sample_signal_all.shape[1])
+    best_doppler = np.zeros(sample_signal_all.shape[1])
+    max_pow_per_delay = np.zeros(
+        [sample_signal_all.shape[0] + signal_model_size,
+         sample_signal_all.shape[1]],
+        dtype=np.complex128
+    )
+    max_pow_per_delay_norm = np.zeros(
+        [sample_signal_all.shape[0] + signal_model_size,
+         sample_signal_all.shape[1]],
+        dtype=np.complex128
+    )
+
+    samp = np.float64(raw_data.meta["T_samp"])
+    logger.debug(f"Starting echo search cycle of size {sample_signal_all.shape[1]} on raw_data {raw_data}.")
+
+    if threads is None:
+        if progress_bar:
+            pbar = tqdm(total=sample_signal_all.shape[1], desc="Decoding pulse")
+        pulse_inds = range(sample_signal_all.shape[1])
+        xcorr_worker(
+            pulse_inds,
+            progress_bar,
+            pbar,
+            sample_signal_all,
+            doppler_freq_size,
+            signal_model_size,
+            doppler_freq_min,
+            doppler_freq_max,
+            doppler_freq_step,
+            signal_model,
+            samp,
+            max_pow_per_delay,
+            max_pow_per_delay_norm,
+            best_peak,
+            best_start,
+            best_doppler,
+            full_gmf_output,
+            pows_output,
+        )
+        if progress_bar:
+            pbar.close()
+    else:
+        pt_threads = []
+        pbars = []
+        for pind in range(threads):
+            pulse_inds = range(pind, sample_signal_all.shape[1], threads)
+            if progress_bar:
+                pbar = tqdm(total=len(pulse_inds), desc="Decoding pulse", position=pind)
+                pbars.append(pbar)
+            pt = threading.Thread(
+                target=xcorr_worker, 
+                args=(
+                    pulse_inds,
+                    progress_bar,
+                    pbar,
+                    sample_signal_all,
+                    doppler_freq_size,
+                    signal_model_size,
+                    doppler_freq_min,
+                    doppler_freq_max,
+                    doppler_freq_step,
+                    signal_model,
+                    samp,
+                    max_pow_per_delay,
+                    max_pow_per_delay_norm,
+                    best_peak,
+                    best_start,
+                    best_doppler,
+                    full_gmf_output,
+                    pows_output,
+                ),
+            )
+            pt_threads.append(pt)
+            pt.start()
+
+        for pt in pt_threads:
+            pt.join()
+
+        if progress_bar:
+            for pbar in pbars:
+                pbar.close()
+    
     matched_filter_output["max_pow_per_delay"] = max_pow_per_delay
     matched_filter_output["max_pow_per_delay_norm"] = max_pow_per_delay_norm
     matched_filter_output["best_peak"] = best_peak

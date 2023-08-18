@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import scipy.constants
 import h5py
 import logging
 import numpy as np
@@ -12,7 +13,9 @@ logger = logging.getLogger(__name__)
 
 @basic_matplotlib_kw(subplot_shape=(3, 1))
 def gmf(axes,
+        ipps,
         filter_output,
+        raw_data_meta,
         axis_font_size=15,
         title_font_size=11,
         tick_font_size=11,
@@ -22,22 +25,33 @@ def gmf(axes,
     """
     Plots the GMF output that uses only doppler and delay
     """
-
-    """
+    t_axis = ipps
     if index_axis:
-        ax.set_xlabel('Delay [1]', fontsize=axis_font_size)
-        ax.set_ylabel('Doppler [1]', fontsize=axis_font_size)
+        axes[0].plot(filter_output["best_start"])
+        axes[2].plot(filter_output["best_doppler"])
+        
+        axes[0].set_ylabel("Start sample [1]")
+        axes[2].set_ylabel("Doppler [Hz]")
     else:
-        ax.set_xlabel('Range [km]', fontsize=axis_font_size)
-        ax.set_ylabel('Velocity [km/s]', fontsize=axis_font_size)
-    """
+        Tipp = raw_data_meta["T_ipp"]
+        t_axis = t_axis.astype(np.float64)*Tipp
+        Ts = raw_data_meta["T_measure_start"]
+        fs = raw_data_meta["frequency"]
+        Tsmp = raw_data_meta['T_samp']
+        axes[0].plot(t_axis, (filter_output["best_start"]*Tsmp + Ts)*0.5*scipy.constants.c*1e-3)
+        axes[2].plot(t_axis, (filter_output["best_doppler"]/fs)*scipy.constants.c*1e-3)
 
-    axes[0].plot(filter_output["best_start"])
-    axes[1].plot(filter_output["best_peak"])
-    axes[2].plot(filter_output["best_doppler"])
+        axes[0].set_ylabel("Range [km]")
+        axes[2].set_ylabel("Doppler [km/s]")
+
+    axes[1].plot(t_axis, filter_output["best_peak"])
+    axes[1].set_ylabel("GMF peak value [1]")
 
     for ax in axes:
-        ax.set_xlabel('IPP [1]', fontsize=axis_font_size)
+        if index_axis:
+            ax.set_xlabel('IPP [1]', fontsize=axis_font_size)
+        else:
+            ax.set_xlabel('IPP [s]', fontsize=axis_font_size)
         for ax_label in ['x', 'y']:
             ax.tick_params(axis=ax_label, labelsize=tick_font_size)
 
