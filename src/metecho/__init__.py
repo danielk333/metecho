@@ -29,5 +29,6 @@ from . import meteor_model
 from . import signal_model
 from . import simulation
 from . import coordinates
+from . import estimation
 
 from .tools import profiling

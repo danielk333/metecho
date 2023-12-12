@@ -1,0 +1,1 @@
+from .scam import Scam
