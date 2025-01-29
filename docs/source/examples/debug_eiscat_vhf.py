@@ -1,7 +1,4 @@
-"""
-Load MU radar data
-===================
-"""
+
 """
 Load MU radar data
 ===================
@@ -18,7 +15,82 @@ import metecho.generalized_matched_filter as mgmf
 clobber = False
 out_path = pathlib.Path("/home/danielk/data/EISCAT/radar-school-2023/analysis")
 par_file = pathlib.Path("/home/danielk/data/EISCAT/radar-school-2023/manda_zenith_4.00v_CP@vhf_information/20230815/145628/manda_va.par")
+# 
+# paths = pathlib.Path("/home/danielk/data/EISCAT/radar-school-2023/manda_zenith_4.00v_CP@vhf/20230815_15").glob("*.mat*")
+# paths = list(paths)
 
+base_path = pathlib.Path("/home/danielk/downloads/ufo")
+paths = list(base_path.glob("*.mat*"))
+
+freq = 223.4e6
+min_v = -100e3
+max_v = 30e3
+min_doppler = (min_v/scipy.constants.c)*freq
+max_doppler = (max_v/scipy.constants.c)*freq
+steps_doppler = 2000
+step_doppler = (max_doppler - min_doppler)/steps_doppler
+print("Doppler limits:")
+print(min_doppler, max_doppler, step_doppler)
+
+raw = None
+for file in paths:
+    print(file)
+    _raw = metecho.data.RawDataInterface(
+        file,
+        backend="eiscat_vhf_matlab",
+        par_file=par_file,
+        declutter=0,
+    )
+    if raw is None:
+        raw = _raw
+        raw.data = np.abs(raw.data)
+    else:
+        raw.data += np.abs(_raw.data)
+    
+    # metecho.plot.rti(raw, log=True, index_axis=False)
+
+plt.plot(np.sum(raw.data[0, :, :], axis=1))
+# metecho.plot.rti(raw, log=True, index_axis=True)
+
+plt.show()
+    # raw.data = raw.data[:, :, 1028:1088]
+    # codes = codes[1028:1088, :]
+
+    # matched_filter_output = mgmf.xcorr.xcorr_echo_search(
+    #     raw,
+    #     min_doppler,
+    #     max_doppler,
+    #     step_doppler,
+    #     codes,
+    #     full_gmf_output=True,
+    #     threads=6,
+    # )
+    # metecho.plot.gmf(np.arange(raw.data.shape[2]), matched_filter_output, raw.meta, index_axis=False)
+    # metecho.plot.gmf(np.arange(raw.data.shape[2]), matched_filter_output, raw.meta, index_axis=True)
+    
+    # plt.show()
+
+
+exit()
+
+
+"""
+Load MU radar data
+===================
+"""
+import pathlib
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy.constants
+import pickle
+
+import metecho
+import metecho.generalized_matched_filter as mgmf
+
+clobber = False
+out_path = pathlib.Path("/home/danielk/data/EISCAT/radar-school-2023/analysis")
+par_file = pathlib.Path("/home/danielk/data/EISCAT/radar-school-2023/manda_zenith_4.00v_CP@vhf_information/20230815/145628/manda_va.par")
+# "/home/danielk/downloads"
 # paths = pathlib.Path("/home/danielk/data/EISCAT/radar-school-2023/manda_zenith_4.00v_CP@vhf/20230815_15").glob("*.mat*")
 # paths = list(paths)
 
