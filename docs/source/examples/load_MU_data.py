@@ -12,13 +12,10 @@ try:
 except NameError:
     HERE = pathlib.Path('.').parent.resolve()
 
-metecho.debug()
 
 h5_mu_file = HERE / 'data' / 'MU_h5' / '2009' / '06' / '27' / '2009-06-27T09.54.05.690000000.h5'
 
 raw = metecho.data.RawDataInterface(h5_mu_file)
-
-print(metecho.profiler)
 
 metecho.plot.rti(raw, log=True)
 
