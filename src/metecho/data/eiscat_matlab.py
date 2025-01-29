@@ -8,21 +8,14 @@ from . import raw_data
 
 logger = logging.getLogger(__name__)
 
-logger.debug("Importing MPI")
-try:
-    import digital_rf as drf
-except ImportError:
-    logger.warning("digital_rf import failed: this raw_data backed is not available")
-    drf = None
-
 
 @raw_data.backend_validator("eiscat_vhf_matlab")
-def validate_digital_rf(path):
+def validate_matlab(path):
     return path.name.endswith(".mat.bz2")
 
 
 @raw_data.backend_loader("eiscat_vhf_matlab")
-def load_digital_rf(path, declutter=150, par_file=None, tlan_file=None):
+def load_matlab(path, declutter=150, par_file=None, tlan_file=None):
     # TODO: read this from tlan and par files
     meta = {}
 
@@ -31,8 +24,8 @@ def load_digital_rf(path, declutter=150, par_file=None, tlan_file=None):
     ch1 = raw[:len(raw)//2]
     ch2 = raw[len(raw)//2:]
 
-    tx1 = ch1[:32768]
-    tx2 = ch2[:32768]
+    # tx1 = ch1[:32768]
+    # tx2 = ch2[:32768]
 
     rx1 = ch1[32768:]
     rx2 = ch2[32768:]

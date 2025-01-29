@@ -10,7 +10,7 @@ logger.debug("Importing MPI")
 try:
     import digital_rf as drf
 except ImportError:
-    logger.warning("digital_rf import failed: this raw_data backed is not available")
+    logger.debug("digital_rf import failed: this raw_data backed is not available")
     drf = None
 
 
