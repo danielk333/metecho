@@ -20,9 +20,8 @@ libxcorr = Extension(
     name='metecho.clibmet',
     sources=[
         'src/clibmet/libxcorr/libxcorr.c',
-        'src/clibmet/libdoa/libdoa.c',
     ],
-    include_dirs=['src/libxcorr/'],
+    include_dirs=['src/clibmet/libxcorr/'],
 )
 
 
