@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
 
+import numpy as np
+import numpy.typing as npt
+
 
 class Model(ABC):
-
-    def __init__(self, duration=0):
-        self.duration = duration
-
     @abstractmethod
-    def evaluate(self, t, **kwargs):
+    def evaluate(
+        self, t: npt.NDArray[np.float64] | npt.NDArray[np.int64]
+    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+        """Evalutate over time t"""
         pass
