@@ -1,0 +1,117 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "metecho"
+version = "0.1.0"
+description = "Radar meteor analysis in Python and C"
+readme = { file = "README.md", content-type = "text/markdown" }
+authors = [
+  { name = "Daniel Kastinen", email = "daniel.kastinen@irf.se" },
+  { name = "Hampus Andersson", email = "hampus.andersson@irf.se" },
+]
+maintainers = [
+  { name = "Daniel Kastinen", email = "daniel.kastinen@irf.se" },
+  { name = "Hampus Andersson", email = "hampus.andersson@irf.se" },
+]
+license = { file = "LICENSE" }
+classifiers = [
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Physics",
+  "Operating System :: OS Independent",
+  "License :: OSI Approved :: MIT License",
+]
+requires-python = ">=3.10"
+dependencies = [
+  "numpy >= 1.19.5",
+  "scipy >= 1.4.1",
+  "h5py >= 3.4.0",
+  "pyant >= 1.1.0",
+  "tqdm >= 4.66.1",
+  "matplotlib >= 2.2.2",
+  "hardtarget",
+  "astropy>=6",
+  "strenum ; python_version<'3.11'",
+]
+
+[project.urls]
+Documentation = "https://danielk.developer.irf.se/metecho/"
+Repository = "https://github.com/danielk333/metecho"
+
+[project.scripts]
+metecho = "metecho.cli:main"
+
+[project.optional-dependencies]
+develop = [
+  "pytest",
+  "wheel",
+  "build",
+  "twine",
+  "auditwheel",
+  "pytest-cov",
+  "ruff"
+]
+type_checker = ["mypy >= 1.18.2", "xenon"]
+profiling = ["yappi >= 1.4.0"]
+tests = ["pytest", "pytest-cov"]
+documentation = [
+  "docstr-coverage",
+  "mkdocs-material",
+  "mkdocstrings[python]",
+  "mkdocs-jupyter",
+  "mkdocs-gen-files",
+  "mkdocs-literate-nav",
+  "mkdocs-section-index",
+  "matplotlib",
+]
+mpi = ["mpi4py"]
+
+[tool.setuptools]
+include-package-data = true
+license-files = ["LICENSE"]
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.mypy]
+disallow_untyped_defs = true
+follow_untyped_imports = true
+warn_unused_ignores = true
+packages = ["metecho"]
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.ruff.lint]
+ignore = ["E203","D203","E251","E501","E226"]
+
+[tool.pytest]
+addopts = ["-v", "--cov"]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+include= ["metecho"]
+source = ["./src/"]
+
+[tool.coverage.report]
+exclude_also = [
+  # Don't complain if tests don't hit defensive assertion code:
+  "raise AssertionError",
+  "raise NotImplementedError",
+
+  # Don't complain if non-runnable code isn't run:
+  "if 0:",
+  "if __name__ == .__main__.:",
+
+  # Don't complain about abstract methods, they aren't run:
+  "@(abc\\.)?abstractmethod",
+]
+
+[tool.uv.sources]
+pygdsm = { git = "https://github.com/telegraphic/pygdsm" }
