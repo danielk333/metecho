@@ -1,5 +1,18 @@
+from typing import Callable, Optional, TypedDict, Unpack
+
 import numpy as np
+import numpy.typing as npt
 from tqdm import tqdm
+
+
+class ScamKwargs(TypedDict, total=False):
+    accept_max: float
+    accept_min: float
+    adapt_interval: int
+    proposal_adapt_interval: int
+    tune: int
+    proposal: str
+    progress_bar: bool
 
 
 class Scam:
@@ -8,23 +21,26 @@ class Scam:
     becomes a least squares).
     """
 
-    OPTIONS = {
-        "accept_max": 0.5,
-        "accept_min": 0.3,
-        "adapt_interval": 1000,
-        "proposal_adapt_interval": 10000,
-        "tune": 1000,
-        "proposal": "normal",
-        "progress_bar": True,
-    }
-
-    def __init__(self, base_step_size, **kwargs):
+    def __init__(self, base_step_size: int, **kwargs: Unpack[ScamKwargs]) -> None:
         self.base_step_size = base_step_size
-        self.options = {}
-        self.options.update(self.OPTIONS)
+        self.options: ScamKwargs = ScamKwargs(
+            accept_max=0.5,
+            accept_min=0.3,
+            adapt_interval=1000,
+            proposal_adapt_interval=10000,
+            tune=1000,
+            proposal="normal",
+            progress_bar=True,
+        )
         self.options.update(kwargs)
 
-    def run(self, posterior, start, steps, seed=None):
+    def run(
+        self,
+        posterior: Callable,
+        start: npt.NDArray,
+        steps: int,
+        seed: Optional[float | npt.NDArray[np.floating]] = None,
+    ) -> npt.NDArray:
         if seed is not None:
             seed_state = np.random.seed()
             np.random.seed(seed)
@@ -101,7 +117,7 @@ class Scam:
                     accept[var_ind] = 0.0
                     tries[var_ind] = 0.0
 
-            if (ind % cov_ad_inv == 0 and ind > 0 and self.options["proposal"] == "adaptive"):
+            if ind % cov_ad_inv == 0 and ind > 0 and self.options["proposal"] == "adaptive":
                 _data = chain[var_ind, :ind]
                 _proposal_cov = np.corrcoef(_data)
 
@@ -114,4 +130,4 @@ class Scam:
         if seed is not None:
             np.random.seed(seed_state)
 
-        return chain[:, self.options["tune"]:]
+        return chain[:, self.options["tune"] :]

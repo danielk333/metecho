@@ -1,28 +1,32 @@
-'''
+"""
 Package-wide execution time profiling system.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Module containing profiling systems using yappi
 
-'''
-import pathlib
-import os
-import time
+"""
+
 import logging
+import os
+import pathlib
+import time
 from functools import wraps
+from typing import Any, Callable, Optional
 
 try:
     import yappi
+
+    YAPPI_AVAILABLE = True
 except ImportError:
-    yappi = None
+    YAPPI_AVAILABLE = False
 
 file_logger = logging.getLogger(__name__)
 
 PACKAGE_PATH = str(pathlib.Path(__file__).parent)
-START_TIME = None
+START_TIME: float = 0.0
 
 
-def _path_to_module(path):
+def _path_to_module(path: str) -> str:
     if PACKAGE_PATH not in path:
         return ""
     stem = pathlib.Path(path).stem
@@ -32,9 +36,9 @@ def _path_to_module(path):
     return ".".join(module)
 
 
-def check_yappi(func):
-    def checked_func(*args, **kwargs):
-        if yappi is None:
+def check_yappi(func: Callable) -> Callable:
+    def checked_func(*args: Any, **kwargs: Any) -> Callable:
+        if YAPPI_AVAILABLE is False:
             raise ImportError("'yappi' not installed, please install to profile")
         return func(*args, **kwargs)
 
@@ -42,7 +46,7 @@ def check_yappi(func):
 
 
 @check_yappi
-def profile():
+def profile() -> None:
     global START_TIME
     START_TIME = time.time()
     yappi.set_clock_type("cpu")
@@ -50,13 +54,11 @@ def profile():
 
 
 @check_yappi
-def get_profile(modules=None):
+def get_profile(modules: Optional[list[str]] = None) -> tuple[yappi.YFuncStats, float]:
     if modules is None:
         modules = ["pyant"]
     stats = yappi.get_func_stats(
-        filter_callback=lambda x: any(
-            list(_path_to_module(x.module).startswith(mod) for mod in modules)
-        ),
+        filter_callback=lambda x: any(list(_path_to_module(x.module).startswith(mod) for mod in modules)),
     )
     stats = stats.sort("ttot", "desc")
 
@@ -64,7 +66,7 @@ def get_profile(modules=None):
     return stats, total
 
 
-def print_profile(stats, total=None):
+def print_profile(stats: yappi.YFuncStats, total: Optional[float] = None) -> None:
     header = [
         "Name",
         "Module",
@@ -111,33 +113,30 @@ def print_profile(stats, total=None):
 
     for data in datas:
         _str = " | ".join(
-            [
-                f"{x:{fmt}}".ljust(size)
-                for x, size, fmt in zip(data[: len(header)], column_sizes, formats)
-            ]
+            [f"{x:{fmt}}".ljust(size) for x, size, fmt in zip(data[: len(header)], column_sizes, formats)]
         )
         print(_str)
 
 
 @check_yappi
-def profile_stop(clear=True):
+def profile_stop(clear: bool = True) -> None:
     yappi.stop()
     if clear:
         global START_TIME
-        START_TIME = None
+        START_TIME = 0.0
         yappi.clear_stats()
 
 
-def log(logger, level):
-    '''Decorator that logs the function call at the desired level
-    '''
+def log(logger: logging.Logger, level: int) -> Callable:
+    """Decorator that logs the function call at the desired level"""
 
-    def log_func(func):
+    def log_func(func: Callable) -> Callable:
 
         @wraps(func)
-        def logged_func(*args, **kwargs):
+        def logged_func(*args: Any, **kwargs: Any) -> Any:
             logger.log(level, f'Function "{func.__name__}" called')
             return func(*args, **kwargs)
+
         return logged_func
 
     return log_func

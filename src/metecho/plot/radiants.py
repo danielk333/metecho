@@ -1,22 +1,19 @@
-import logging
+from typing import Any
+
 import numpy as np
-
-
-from .general import basic_matplotlib_kw
-from .. import coordinates
-from .. import meteoroid_streams
-
-logger = logging.getLogger(__name__)
+from matplotlib.axes import Axes
+from matplotlib.collections import PathCollection, QuadMesh
+from spacecoords import hammer_aitoff
 
 
 def add_hammer_grid(
-    ax,
-    d_lon=np.radians(30),
-    d_lat=np.radians(15),
-    res=100,
-    alpha=0.2,
-    color="black",
-):
+    ax: Axes,
+    d_lon: np.float64 | float = np.radians(30),
+    d_lat: np.float64 | float = np.radians(15),
+    res: int = 100,
+    alpha: float = 0.2,
+    color: str = "black",
+) -> None:
     gird_lon = np.arange(-np.pi, np.pi + d_lon, d_lon, dtype=np.float64)
     gird_lat = np.arange(-np.pi * 0.5, np.pi * 0.5, d_lat, dtype=np.float64)
 
@@ -24,7 +21,7 @@ def add_hammer_grid(
     lat_V = np.linspace(-np.pi * 0.5, np.pi * 0.5, res)
 
     XYg = [
-        coordinates.ecliptic_to_hammer(
+        hammer_aitoff.ecliptic_to_hammer(
             gird_lon[i] * np.ones((res,)),
             lat_V,
             radians=True,
@@ -32,7 +29,7 @@ def add_hammer_grid(
         for i in range(len(gird_lon))
     ]
     XYg += [
-        coordinates.ecliptic_to_hammer(
+        hammer_aitoff.ecliptic_to_hammer(
             lon_V,
             gird_lat[i] * np.ones((res,)),
             radians=True,
@@ -43,7 +40,7 @@ def add_hammer_grid(
     for hx, hy in XYg:
         ax.plot(hx, hy, "-", color=color, alpha=alpha)
 
-    x_, y_ = coordinates.ecliptic_to_hammer(
+    x_, y_ = hammer_aitoff.ecliptic_to_hammer(
         gird_lon,
         np.zeros(gird_lon.shape),
         radians=True,
@@ -54,11 +51,11 @@ def add_hammer_grid(
         ax.text(
             x_[i] + 0.02,
             y_[i] + 0.03,
-            f"{np.degrees(np.mod(1.5*np.pi - gird_lon[i], np.pi*2)):.0f}$^\\circ$",
+            f"{np.degrees(np.mod(1.5 * np.pi - gird_lon[i], np.pi * 2)):.0f}$^\\circ$",
             color=color,
         )
 
-    x_, y_ = coordinates.ecliptic_to_hammer(
+    x_, y_ = hammer_aitoff.ecliptic_to_hammer(
         -np.pi * 0.5 * np.ones(gird_lat.shape),
         gird_lat,
         radians=True,
@@ -74,23 +71,22 @@ def add_hammer_grid(
         )
 
 
-@basic_matplotlib_kw(subplot_shape=None)
 def hammer(
-    ax,
-    lon,
-    lat,
-    solar_lon,
-    velocity,
-    radians=False,
-    grid=True,
-    grid_res=100,
-    grid_alpha=0.2,
-    grid_color="black",
-    d_lon=np.radians(30),
-    d_lat=np.radians(15),
-    size=2,
-    mpl_kw={},
-):
+    ax: Axes,
+    lon: float,
+    lat: float,
+    solar_lon: float,
+    velocity: float,
+    radians: bool = False,
+    grid: bool = True,
+    grid_res: int = 100,
+    grid_alpha: float = 0.2,
+    grid_color: str = "black",
+    d_lon: np.float64 | float = np.radians(30),
+    d_lat: np.float64 | float = np.radians(15),
+    size: int = 2,
+    mpl_kw: dict[str, Any] = {},
+) -> tuple[Axes, list[PathCollection]]:
     if grid:
         add_hammer_grid(
             ax,
@@ -101,7 +97,7 @@ def hammer(
             color=grid_color,
         )
 
-    ham_x, ham_y = coordinates.ecliptic_to_hammer(
+    ham_x, ham_y = hammer_aitoff.ecliptic_to_hammer(
         lon,
         lat,
         sun_lon=solar_lon,
@@ -112,22 +108,21 @@ def hammer(
     return ax, [sc]
 
 
-@basic_matplotlib_kw(subplot_shape=None)
 def hammer_density(
-    ax,
-    lon,
-    lat,
-    solar_lon,
-    radians=False,
-    grid=True,
-    grid_alpha=0.2,
-    grid_res=100,
-    d_lon=np.radians(30),
-    d_lat=np.radians(15),
-    bins=200,
-    mpl_kw={},
-):
-    ham_x, ham_y = coordinates.ecliptic_to_hammer(
+    ax: Axes,
+    lon: float,
+    lat: float,
+    solar_lon: float,
+    radians: bool = False,
+    grid: bool = True,
+    grid_alpha: float = 0.2,
+    grid_res: int = 100,
+    d_lon: np.float64 | float = np.radians(30),
+    d_lat: np.float64 | float = np.radians(15),
+    bins: int = 200,
+    mpl_kw: dict[str, Any] = {},
+) -> tuple[Axes, list[QuadMesh]]:
+    ham_x, ham_y = hammer_aitoff.ecliptic_to_hammer(
         lon,
         lat,
         sun_lon=solar_lon,
@@ -154,8 +149,17 @@ def hammer_density(
     return ax, [pc]
 
 
-@basic_matplotlib_kw(subplot_shape=None)
-def hammer_iau_streams(ax, showers, mean_radiant=True, size=300, text_offset=(0.03, 0.02), mpl_kw={}):
+"""
+TODO: Fix this when you know what showers is
+
+def hammer_iau_streams(
+    ax: Axes,
+    showers,
+    mean_radiant: bool = True,
+    size: int = 300,
+    text_offset: tuple[float, float] = (0.03, 0.02),
+    mpl_kw: dict[str, Any] = {},
+) -> tuple[Axes, list[PathCollection]]:
     data, _ = meteoroid_streams.iau.get_streams_data()
     all_showers = data["Code"].unique()
 
@@ -169,21 +173,21 @@ def hammer_iau_streams(ax, showers, mean_radiant=True, size=300, text_offset=(0.
             continue
 
         if mean_radiant:
-            radiant = meteoroid_streams.radiant.ecliptic(
+            _radiant = radiant.ecliptic(
                 np.nanmean(data[inds]["Ra"]),
                 np.nanmean(data[inds]["De"]),
             )
             sun_lon = np.nanmean(data[inds]["LaSun"])
         else:
-            radiant = meteoroid_streams.radiant.ecliptic(
+            _radiant = radiant.ecliptic(
                 data[inds]["Ra"],
                 data[inds]["De"],
             )
             sun_lon = data[inds]["LaSun"]
-        lon = radiant.lon.deg
-        lat = radiant.lat.deg
+        lon = _radiant.lon.deg
+        lat = _radiant.lat.deg
 
-        hx, hy = coordinates.ecliptic_to_hammer(
+        hx, hy = hammer_aitoff.ecliptic_to_hammer(
             lon,
             lat,
             sun_lon=sun_lon,
@@ -214,3 +218,4 @@ def hammer_iau_streams(ax, showers, mean_radiant=True, size=300, text_offset=(0.
     sc = ax.scatter(ham_x, ham_y, size, **mpl_kw)
 
     return ax, [sc]
+"""

@@ -1,12 +1,15 @@
-from pathlib import Path
-import os
+import argparse
 import logging
-import pickle
+from pathlib import Path
 
-from .. import data
+from hardtarget.process.process import DataLoader
+from radardef.radar_def import RadarDef
+
+from metecho.data_handling.store_events import store_events
+from metecho.events import Events, event_search, generate_event_search_config
+from metecho.plot import plot_events
+
 from .. import tools
-from .. import events
-from .. import signal_model
 from .commands import add_command
 
 logger = logging.getLogger(__name__)
@@ -21,140 +24,72 @@ except ImportError:
         rank = 0
         size = 1
 
-        def barrier(self):
+        def barrier(self) -> None:
             pass
 
     comm = COMM_WORLD()
 
 
-def raw_data_file_list(output_dir, cli_logger, args):
-    if args.radar.lower() == "mu":
-        backend = "mu_h5"
-    else:
-        raise ValueError(f'Radar "{args.radar}" not supported by find_events function')
-
-    paths = []
-    for path in args.files:
-        path = Path(path).resolve()
-        if path.is_dir():
-            data_store = data.DataStore(
-                path,
-                include_convertable=args.convert,
-            )
-            paths += [file for file, backend in data_store.get_files()]
-
-            if args.convert:
-                paths += data_store.convert(
-                    output_dir, backend, MPI=comm.size > 1, MPI_root=-1
-                )
-        else:
-            input_fmt = data.check_if_convertable(path)
-            if input_fmt is not None and args.convert:
-                paths += data.convert(
-                    [path],
-                    output_dir,
-                    backend=backend,
-                    input_format=input_fmt,
-                    MPI=comm.size > 1,
-                    MPI_root=-1,
-                )[0]
-                continue
-
-            backend_fmt = data.check_if_raw_data(path)
-            if backend_fmt is not None:
-                paths.append(path)
-            else:
-                cli_logger.warning(
-                    f'Input path "{path}" was not convertable (or conversions are not enabled) \
-                    nor a file of a supported raw data format and therefor skipped'
-                )
-
-    return paths
-
-
 @tools.MPI_target_arg(0)
-def find_events(file, args, cli_logger):
-    cli_logger.info(f"Handling {file}")
-    if args.radar.lower() == "mu":
-        backend = "mu_h5"
-        config = events.generate_event_search_config()
+def find_events(file: str | Path, args: argparse.Namespace) -> Events:
+
+    config = generate_event_search_config(file_input=args.config)
+
+    data_loader = RadarDef().load_data(file)
+
+    data: DataLoader | Path
+    if data_loader:
+        data = data_loader
     else:
-        raise ValueError(f'Radar "{args.radar}" not supported by find_events function')
+        data = Path(file)
 
-    raw = data.RawDataInterface(file, backend=backend)
-
-    signal = signal_model.phase_coding.barker_code_13(
-        raw.data.shape[raw.axis["pulse"]],
-        2,
-    )
-
-    event_list, nonhead, best_data, noise = events.search(
-        raw,
+    events, echo = event_search(
+        data,
         config,
-        None,
-        signal,
-        plot=args.plot,
-        save_as_image=args.plot_save,
-        save_location=args.plot_output,
+        start_time=int(args.start_time) if args.relative_time else args.start_time,
+        end_time=int(args.end_time) if args.relative_time else args.end_time,
+        relative_time=args.relative_time,
+        progress=args.progress,
     )
-    if args.best_data:
-        return [event_list, nonhead, best_data, noise]
-    else:
-        return [event_list, nonhead, None, noise]
+
+    if args.plot:
+        plot_events(
+            echo,
+            events,
+            data if isinstance(data, DataLoader) else None,
+            args.plot_save,
+            args.plot_output,
+        )
+
+    return events
 
 
-def main(args, cli_logger):
-    default_folder = Path(os.getcwd()) / "output"
+def main(args: argparse.Namespace) -> None:
 
-    if len(args.output) == 0:
-        args.output = default_folder / "events.pickle"
-    if len(args.convert_output) == 0:
-        args.convert_output = default_folder / "convert"
-    if len(args.plot_output) == 0:
-        args.plot_output = default_folder / "plots"
-    else:
+    if args.plot_output:
         args.plot_save = True
         args.plot_output = Path(args.plot_output).resolve()
 
-    if args.convert:
-        output_dir = Path(args.convert_output).resolve()
+    # if save_results.is_dir():
+    #    raise ValueError(f'Output results path "{save_results}" is a directory, not a file-path')
 
-        logger.debug(f'Setting output path and converting files to "{output_dir}"')
+    events = find_events(args.files, args, MPI=comm.size > 1, MPI_root=0)
+
+    if args.output:
         if comm.rank == 0:
-            output_dir.mkdir(exist_ok=True)
+            output_dir = Path(args.output).resolve()
+            if not output_dir.exists():
+                output_dir.mkdir(parents=True)
+
+            for x in events:
+                store_events(x, output_dir)
+
         comm.barrier()
-    else:
-        output_dir = None
-
-    save_results = Path(args.output).resolve()
-    if save_results.is_dir():
-        raise ValueError(
-            f'Output results path "{save_results}" is a directory, not a file-path'
-        )
-
-    cli_logger.info("Getting file list...")
-    paths = raw_data_file_list(output_dir, cli_logger, args)
-
-    results = find_events(paths, args, cli_logger, MPI=comm.size > 1, MPI_root=0)
-
-    if comm.rank == 0:
-        if not save_results.parent.exists():
-            save_results.parent.mkdir(parents=True)
-
-        with open(save_results, "wb") as fh:
-            pickle.dump(results, fh)
-        cli_logger.info(f"Saved results to pickle at {save_results}")
-
-    comm.barrier()
 
 
-def parser_build(parser):
-    parser.add_argument(
-        "-Co",
-        "--convert-output",
-        default="",
-        help="The location where you want to save converted files",
-    )
+def parser_build(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    """Adds mandatory and optional positional arguments to the parser."""
+
     parser.add_argument(
         "-Po",
         "--plot-output",
@@ -164,8 +99,8 @@ def parser_build(parser):
     parser.add_argument(
         "-o",
         "--output",
-        default="",
-        help="The location (including file name) where you want to save event lists",
+        default=None,
+        help="The directory to where you want to save events",
     )
     parser.add_argument(
         "-P",
@@ -181,12 +116,6 @@ def parser_build(parser):
         help="Saves image to the output folder if set.",
     )
     parser.add_argument(
-        "-C",
-        "--convert",
-        action="store_true",
-        help="Convert files if possible to supported backend formats",
-    )
-    parser.add_argument(
         "-q",
         "--sequential",
         action="store_true",
@@ -199,9 +128,11 @@ def parser_build(parser):
         action="store_true",
         help="Stores best data in pickle if set.",
     )
-    parser.add_argument(
-        "radar", choices=["MU"], help="The radar that performed the observations"
-    )
+    parser.add_argument("--config", default=None, type=str, help="path to event search config file, optional")
+    parser.add_argument("-s", "--start_time", default=None, type=str)
+    parser.add_argument("-e", "--end_time", default=None, type=str)
+    parser.add_argument("--relative_time", action="store_true")
+    parser.add_argument("-p", "--progress", action="store_true", help="enable progress bar")
     parser.add_argument(
         "files",
         nargs="+",
@@ -214,5 +145,5 @@ add_command(
     name="event_search",
     function=main,
     parser_build=parser_build,
-    command_help="Searches radar data to look for signs of meteor events.",
+    # command_help="Searches radar data to look for signs of meteor events.",
 )

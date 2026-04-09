@@ -1,10 +1,16 @@
+import numpy.typing as npt
 import pyorb
 
-from .general import basic_matplotlib_kw
 
+def gmf(axes: npt.NDArray, t: npt.NDArray, kep: npt.NDArray) -> None:
+    """
+    Args:
+        axes: Axes to plot on
+        t: Array of seconds, this will be the x-axis of each plot
+        kep: TODO
 
-@basic_matplotlib_kw(subplot_shape=(2, 3))
-def gmf(axes, t, kep):
+    """
+
     axis_labels = [
         "$a$ [AU]",
         "$e$ [1]",
