@@ -1,3 +1,6 @@
+# TODO: REMOVE, same as in hardtarget
+
+
 class SensorSimulation:
     STEPS = [
         "transmission",
@@ -21,9 +24,7 @@ class SensorSimulation:
         self.noise_generator = noise_generator
         self.samples_to_transmissions_map = samples_to_transmissions_map
         self.sampler = sampler
-        assert all(
-            [key in self.STEPS for key in step_functions]
-        ), "All steps are needed"
+        assert all([key in self.STEPS for key in step_functions]), "All steps are needed"
         self.step_functions = step_functions
         self.step_parameters = step_parameters
 
@@ -40,8 +41,7 @@ class SensorSimulation:
         if skip:
             return t_rec, self.noise_generator(t_rec, end_shape, **noise_parameters)
         func_args = {
-            key: [parameters[var] for var in variables]
-            for key, variables in self.step_parameters.items()
+            key: [parameters[var] for var in variables] for key, variables in self.step_parameters.items()
         }
         transmission_map = {key: parameters[key] for key in transmission_map_parameters}
         t = self.samples_to_transmissions_map(t_rec, **transmission_map)

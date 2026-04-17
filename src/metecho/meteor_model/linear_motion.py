@@ -5,6 +5,8 @@ import numpy.typing as npt
 
 from .model import Model
 
+# TODO: Should move to ablate!
+
 
 class LinearMotion(Model):
     """Base linear motion model to be subclassed with a velocity function

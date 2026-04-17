@@ -3,6 +3,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+#TODO: REMOVE
 
 def basic_matplotlib_kw(subplot_shape=None):
     '''Decorator that adds basic matplotlib figure functionality.

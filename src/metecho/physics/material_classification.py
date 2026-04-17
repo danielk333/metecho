@@ -1,5 +1,7 @@
 import numpy as np
 
+# TODO: Keep and fix
+
 
 def k_c(v_inf, start_height):
     return start_height + (2.86 - 2 * np.log10(v_inf)) / 0.0612

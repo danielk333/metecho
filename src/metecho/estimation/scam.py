@@ -1,6 +1,8 @@
 import numpy as np
 from tqdm import tqdm
 
+# TODO: Fix this
+
 
 class Scam:
     """Markov Chain Monte Carlo sampling of the posterior,
@@ -101,7 +103,7 @@ class Scam:
                     accept[var_ind] = 0.0
                     tries[var_ind] = 0.0
 
-            if (ind % cov_ad_inv == 0 and ind > 0 and self.options["proposal"] == "adaptive"):
+            if ind % cov_ad_inv == 0 and ind > 0 and self.options["proposal"] == "adaptive":
                 _data = chain[var_ind, :ind]
                 _proposal_cov = np.corrcoef(_data)
 
@@ -114,4 +116,4 @@ class Scam:
         if seed is not None:
             np.random.seed(seed_state)
 
-        return chain[:, self.options["tune"]:]
+        return chain[:, self.options["tune"] :]

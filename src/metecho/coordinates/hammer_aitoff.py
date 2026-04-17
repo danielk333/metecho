@@ -4,6 +4,7 @@ import numpy as np
 import numpy.typing as npt
 
 
+# TODO: Move to spacecoords!!! (if not already there)
 def ecliptic_to_hammer(
     lon: npt.NDArray[np.float64],
     lat: npt.NDArray[np.float64],

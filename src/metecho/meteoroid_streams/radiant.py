@@ -15,6 +15,9 @@ if astropy is not None:
     import astropy.units as units
 
 
+# TODO: Move out to spacecoords
+
+
 def ecliptic(ra, dec):
     '''Goes to GeocentricMeanEcliptic
     '''

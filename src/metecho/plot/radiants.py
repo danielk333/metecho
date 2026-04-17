@@ -1,12 +1,13 @@
 import logging
+
 import numpy as np
 
-
+from .. import coordinates, meteoroid_streams
 from .general import basic_matplotlib_kw
-from .. import coordinates
-from .. import meteoroid_streams
 
 logger = logging.getLogger(__name__)
+
+# TODO: LATER
 
 
 def add_hammer_grid(
@@ -54,7 +55,7 @@ def add_hammer_grid(
         ax.text(
             x_[i] + 0.02,
             y_[i] + 0.03,
-            f"{np.degrees(np.mod(1.5*np.pi - gird_lon[i], np.pi*2)):.0f}$^\\circ$",
+            f"{np.degrees(np.mod(1.5 * np.pi - gird_lon[i], np.pi * 2)):.0f}$^\\circ$",
             color=color,
         )
 
