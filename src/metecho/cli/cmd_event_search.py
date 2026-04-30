@@ -8,40 +8,61 @@ from radardef.radar_def import RadarDef
 from metecho.data_handling.store_events import store_events
 from metecho.events import Events, event_search, generate_event_search_config
 from metecho.plot import plot_events
+from metecho.tools.mpi_decorators import get_mpi
 
-from .. import tools
 from .commands import add_command
 
 logger = logging.getLogger(__name__)
 
-try:
-    from mpi4py import MPI
 
-    comm = MPI.COMM_WORLD
-except ImportError:
+"""
+Multiprocessing strategy
 
-    class COMM_WORLD:
-        rank = 0
-        size = 1
+If several directories/files divide it as:
 
-        def barrier(self) -> None:
-            pass
+```
+                [Dir 1, Dir 2, Dir 3, ..., Dir N]
+                              |
+                    Split ranks in N subgroups
+        ______________________|_____________________
+        |                     |                     |
+    sub group 1               :                 sub group N
+        |                     :                     |
+ dataloader[Dir 1]            :               dataloader[Dir N]
+        |                     :                     |
+ EchoProcess[DL^]             :               EchoProcess[DL^]
+   _____|_____                :                _____|_____
+   |    |    |                :                |    |    |
+  T1   T2    T3                               T1   T2    T3
 
-    comm = COMM_WORLD()
+```
+How to gather results after this?
+
+If only one file/directory -> let Hardtarget do the
+"""
 
 
-@tools.MPI_target_arg(0)
-def find_events(file: str | Path, args: argparse.Namespace) -> Events:
+def find_events(files: list[Path], args: argparse.Namespace) -> Events:
 
-    config = generate_event_search_config(file_input=args.config)
+    directories = [n for n in files if n.is_dir()]
+    n_directories = len(directories)
 
-    data_loader = RadarDef().load_data(file)
+    comm = get_mpi()
+    subgroup = comm.rank % n_directories
+    sub_comm = comm.Split(color=subgroup, key=comm.rank)
 
-    data: DataLoader | Path
-    if data_loader:
-        data = data_loader
+    if sub_comm.rank == 0:
+        config = generate_event_search_config(file_input=args.config)
+
+        data = RadarDef().load_data(directories[subgroup])
+
+        assert data is not None
     else:
-        data = Path(file)
+        config = None
+        data = None
+
+    config = sub_comm.bcast(config, root=0)
+    data = sub_comm.bcast(data, root=0)
 
     events, echo = event_search(
         data,
@@ -50,7 +71,9 @@ def find_events(file: str | Path, args: argparse.Namespace) -> Events:
         end_time=int(args.end_time) if args.relative_time else args.end_time,
         relative_time=args.relative_time,
         progress=args.progress,
+        comm=sub_comm,
     )
+
 
     if args.plot:
         plot_events(
@@ -61,6 +84,7 @@ def find_events(file: str | Path, args: argparse.Namespace) -> Events:
             args.plot_output,
         )
 
+    sub_comm.barrier()
     return events
 
 
@@ -73,18 +97,18 @@ def main(args: argparse.Namespace) -> None:
     # if save_results.is_dir():
     #    raise ValueError(f'Output results path "{save_results}" is a directory, not a file-path')
 
-    events = find_events(args.files, args, MPI=comm.size > 1, MPI_root=0)
+    events = find_events(args.files, args)
 
-    if args.output:
-        if comm.rank == 0:
-            output_dir = Path(args.output).resolve()
-            if not output_dir.exists():
-                output_dir.mkdir(parents=True)
+    #Make sure all events are done
+    get_mpi().barrier()
 
+    if args.output and get_mpi().rank == 0:
+        output_dir = Path(args.output).resolve()
+        if isinstance(events, list):
             for x in events:
-                store_events(x, output_dir)
-
-        comm.barrier()
+                store_events(x,output_dir)
+        else
+            store_events(events, output_dir)
 
 
 def parser_build(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:

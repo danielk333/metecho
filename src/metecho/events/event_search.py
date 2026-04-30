@@ -13,63 +13,78 @@ from radardef.types.types import ExpDef
 from metecho.events.conf import generate_default_event_search_config
 from metecho.events.types import Echo, Event, Events, EventSearchConfig
 from metecho.noise import calc_noise
+from metecho.tools.mpi_decorators import CommMock, CommObject
 
 from . import event_select, search_objects
 
 logger = logging.getLogger(__name__)
 
 
+def event_search_on_old_data(
+    data: Path,
+    config: EventSearchConfig | None,
+) -> tuple[Events, Echo]:
+    old_data: tuple[EchoSearchOutArgs, ExpDef, EchoSearchCfgParams, EchoSearchProParams] = list(
+        hardtarget.load_analysed_data(data)
+    )[0]
+    res_out, exp, _, _ = old_data
+
+    if not isinstance(res_out, EchoSearchOutArgs):
+        raise TypeError(f"Loaded data from : {data} is not compatible with the echo search")
+    # If no config available generate a default one from the experiment definition
+    if not config:
+        config = generate_default_event_search_config(exp_def=exp)
+
+    echo = echo_post_process(
+        echo_search_analysis=res_out,
+        config=config,
+        exp_def=exp,
+    )
+
+    events = locate_events(echo, config, data=data if isinstance(data, DataLoader) else None)
+
+    return events, echo
+
+
 def event_search(
-    data: DataLoader | Path,
+    data: DataLoader,
     config: EventSearchConfig | None,
     start_time: Optional[np.datetime64 | int | str | dt.datetime] = None,
     end_time: Optional[np.datetime64 | int | str | dt.datetime] = None,
     relative_time: bool = False,
     exp_def: ExpDef | None = None,
     progress: bool = False,
+    comm: CommObject = CommMock(),
 ) -> tuple[Events, Echo]:
 
-    # Load already analysed data or start and echo search
-    if isinstance(data, Path):
-        # load already analysed data, TODO: Get specific data indices based on start and end time
-        old_data: tuple[EchoSearchOutArgs, ExpDef, EchoSearchCfgParams, EchoSearchProParams] = list(
-            hardtarget.load_analysed_data(data)
-        )[0]
-        res_out, exp, _, _ = old_data
+    # If no config available generate a default one from the experiment definition
+    if not config:
+        config = generate_default_event_search_config(exp_def=data.experiment)
+    # Run echo search
+    results = hardtarget.echo_search(
+        data=data,
+        start_time=start_time,
+        end_time=end_time,
+        relative_time=relative_time,
+        exp_params=exp_def,
+        config={
+            "n_ipp": 1,
+            "samp_offset": 0,
+            "min_range_gate": 81,  # tmp
+            "max_range_gate": 140,  # tmp
+            "doppler_freq_min": config.dop_min_freq,
+            "doppler_freq_max": config.dop_max_freq,
+            "doppler_freq_step": config.dop_step_size,
+        },
+        progress=progress,
+        comm=comm,
+    )
 
-        if not isinstance(res_out, EchoSearchOutArgs):
-            raise TypeError(f"Loaded data from : {data} is not compatible with the echo search")
-        # If no config available generate a default one from the experiment definition
-        if not config:
-            config = generate_default_event_search_config(exp_def=exp)
-    else:
-        # If no config available generate a default one from the experiment definition
-        if not config:
-            config = generate_default_event_search_config(exp_def=data.experiment)
-        # Run echo search
-        results = hardtarget.echo_search(
-            data=data,
-            start_time=start_time,
-            end_time=end_time,
-            relative_time=relative_time,
-            exp_params=exp_def,
-            config={
-                "n_ipp": 1,
-                "samp_offset": 0,
-                "min_range_gate": 81,  # tmp
-                "max_range_gate": 140,  # tmp
-                "doppler_freq_min": config.dop_min_freq,
-                "doppler_freq_max": config.dop_max_freq,
-                "doppler_freq_step": config.dop_step_size,
-            },
-            progress=progress,
-        )
-
-        # Gather data from echo search
-        output: tuple[EchoSearchOutArgs, ExpDef, EchoSearchCfgParams, EchoSearchProParams] = (
-            hardtarget.stack_analysed_data(results["data"])
-        )
-        res_out, exp, _, _ = output
+    # Gather data from echo search
+    output: tuple[EchoSearchOutArgs, ExpDef, EchoSearchCfgParams, EchoSearchProParams] = (
+        hardtarget.stack_analysed_data(results["data"])
+    )
+    res_out, exp, _, _ = output
 
     echo = echo_post_process(
         echo_search_analysis=res_out,
@@ -257,8 +272,9 @@ def locate_events(
         meteor_indices = np.argwhere(detection_per_index >= config.CRITERIA_N).flatten()
     else:
         meteor_indices = np.argwhere(
-            np.logical_and(meteor_filter, detection_per_index >= config.CRITERIA_N).flatten()
-        )
+            np.logical_and(meteor_filter, detection_per_index >= config.CRITERIA_N)
+        ).flatten()
+
     # Cluster the start and end point of each event.
     meteor_span = event_select.cluster(
         meteor_indices,

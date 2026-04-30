@@ -28,7 +28,8 @@ def store_events(events: Events, path: Path) -> None:
     Events will be stored in the following structure
 
     """
-
+    if not path.is_dir():
+        path.mkdir(parents=True)
     file_name = "events_" + str(events.measurement_start_us) + ".h5"
     with h5py.File(path / file_name, "w") as file:
         store_params(file, events)

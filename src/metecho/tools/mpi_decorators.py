@@ -1,24 +1,52 @@
-import logging
 from functools import wraps
-
-logger = logging.getLogger(__name__)
-
-logger.debug("Importing MPI")
-try:
-    from mpi4py import MPI
-
-    comm = MPI.COMM_WORLD
-except ImportError:
-    logger.debug("MPI import failed: reverting to one process")
-
-    class COMM_WORLD:
-        rank = 0
-        size = 1
-
-    comm = COMM_WORLD()
+from typing import Any, Callable, Protocol
 
 
-def MPI_target_arg(arg_index):
+class CommObject(Protocol):
+    rank: int
+    size: int
+
+    def bcast(self, obj: Any, root: int = 0) -> Any: ...
+    def gather(self, sendobj: Any, root: int = 0) -> list[Any] | None: ...
+    def Split(self, color: int, key: int) -> CommObject: ...
+    def barrier(self) -> None: ...
+
+
+class CommMock(CommObject):
+    rank = 0
+    size = 1
+
+    def bcast(self, obj: Any, root: int = 0) -> Any:
+        return obj
+
+    def gather(self, sendobj: Any, root: int = 0) -> list[Any]:
+        return [sendobj]
+
+    def Split(self, color: int, key: int) -> CommObject:
+        return self
+
+    def barrier(self) -> None:
+        return None
+
+
+_COMM: CommObject = CommMock()
+_IMPORTED = False
+
+
+def get_mpi() -> CommObject:
+    global _COMM, _IMPORTED
+    if not _IMPORTED:
+        try:
+            from mpi4py import MPI
+
+            _COMM = MPI.COMM_WORLD
+        except ImportError:
+            _COMM = CommMock()
+        _IMPORTED = True
+    return _COMM
+
+
+def MPI_target_arg(arg_index: int) -> Any:
     """Decorates the target function to parallelize over a single input iterable
     positional argument identified by the given index.
 
@@ -34,9 +62,9 @@ def MPI_target_arg(arg_index):
     If set to a negative number, no gathering is performed.
     """
 
-    def _mpi_wrapper(func):
+    def _mpi_wrapper(func: Callable) -> Any:
         @wraps(func)
-        def _mpi_wrapped_func(*args, **kwargs):
+        def _mpi_wrapped_func(*args: Any, **kwargs: Any) -> Any:
             input_list = args[arg_index]
             _args = list(args)
             rets = [None] * len(input_list)

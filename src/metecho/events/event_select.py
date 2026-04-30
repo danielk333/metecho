@@ -49,7 +49,7 @@ def cluster(
         doppler_diff >= config.min_dop_separation_split,
     ]
 
-    split_indices = np.argwhere(np.sum(split_metric, 0) >= 1)
+    split_indices = np.argwhere(np.sum(split_metric, 0) >= 1).flatten()
     split_indices = np.append(split_indices, len(event_indices))
 
     new_indices = []
