@@ -29,7 +29,7 @@ def load_object_from_group(group: h5py.Group, object_type: type[GenericObject]) 
     # Dict containing the decoded data
     decoded_data = {}
 
-    # Get Key and Type pais from the given object
+    # Get Key and Type pairs from the given object
     annotations = object_type.__annotations__
 
     # If object is a dataclass only read datapoints that is a part of the init
@@ -59,7 +59,6 @@ def load_object_from_group(group: h5py.Group, object_type: type[GenericObject]) 
                 data = data  # Convert from string to datetime
             elif is_namedtuple(data_type) and isinstance(data, str):
                 a = data.strip("{}")
-                breakpoint()
                 d = dict(item.split(": ") for item in a.split(", "))
                 data = data_type(**d)
             elif data_type == dict and isinstance(data, str):

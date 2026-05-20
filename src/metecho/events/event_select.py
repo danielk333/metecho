@@ -2,14 +2,14 @@ import numpy as np
 import numpy.typing as npt
 from scipy.signal import savgol_filter  # type: ignore[attr-defined]
 
-from metecho.events.types import EventSearchConfig
+from metecho.events.types import EventSelectCfg
 
 
 def cluster(
     event_indices: npt.NDArray[np.integer],
     best_doppler: npt.NDArray,
     best_start: npt.NDArray[np.integer],
-    config: EventSearchConfig,
+    config: EventSelectCfg,
 ) -> npt.NDArray[np.int64]:
     """
 
@@ -60,12 +60,11 @@ def cluster(
         start_index = split_indices[x]
 
     least_ipp_available = config.least_ipp_available
-    IPP_extend = config.IPP_extend
 
     for x in range(len(new_indices)):
         if len(new_indices[x]) > least_ipp_available:
             event_ipp_indices.append(
-                (np.amin(new_indices[x]) - IPP_extend, np.amax(new_indices[x]) + IPP_extend)
+                (np.amin(new_indices[x]) - config.ipp_extend, np.amax(new_indices[x]) + config.ipp_extend)
             )
 
     return np.array(event_ipp_indices)

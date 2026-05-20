@@ -2,11 +2,11 @@ import argparse
 import logging
 from pathlib import Path
 
-from hardtarget.process.process import DataLoader
+from radardef.components import DataLoader
 from radardef.radar_def import RadarDef
 
 from metecho.data_handling.store_events import store_events
-from metecho.events import Events, event_search, generate_event_search_config
+from metecho.events import Events, event_search
 from metecho.plot import plot_events
 from metecho.tools.mpi_decorators import get_mpi
 
@@ -43,9 +43,9 @@ If only one file/directory -> let Hardtarget do the
 
 
 def find_events(files: list[Path], args: argparse.Namespace) -> Events:
-
+    """
     directories = [n for n in files if n.is_dir()]
-    n_directories = len(directories)
+    n_directories = len(directories) if len(directories) != 0 else 1
 
     comm = get_mpi()
     subgroup = comm.rank % n_directories
@@ -63,17 +63,18 @@ def find_events(files: list[Path], args: argparse.Namespace) -> Events:
 
     config = sub_comm.bcast(config, root=0)
     data = sub_comm.bcast(data, root=0)
+    """
 
+    data = RadarDef().load_data(files[0])
     events, echo = event_search(
         data,
-        config,
+        Path(args.config) if args.config else None,
         start_time=int(args.start_time) if args.relative_time else args.start_time,
         end_time=int(args.end_time) if args.relative_time else args.end_time,
         relative_time=args.relative_time,
         progress=args.progress,
-        comm=sub_comm,
+        # comm=sub_comm,
     )
-
 
     if args.plot:
         plot_events(
@@ -84,7 +85,7 @@ def find_events(files: list[Path], args: argparse.Namespace) -> Events:
             args.plot_output,
         )
 
-    sub_comm.barrier()
+    # sub_comm.barrier()
     return events
 
 
@@ -96,18 +97,17 @@ def main(args: argparse.Namespace) -> None:
 
     # if save_results.is_dir():
     #    raise ValueError(f'Output results path "{save_results}" is a directory, not a file-path')
+    events = find_events([Path(f) for f in args.files], args)
 
-    events = find_events(args.files, args)
-
-    #Make sure all events are done
+    # Make sure all events are done
     get_mpi().barrier()
 
     if args.output and get_mpi().rank == 0:
         output_dir = Path(args.output).resolve()
         if isinstance(events, list):
             for x in events:
-                store_events(x,output_dir)
-        else
+                store_events(x, output_dir)
+        else:
             store_events(events, output_dir)
 
 

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import numpy.typing as npt
 
-from metecho.events.types import Echo, EventSearchConfig
+from metecho.events.types import Echo, EventCriteriaCfg
 
 
 class SearchObject(ABC):
@@ -11,7 +11,7 @@ class SearchObject(ABC):
         super().__init__()
 
     @abstractmethod
-    def search(self, event_search_out: Echo, config: EventSearchConfig) -> npt.NDArray[np.bool]:
+    def search(self, event_search_out: Echo, config: EventCriteriaCfg) -> npt.NDArray[np.bool]:
         """Searches the data and returns an array of booleans of where the search function is fullfilled"""
         pass
 
@@ -35,12 +35,12 @@ class XcorrSigma(SearchObject):
     def required_trails(self) -> bool:
         return False
 
-    def search(self, event_search_out: Echo, config: EventSearchConfig) -> npt.NDArray[np.bool]:
+    def search(self, event_search_out: Echo, config: EventCriteriaCfg) -> npt.NDArray[np.bool]:
         criteria = np.array(
             event_search_out.max_corr
             > (
                 np.mean(event_search_out.best_peak_filt)
-                + config.FIND_CRITERIA_xcorr_sigma * np.std(event_search_out.best_peak_filt)
+                + config.correlation_sigma * np.std(event_search_out.best_peak_filt)
             )
         )
         return criteria
@@ -55,12 +55,12 @@ class TotpowSigma(SearchObject):
     def required_trails(self) -> bool:
         return False
 
-    def search(self, event_search_out: Echo, config: EventSearchConfig) -> npt.NDArray[np.bool]:
+    def search(self, event_search_out: Echo, config: EventCriteriaCfg) -> npt.NDArray[np.bool]:
         criteria = np.array(
             event_search_out.tot_pow
             > (
                 np.mean(event_search_out.tot_pow_filt)
-                + config.FIND_CRITERIA_totpow_sigma * np.std(event_search_out.tot_pow_filt)
+                + config.totpow_sigma * np.std(event_search_out.tot_pow_filt)
             )
         )
         return criteria
@@ -75,19 +75,19 @@ class DopplerSigma(SearchObject):
     def required_trails(self) -> bool:
         return False
 
-    def search(self, event_search_out: Echo, config: EventSearchConfig) -> npt.NDArray[np.bool]:
+    def search(self, event_search_out: Echo, config: EventCriteriaCfg) -> npt.NDArray[np.bool]:
         self.doppler_coherrence = (
             event_search_out.doppler_coherrence < config.dop_std_coherr_percent
             or event_search_out.start_coherrence < config.start_std_coherr_percent
         )
-        doppler_std = event_search_out.doppler_std < config.FIND_CRITERIA_dop_STD_sigma * np.std(
+        doppler_std = event_search_out.doppler_std < config.doppler_std_sigma * np.std(
             event_search_out.best_doppler
         )
         upper_limit = np.mean(event_search_out.best_doppler) + (
-            config.FIND_CRITERIA_dop_sigma * np.std(event_search_out.best_doppler)
+            config.doppler_sigma * np.std(event_search_out.best_doppler)
         )
         lower_limit = np.mean(event_search_out.best_doppler) - (
-            config.FIND_CRITERIA_dop_sigma * np.std(event_search_out.best_doppler)
+            config.doppler_sigma * np.std(event_search_out.best_doppler)
         )
         best_doppler_above_limit = event_search_out.best_doppler > upper_limit
         best_doppler_below_limit = event_search_out.best_doppler < lower_limit
@@ -108,16 +108,16 @@ class IndPm(SearchObject):
     def required_trails(self) -> bool:
         return False
 
-    def search(self, event_search_out: Echo, config: EventSearchConfig) -> npt.NDArray[np.bool]:
+    def search(self, event_search_out: Echo, config: EventCriteriaCfg) -> npt.NDArray[np.bool]:
         self.doppler_coherrence = (
             event_search_out.doppler_coherrence < config.dop_std_coherr_percent
             or event_search_out.start_coherrence < config.start_std_coherr_percent
         )
-        start_std = event_search_out.start_std < config.FIND_CRITERIA_start_STD_sigma * np.std(
+        start_std = event_search_out.start_std < config.start_std_sigma * np.std(
             event_search_out.max_corr_ind
         )
-        upper_limit = np.mean(event_search_out.max_corr_ind) + config.FIND_CRITERIA_ind_pm
-        lower_limit = np.mean(event_search_out.max_corr_ind) - config.FIND_CRITERIA_ind_pm
+        upper_limit = np.mean(event_search_out.max_corr_ind) + config.ind_pm
+        lower_limit = np.mean(event_search_out.max_corr_ind) - config.ind_pm
         best_start_above_limit = event_search_out.max_corr_ind > upper_limit
         best_start_below_limit = event_search_out.max_corr_ind < lower_limit
         criteria = (
@@ -137,7 +137,7 @@ class MinDopAllowed(SearchObject):
     def required_trails(self) -> bool:
         return True
 
-    def search(self, event_search_out: Echo, config: EventSearchConfig) -> npt.NDArray[np.bool]:
+    def search(self, event_search_out: Echo, config: EventCriteriaCfg) -> npt.NDArray[np.bool]:
         criteria = np.array(((np.abs(event_search_out.best_doppler)) > config.min_dop_allowed))
         return criteria
 
@@ -151,7 +151,7 @@ class MinStartAllowed(SearchObject):
     def required_trails(self) -> bool:
         return False
 
-    def search(self, event_search_out: Echo, config: EventSearchConfig) -> npt.NDArray[np.bool]:
+    def search(self, event_search_out: Echo, config: EventCriteriaCfg) -> npt.NDArray[np.bool]:
         criteria = np.logical_and(
             (event_search_out.max_corr_ind >= config.min_start_allowed),
             (event_search_out.max_corr_ind <= config.max_start_allowed),

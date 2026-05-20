@@ -8,51 +8,41 @@ from radardef.types.types import ExpDef
 from metecho.noise.types import GaussianNoise
 
 
-class EventSearchConfig(NamedTuple):
-    # Detection metrics
-    CRITERIA_N: int
-    MOVE_STD_WINDOW: int
-    # Power and correlation limits
-    FIND_CRITERIA_xcorr_sigma: float
-    FIND_CRITERIA_totpow_sigma: float
-    # Normal move STD
-    FIND_CRITERIA_dop_STD_sigma: float
-    FIND_CRITERIA_start_STD_sigma: float
-    # Constant echo prescense search
+class EventSearchCfg(NamedTuple):
     dop_std_coherr: float
     start_std_coherr: float
-    start_std_coherr_percent: float
-    dop_std_coherr_percent: float
-    # Filtering parameters
     pow_std_est: float
     pow_std_filt: float
-    # If echoes are present
-    FIND_CRITERIA_dop_sigma: float
-    FIND_CRITERIA_ind_pm: int
-    # 0 dop removal
-    # 1e3 * 1 * 46.5e6 / 299792458
-    min_dop_allowed: float
-    # 85 - 26 / 2
-    max_start_allowed: int
-    min_start_allowed: int
-    # Recursive "index-island" detector
+    allow_analysis_overlap: int
+    corr_filter_limit: float
+    noise_time_window_sec: float
+    move_std_window: int
+
+
+class EventSelectCfg(NamedTuple):
     least_ipp_available: int
     min_ipp_separation_split: int
-    # 10e3 * 1 * 46.5e6 / 299792458
     min_dop_separation_split: float
     min_range_separation_split: float
+    ipp_extend: int
     smoothing_window: int
     polyorder: int
-    IPP_extend: int
-    # Sequential analysis config
-    allow_analysis_overlap: int
-    event_max_overlap: int
-    # Xcorr settings
-    dop_min_freq: int
-    dop_max_freq: int
-    dop_step_size: int
-    # Noise limit
-    xcorr_noise_limit: float
+    event_max_overlap: int = 10
+
+
+class EventCriteriaCfg(NamedTuple):
+    criteria_n: int = 3
+    correlation_sigma: float = 1
+    totpow_sigma: float = 1.5
+    doppler_std_sigma: float = 0.5
+    start_std_sigma: float = 0.5
+    doppler_sigma: float = 3
+    ind_pm: int = 3
+    min_start_allowed: int = 0
+    max_start_allowed: int = 1000
+    min_dop_allowed: float = 0
+    start_std_coherr_percent: float = 0.1
+    dop_std_coherr_percent: float = 0.1
 
 
 class Echo(NamedTuple):
@@ -77,8 +67,6 @@ class Event(NamedTuple):
     end_ipp: int
     event_indices: npt.NDArray[np.int64]
     event_date: np.datetime64
-    data_start_date_us: int
-    file: Path
     event_search_executed: np.datetime64
     type: str
     noise: GaussianNoise
@@ -91,6 +79,7 @@ class Events(NamedTuple):
     trails: list[Event]
     trail_indicies: npt.NDArray[np.int64]
     detection_per_index: npt.NDArray[np.int64]
-    config: EventSearchConfig
+    config: EventCriteriaCfg
     exp_def: ExpDef
     measurement_start_us: int
+    file: Path
