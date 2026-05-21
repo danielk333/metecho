@@ -54,8 +54,8 @@ def store_params(group: h5py.Group | h5py.File, object: NamedTuple | IsDataclass
                 sub_group = group.create_group(key)
                 store_params(sub_group, data)
                 continue
-            elif isinstance(data, list):
-                if len(data) > 0 and is_dataclass(data[0]) or is_namedtuple(type(data[0])):
+            elif (isinstance(data, list) or isinstance(data, tuple)) and len(data) > 0:
+                if is_dataclass(data[0]) or is_namedtuple(type(data[0])):
                     list_group = group.create_group(key)
 
                     for i, data_point in enumerate(data):

@@ -3,6 +3,7 @@ from typing import NamedTuple
 
 import numpy as np
 import numpy.typing as npt
+from hardtarget.echo_search.types import EchoSearchCfgParams
 from radardef.types.types import ExpDef
 
 from metecho.noise.types import GaussianNoise
@@ -59,7 +60,6 @@ class Echo(NamedTuple):
     start_coherrence: np.floating
     doppler_std: npt.NDArray[np.integer]  # derived from best_doppler
     doppler_coherrence: np.floating
-    ipp_offset: int
 
 
 class Event(NamedTuple):
@@ -70,7 +70,6 @@ class Event(NamedTuple):
     event_search_executed: np.datetime64
     type: str
     noise: GaussianNoise
-    ipp_offset: int
 
 
 class Events(NamedTuple):
@@ -79,7 +78,7 @@ class Events(NamedTuple):
     trails: list[Event]
     trail_indicies: npt.NDArray[np.int64]
     detection_per_index: npt.NDArray[np.int64]
-    config: EventCriteriaCfg
+    config: tuple[EchoSearchCfgParams, EventSearchCfg, EventSelectCfg, EventCriteriaCfg]
     exp_def: ExpDef
     measurement_start_us: int
     file: Path

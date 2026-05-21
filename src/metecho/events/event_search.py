@@ -51,7 +51,6 @@ def event_search(
             extract_event_search_configurations(config)
         )
 
-    breakpoint()
     # Run echo search
     results = hardtarget.echo_search(
         data=data,
@@ -78,10 +77,17 @@ def event_search(
     meteor_indicies, meteor_trail_indicies, detection_per_index = meteor_search(echo, event_criteria_cfg)
 
     meteor_events = create_event_cluster(
-        echo, meteor_indicies, event_select_cfg, data.epoch_bounds[0], overlap_correction=True
+        echo,
+        meteor_indicies,
+        "meteor:head",
+        event_select_cfg,
+        overlap_correction=True,
     )
     meteor_trail_events = create_event_cluster(
-        echo, meteor_trail_indicies, event_select_cfg, data.epoch_bounds[0], overlap_correction=True
+        echo,
+        meteor_trail_indicies,
+        "meteor:trail",
+        event_select_cfg,
     )
 
     events = Events(
@@ -90,7 +96,7 @@ def event_search(
         trails=meteor_trail_events,
         trail_indicies=meteor_trail_indicies,
         detection_per_index=detection_per_index,
-        config=event_criteria_cfg,
+        config=(echo_search_cfg, event_search_cfg, event_select_cfg, event_criteria_cfg),
         exp_def=exp,
         measurement_start_us=data.epoch_bounds[0],
         file=data.path,
@@ -172,7 +178,6 @@ def echo_post_process(
         start_coherrence=start_coherrence,
         doppler_std=doppler_std,
         doppler_coherrence=doppler_coherrence,
-        ipp_offset=int(echo_search_analysis.epoch_us / exp_def.t_ipp_usec),
     )
 
 
@@ -235,10 +240,10 @@ def meteor_search(
 def create_event_cluster(
     echo: Echo,
     object_indicies: npt.NDArray,
+    type: str,
     config: EventSelectCfg,
-    measurement_start_us: int,
     overlap_correction=False,
-) -> list[events]:
+) -> list[Event]:
     # Generic function to cover both metors and trails
 
     # Cluster the start and end point of each event.
@@ -268,8 +273,7 @@ def create_event_cluster(
             np.logical_and(object_indicies > event_span[x, 0], object_indicies < event_span[x, 1])
         ]
         event_offset_us = int(event_span[x, 0] * echo.exp_def.t_ipp_usec)
-        # TODO: Event offset is relative to the analysis start, thus we need to take echo.epoch_us into consideration?
-        ev_date = np.datetime64(int(measurement_start_us + event_offset_us), "us")
+        ev_date = np.datetime64(int(echo.epoch_us + event_offset_us), "us")
 
         ev = Event(
             start_ipp=event_span[x, 0],
@@ -277,9 +281,8 @@ def create_event_cluster(
             event_indices=event_indices,
             event_date=ev_date,
             event_search_executed=np.datetime64(dt.datetime.now()),
-            type="meteor:head",
+            type=type,
             noise=echo.gauss_noise,
-            ipp_offset=echo.ipp_offset,
         )
 
         events.append(ev)

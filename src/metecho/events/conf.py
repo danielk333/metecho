@@ -83,8 +83,8 @@ def generate_default_configurations(exp_def: ExpDef):
 
     echo_search_cfg = EchoSearchCfgParams(
         n_ipp=1,
-        min_range_gate=tx_start_samp + 1,
-        max_range_gate=rx_end_samp - tx_samps,
+        min_range_gate=0,
+        max_range_gate=-1,
         range_gate_step=int(exp_def.baud_length_usec / (exp_def.t_samp_usec * 2)),
         doppler_freq_min=-25000,
         doppler_freq_max=25000,

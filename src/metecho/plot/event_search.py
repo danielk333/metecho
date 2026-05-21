@@ -1,3 +1,4 @@
+import datetime as dt
 from pathlib import Path
 from typing import Optional
 
@@ -27,18 +28,25 @@ def plot_events(
     """
 
     # Calculate start and end sample of search
-    start_samp = echo.ipp_offset * echo.exp_def.ipp_samps
-    end_samp = echo.max_corr.shape[0] * echo.exp_def.ipp_samps + start_samp
+    n_ipps = len(echo.max_corr)
 
     # Create a 3x3 grid that's 16 times 9 inches big
     fig, axs = plt.subplots(3, 3)
     fig.set_size_inches(16, 9)
 
     # Create title
-    data_path = data.path.name if isinstance(data, DataLoader) else "Stored events"
+    if isinstance(data, DataLoader):
+        data_path = data.path.name if data.path.is_file() else data.path
+    else:
+        data_path = "Stored events"
+
     event_save = f"Events saved: {len(events.meteors)}" if len(events.meteors) > 0 else "No events found"
+    analyse_time = dt.datetime.fromtimestamp(echo.epoch_us * 1e-6, tz=dt.timezone.utc).strftime(
+        "%Y-%m-%dT%H:%M:%S"
+    )
+
     fig.suptitle(
-        f"{data_path}, Matches={len(events.meteor_indicies)}, \
+        f"{data_path}, Time: {analyse_time} \n Matches={len(events.meteor_indicies)}, \
         Non-transient coherent detection ({echo.doppler_coherrence}, {echo.start_coherrence}),\
         {event_save}",
         fontsize=18,
@@ -77,7 +85,7 @@ def plot_events(
     )
 
     # Create x-axis for each ipp
-    pulse_ind = np.arange((end_samp - start_samp) / echo.exp_def.ipp_samps)
+    pulse_ind = np.arange(n_ipps)
 
     axs[2, 0].plot(pulse_ind, events.detection_per_index)
     axs[2, 0].set_xlabel("IPP [1]")
@@ -119,9 +127,9 @@ def plot_events(
         long_plot_ax, mesh = hardtarget.plotting.rti(
             long_plot_ax,
             data,
-            start_time=start_samp * data.experiment.t_samp_usec,
-            end_time=end_samp * data.experiment.t_samp_usec,
-            relative_time=True,
+            start_time=echo.epoch_us,
+            end_time=echo.epoch_us + n_ipps * data.experiment.t_ipp_usec,
+            relative_time=False,
             colorbar=False,
             log=True,
         )
