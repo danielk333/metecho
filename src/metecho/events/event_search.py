@@ -11,6 +11,7 @@ from hardtarget.echo_search.types import EchoSearchCfgParams, EchoSearchOutArgs,
 from radardef.components import DataLoader
 from radardef.types.types import ExpDef
 
+from metecho.data_handling.store_events import store_events
 from metecho.events.conf import extract_event_search_configurations, generate_default_configurations
 from metecho.events.types import (
     Echo,
@@ -37,6 +38,7 @@ def event_search(
     end_time: Optional[np.datetime64 | int | str | dt.datetime] = None,
     relative_time: bool = False,
     progress: bool = False,
+    output: Optional[str | Path] = None,
     comm: CommObject = CommMock(),
 ) -> tuple[Events, Echo]:
 
@@ -52,21 +54,30 @@ def event_search(
         )
 
     # Run echo search
+    echo_output = Path(output) / "echo" if output else None
     results = hardtarget.echo_search(
         data=data,
         start_time=start_time,
         end_time=end_time,
         relative_time=relative_time,
         config=echo_search_cfg,
+        output=echo_output,
         progress=progress,
         comm=comm,
     )
 
-    # Gather data from echo search
-    output: tuple[EchoSearchOutArgs, ExpDef, EchoSearchCfgParams, EchoSearchProParams] = (
-        hardtarget.stack_analysed_data(results["data"])
-    )
-    res_out, exp, _, _ = output
+    if echo_output:
+        # No chunksize so will ju be one object
+        echo_result: tuple[EchoSearchOutArgs, ExpDef, EchoSearchCfgParams, EchoSearchProParams] = list(
+            hardtarget.load_analysed_data(echo_output)
+        )[0]
+        res_out, exp, _, _ = echo_result
+    else:
+        # Gather data from echo search
+        echo_result: tuple[EchoSearchOutArgs, ExpDef, EchoSearchCfgParams, EchoSearchProParams] = (
+            hardtarget.stack_analysed_data(results["data"])
+        )
+        res_out, exp, _, _ = echo_result
 
     echo = echo_post_process(
         echo_search_analysis=res_out,
@@ -101,6 +112,10 @@ def event_search(
         measurement_start_us=data.epoch_bounds[0],
         file=data.path,
     )
+
+    if output:
+        store_events(events, Path(output).resolve())
+
     return events, echo
 
 

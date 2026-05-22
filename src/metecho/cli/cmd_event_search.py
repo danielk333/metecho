@@ -5,10 +5,8 @@ from pathlib import Path
 from radardef.components import DataLoader
 from radardef.radar_def import RadarDef
 
-from metecho.data_handling.store_events import store_events
 from metecho.events import Events, event_search
 from metecho.plot import plot_events
-from metecho.tools.mpi_decorators import get_mpi
 
 from .commands import add_command
 
@@ -73,6 +71,7 @@ def find_events(files: list[Path], args: argparse.Namespace) -> Events:
         end_time=int(args.end_time) if args.relative_time else args.end_time,
         relative_time=args.relative_time,
         progress=args.progress,
+        output=args.output,
         # comm=sub_comm,
     )
 
@@ -98,17 +97,6 @@ def main(args: argparse.Namespace) -> None:
     # if save_results.is_dir():
     #    raise ValueError(f'Output results path "{save_results}" is a directory, not a file-path')
     events = find_events([Path(f) for f in args.files], args)
-
-    # Make sure all events are done
-    get_mpi().barrier()
-
-    if args.output and get_mpi().rank == 0:
-        output_dir = Path(args.output).resolve()
-        if isinstance(events, list):
-            for x in events:
-                store_events(x, output_dir)
-        else:
-            store_events(events, output_dir)
 
 
 def parser_build(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
