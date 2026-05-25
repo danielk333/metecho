@@ -1,3 +1,4 @@
+import datetime as dt
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from types import get_original_bases
@@ -25,12 +26,14 @@ class IsDataclass(Protocol):
 
 def store_events(events: Events, path: Path) -> None:
     """
-    Events will be stored in the following structure
+    file name format..... TBD
 
     """
     if not path.is_dir():
         path.mkdir(parents=True)
-    file_name = "events_" + str(events.measurement_start_us) + ".h5"
+    _dt = dt.datetime.fromtimestamp(events.event_search_start_us * 1e-6, dt.timezone.utc)
+    time_string = _dt.strftime("%Y-%m-%dT%H-%M-%S")
+    file_name = f"events-{time_string}.h5"
     with h5py.File(path / file_name, "w") as file:
         store_params(file, events)
 

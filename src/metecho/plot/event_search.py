@@ -37,13 +37,14 @@ def plot_events(
     # Create title
     if isinstance(data, DataLoader):
         data_path = data.path.name if data.path.is_file() else data.path
+        # TODO: assert data path is same as in events
     else:
         data_path = "Stored events"
 
     event_save = f"Events saved: {len(events.meteors)}" if len(events.meteors) > 0 else "No events found"
-    analyse_time = dt.datetime.fromtimestamp(echo.epoch_us * 1e-6, tz=dt.timezone.utc).strftime(
-        "%Y-%m-%dT%H:%M:%S"
-    )
+    analyse_time = dt.datetime.fromtimestamp(
+        events.event_search_start_us * 1e-6, tz=dt.timezone.utc
+    ).strftime("%Y-%m-%dT%H:%M:%S")
 
     fig.suptitle(
         f"{data_path}, Time: {analyse_time} \n Matches={len(events.meteor_indicies)}, \
@@ -127,8 +128,8 @@ def plot_events(
         long_plot_ax, mesh = hardtarget.plotting.rti(
             long_plot_ax,
             data,
-            start_time=echo.epoch_us,
-            end_time=echo.epoch_us + n_ipps * data.experiment.t_ipp_usec,
+            start_time=events.event_search_start_us,
+            end_time=events.event_search_end_us,
             relative_time=False,
             colorbar=False,
             log=True,

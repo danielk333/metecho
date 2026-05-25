@@ -5,8 +5,9 @@ from pathlib import Path
 from radardef.components import DataLoader
 from radardef.radar_def import RadarDef
 
-from metecho.events import Events, event_search
+from metecho.events import event_search
 from metecho.plot import plot_events
+from metecho.tools.mpi_decorators import get_mpi
 
 from .commands import add_command
 
@@ -37,66 +38,59 @@ If several directories/files divide it as:
 How to gather results after this?
 
 If only one file/directory -> let Hardtarget do the
+
+Add check that if args.files are multiple directories then split as below!
+
+directories = [n for n in files if n.is_dir()]
+n_directories = len(directories) if len(directories) != 0 else 1
+
+comm = get_mpi()
+subgroup = comm.rank % n_directories
+sub_comm = comm.Split(color=subgroup, key=comm.rank)
+
+data = RadarDef().load_data(directories[subgroup])
 """
-
-
-def find_events(files: list[Path], args: argparse.Namespace) -> Events:
-    """
-    directories = [n for n in files if n.is_dir()]
-    n_directories = len(directories) if len(directories) != 0 else 1
-
-    comm = get_mpi()
-    subgroup = comm.rank % n_directories
-    sub_comm = comm.Split(color=subgroup, key=comm.rank)
-
-    if sub_comm.rank == 0:
-        config = generate_event_search_config(file_input=args.config)
-
-        data = RadarDef().load_data(directories[subgroup])
-
-        assert data is not None
-    else:
-        config = None
-        data = None
-
-    config = sub_comm.bcast(config, root=0)
-    data = sub_comm.bcast(data, root=0)
-    """
-
-    data = RadarDef().load_data(files[0])
-    events, echo = event_search(
-        data,
-        Path(args.config) if args.config else None,
-        start_time=int(args.start_time) if args.relative_time else args.start_time,
-        end_time=int(args.end_time) if args.relative_time else args.end_time,
-        relative_time=args.relative_time,
-        progress=args.progress,
-        output=args.output,
-        # comm=sub_comm,
-    )
-
-    if args.plot:
-        plot_events(
-            echo,
-            events,
-            data if isinstance(data, DataLoader) else None,
-            args.plot_save,
-            args.plot_output,
-        )
-
-    # sub_comm.barrier()
-    return events
 
 
 def main(args: argparse.Namespace) -> None:
 
     if args.plot_output:
-        args.plot_save = True
-        args.plot_output = Path(args.plot_output).resolve()
+        plot_save = True
+        plot_output = Path(args.plot_output).resolve()
+    else:
+        plot_save = False
+        plot_output = None
 
-    # if save_results.is_dir():
-    #    raise ValueError(f'Output results path "{save_results}" is a directory, not a file-path')
-    events = find_events([Path(f) for f in args.files], args)
+    comm = get_mpi()
+
+    if comm.rank == 0:
+        data = RadarDef().load_data(args.data)
+    else:
+        data = None
+
+    data = comm.bcast(data, root=0)
+
+    events, echo = event_search(
+        data,
+        Path(args.config) if args.config else None,
+        start_time=args.start_time,
+        end_time=args.end_time,
+        relative_time=args.relative_time,
+        progress=args.progress,
+        output=args.output,
+        comm=comm,
+    )
+
+    comm.barrier()
+
+    if args.plot and comm.rank == 0:
+        plot_events(
+            echo,
+            events,
+            data if isinstance(data, DataLoader) else None,
+            plot_save,
+            plot_output,
+        )
 
 
 def parser_build(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
@@ -145,11 +139,7 @@ def parser_build(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument("-e", "--end_time", default=None, type=str)
     parser.add_argument("--relative_time", action="store_true")
     parser.add_argument("-p", "--progress", action="store_true", help="enable progress bar")
-    parser.add_argument(
-        "files",
-        nargs="+",
-        help="Input the locations of the files (or folders) you want analyzed.",
-    )
+    parser.add_argument("data", help="path to directory to analyse")
     return parser
 
 

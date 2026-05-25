@@ -80,5 +80,6 @@ class Events(NamedTuple):
     detection_per_index: npt.NDArray[np.int64]
     config: tuple[EchoSearchCfgParams, EventSearchCfg, EventSelectCfg, EventCriteriaCfg]
     exp_def: ExpDef
-    measurement_start_us: int
+    event_search_start_us: int
+    event_search_end_us: int
     file: Path

@@ -42,79 +42,94 @@ def event_search(
     comm: CommObject = CommMock(),
 ) -> tuple[Events, Echo]:
 
-    if isinstance(config, tuple):
-        event_search_cfg, event_criteria_cfg, event_select_cfg, echo_search_cfg = config
-    elif not config:
-        event_search_cfg, event_criteria_cfg, event_select_cfg, echo_search_cfg = (
-            generate_default_configurations(data.experiment)
-        )
+    if comm.rank == 0:
+        if isinstance(config, tuple):
+            event_search_cfg, event_criteria_cfg, event_select_cfg, echo_search_cfg = config
+        elif not config:
+            event_search_cfg, event_criteria_cfg, event_select_cfg, echo_search_cfg = (
+                generate_default_configurations(data.experiment)
+            )
+        else:
+            event_search_cfg, event_criteria_cfg, event_select_cfg, echo_search_cfg = (
+                extract_event_search_configurations(config)
+            )
     else:
-        event_search_cfg, event_criteria_cfg, event_select_cfg, echo_search_cfg = (
-            extract_event_search_configurations(config)
-        )
+        event_search_cfg = event_criteria_cfg = event_select_cfg = echo_search_cfg = None
+
+    event_search_cfg = comm.bcast(event_search_cfg, root=0)
+    event_criteria_cfg = comm.bcast(event_criteria_cfg, root=0)
+    event_select_cfg = comm.bcast(event_select_cfg, root=0)
+    echo_search_cfg = comm.bcast(echo_search_cfg, root=0)
 
     # Run echo search
-    echo_output = Path(output) / "echo" if output else None
     results = hardtarget.echo_search(
         data=data,
         start_time=start_time,
         end_time=end_time,
         relative_time=relative_time,
         config=echo_search_cfg,
-        output=echo_output,
+        output=Path(output) if output else None,
         progress=progress,
         comm=comm,
     )
+    comm.barrier()
 
-    if echo_output:
-        # No chunksize so will ju be one object
-        echo_result: tuple[EchoSearchOutArgs, ExpDef, EchoSearchCfgParams, EchoSearchProParams] = list(
-            hardtarget.load_analysed_data(echo_output)
-        )[0]
-        res_out, exp, _, _ = echo_result
-    else:
-        # Gather data from echo search
-        echo_result: tuple[EchoSearchOutArgs, ExpDef, EchoSearchCfgParams, EchoSearchProParams] = (
-            hardtarget.stack_analysed_data(results["data"])
+    if comm.rank == 0:
+        if output:
+            # No chunksize so will ju be one object
+            echo_result: tuple[EchoSearchOutArgs, ExpDef, EchoSearchCfgParams, EchoSearchProParams] = list(
+                hardtarget.load_analysed_data(output)
+            )[0]
+            res_out, exp, _, _ = echo_result
+        else:
+            # Gather data from echo search
+            echo_result: tuple[EchoSearchOutArgs, ExpDef, EchoSearchCfgParams, EchoSearchProParams] = (
+                hardtarget.stack_analysed_data(results["data"])
+            )
+            res_out, exp, _, _ = echo_result
+
+        echo = echo_post_process(
+            echo_search_analysis=res_out,
+            config=event_search_cfg,
+            exp_def=exp,
         )
-        res_out, exp, _, _ = echo_result
 
-    echo = echo_post_process(
-        echo_search_analysis=res_out,
-        config=event_search_cfg,
-        exp_def=exp,
-    )
+        meteor_indicies, meteor_trail_indicies, detection_per_index = meteor_search(echo, event_criteria_cfg)
 
-    meteor_indicies, meteor_trail_indicies, detection_per_index = meteor_search(echo, event_criteria_cfg)
+        meteor_events = create_event_cluster(
+            echo,
+            meteor_indicies,
+            "meteor:head",
+            event_select_cfg,
+            overlap_correction=True,
+        )
+        meteor_trail_events = create_event_cluster(
+            echo,
+            meteor_trail_indicies,
+            "meteor:trail",
+            event_select_cfg,
+        )
 
-    meteor_events = create_event_cluster(
-        echo,
-        meteor_indicies,
-        "meteor:head",
-        event_select_cfg,
-        overlap_correction=True,
-    )
-    meteor_trail_events = create_event_cluster(
-        echo,
-        meteor_trail_indicies,
-        "meteor:trail",
-        event_select_cfg,
-    )
+        events = Events(
+            meteors=meteor_events,
+            meteor_indicies=meteor_indicies,
+            trails=meteor_trail_events,
+            trail_indicies=meteor_trail_indicies,
+            detection_per_index=detection_per_index,
+            config=(echo_search_cfg, event_search_cfg, event_select_cfg, event_criteria_cfg),
+            exp_def=exp,
+            event_search_start_us=echo.epoch_us,
+            event_search_end_us=int(echo.epoch_us + len(echo.max_corr) * exp.t_ipp_usec),
+            file=data.path,
+        )
 
-    events = Events(
-        meteors=meteor_events,
-        meteor_indicies=meteor_indicies,
-        trails=meteor_trail_events,
-        trail_indicies=meteor_trail_indicies,
-        detection_per_index=detection_per_index,
-        config=(echo_search_cfg, event_search_cfg, event_select_cfg, event_criteria_cfg),
-        exp_def=exp,
-        measurement_start_us=data.epoch_bounds[0],
-        file=data.path,
-    )
+        if output:
+            store_events(events, Path(output).resolve())
+    else:
+        events = echo = None
 
-    if output:
-        store_events(events, Path(output).resolve())
+    events = comm.bcast(events, root=0)
+    echo = comm.bcast(echo, root=0)
 
     return events, echo
 
