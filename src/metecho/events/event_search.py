@@ -33,7 +33,7 @@ def event_search(
     data: DataLoader,
     config: Optional[
         tuple[EventSearchCfg, EventCriteriaCfg, EventSelectCfg, EchoSearchCfgParams] | dict | Path
-    ],
+    ] = None,
     start_time: Optional[np.datetime64 | int | str | dt.datetime] = None,
     end_time: Optional[np.datetime64 | int | str | dt.datetime] = None,
     relative_time: bool = False,
@@ -68,7 +68,7 @@ def event_search(
         end_time=end_time,
         relative_time=relative_time,
         config=echo_search_cfg,
-        output=Path(output) / "Echo" if output else None,
+        output=Path(output) / "echo" if output else None,
         progress=progress,
         comm=comm,
     )
@@ -306,8 +306,8 @@ def create_event_cluster(
         ev_date = np.datetime64(int(echo.epoch_us + event_offset_us), "us")
 
         ev = Event(
-            start_ipp=event_span[x, 0],
-            end_ipp=event_span[x, 1],
+            start_ipp=int(event_span[x, 0]),
+            end_ipp=int(event_span[x, 1]),
             event_indices=event_indices,
             event_date=ev_date,
             event_search_executed=np.datetime64(dt.datetime.now()),
