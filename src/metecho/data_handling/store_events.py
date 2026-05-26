@@ -29,12 +29,16 @@ def store_events(events: Events, path: Path) -> None:
     file name format..... TBD
 
     """
-    if not path.is_dir():
-        path.mkdir(parents=True)
+
     _dt = dt.datetime.fromtimestamp(events.event_search_start_us * 1e-6, dt.timezone.utc)
     time_string = _dt.strftime("%Y-%m-%dT%H-%M-%S")
+    folder_name = f"{time_string[0:10]}/{time_string[11:13]}-00-00"
     file_name = f"events-{time_string}.h5"
-    with h5py.File(path / file_name, "w") as file:
+
+    path = path / "Events" / folder_name / file_name
+    if not path.parent.is_dir():
+        path.parent.mkdir(parents=True)
+    with h5py.File(path, "w") as file:
         store_params(file, events)
 
 

@@ -73,8 +73,8 @@ def main(args: argparse.Namespace) -> None:
     events, echo = event_search(
         data,
         Path(args.config) if args.config else None,
-        start_time=args.start_time,
-        end_time=args.end_time,
+        start_time=args.start_time if not args.relative_time else int(args.start_time),
+        end_time=args.end_time if not args.relative_time else int(args.end_time),
         relative_time=args.relative_time,
         progress=args.progress,
         output=args.output,

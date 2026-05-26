@@ -68,7 +68,7 @@ def event_search(
         end_time=end_time,
         relative_time=relative_time,
         config=echo_search_cfg,
-        output=Path(output) if output else None,
+        output=Path(output) / "Echo" if output else None,
         progress=progress,
         comm=comm,
     )
@@ -78,7 +78,7 @@ def event_search(
         if output:
             # No chunksize so will ju be one object
             echo_result: tuple[EchoSearchOutArgs, ExpDef, EchoSearchCfgParams, EchoSearchProParams] = list(
-                hardtarget.load_analysed_data(output)
+                hardtarget.load_analysed_data(results["dir"])
             )[0]
             res_out, exp, _, _ = echo_result
         else:
