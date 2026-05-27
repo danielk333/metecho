@@ -1,27 +1,69 @@
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
 from hardtarget import direction_of_arrival, target_estimation
 from pyant.models import Array, ArrayParams  # ,InterpolatedArray, InterpolatedArrayParams
-from radardef.components import RadarStation
+from radardef import RadarStation
+from radardef.components import DataLoader
 from radardef.radar_stations import Mu
 
 from metecho.events import event_search
-from metecho.tools.mpi_decorators import get_mpi
+from metecho.events.types import Event
+from metecho.tools.mpi_decorators import CommMock, CommObject, get_mpi
 
 config = Path("../hardtarget/docs/examples/cfg/test.ini")
 
 
-def pipeline(
-    path: Path,
-    station=RadarStation,
-    config: Optional[Path] = None,
-    output: Optional[Path] = None,
+def analyse_events(
+    data: DataLoader,
+    events: list[Event],
+    config: Path,
+    station: RadarStation,
+    output: Optional[Path | str] = None,
+    rank: int = 0,
+    size: int = 1,
 ):
-    comm = get_mpi()
+    events = events[rank : len(events) : size]
+    for event in events:
+        # Event location
+        start_time = int(event.event_date.astype("datetime64[us]").astype("int"))
+        end_time = start_time + (event.end_ipp - event.start_ipp) * data.experiment.t_ipp_usec
 
-    # If needed convert the data
-    # TODO
+        sub_dir = f"{event.type}s/{event.type}_{np.datetime_as_string(event.event_date)}"
+
+        target_estimation(
+            data,
+            config=config,
+            start_time=start_time,
+            end_time=end_time,
+            output=output,
+            sub_directory=sub_dir,
+        )
+
+        if isinstance(station.beam, Array) and isinstance(station.beam_parameters, ArrayParams):
+            direction_of_arrival(
+                data,
+                config=config,
+                start_time=start_time,
+                end_time=end_time,
+                output=output,
+                sub_directory=sub_dir,
+                array_beam=station.beam,
+                beam_params=station.beam_parameters,
+            )
+
+
+def proccess_dir(
+    path: Path,
+    station: RadarStation,
+    output: Path,
+    config: Path,
+    comm: CommObject = CommMock(),
+):
+    """
+    Expected that conversion of data is done before running pipeline..?
+    """
 
     # Load the data
     if comm.rank == 0:
@@ -40,40 +82,56 @@ def pipeline(
         comm=comm,
     )
 
-    # Analyse events
-    # No point in parallel process one event, better to allocate one process per event
-    meteors = events.meteors[comm.rank : len(events.meteors) : comm.size]
-    for meteor in meteors:
-        # Event location
-        start_time = events.event_search_start_us + meteor.start_ipp * data.experiment.t_ipp_usec
-        end_time = events.event_search_start_us + meteor.end_ipp * data.experiment.t_ipp_usec
-
-        # Target estimation
-        target_estimation(
-            data,
+    # Analyse detected meteors and trails
+    for e in [events.meteors, events.trails]:
+        analyse_events(
+            data=data,
+            events=e,
             config=config,
-            start_time=start_time,
-            end_time=end_time,
-            output=Path(output) / "target_estimation" if output else None,
+            station=station,
+            output=output,
+            rank=comm.rank,
+            size=comm.size,
         )
 
-        if isinstance(station.beam, Array) and isinstance(station.beam_parameters, ArrayParams):
-            direction_of_arrival(
-                data,
-                config=config,
-                start_time=start_time,
-                end_time=end_time,
-                output=Path(output) / "direction_of_arrival" if output else None,
-                array_beam=station.beam,
-                beam_params=station.beam_parameters,
-            )
+    comm.barrier()
+
+
+def pipeline(
+    path: Path,
+    station: RadarStation,
+    output: Path,
+    config: Path,
+):
+    comm = get_mpi()
+
+    if not station.is_data_compatible(path):
+        target_format = station.converters.available_target_formats(station.validator.format)[0]
+        conv_path = station.convert(path, target_format, dst=output, progress=True)
+        if len(conv_path) > 0:
+            path = conv_path[0]
+        else:
+            print("error no converted data")
+            return
+
+    comm.barrier()
+
+    sub_dirs = [d for d in path.iterdir() if d.is_dir()]
+
+    if sub_dirs:
+        for dir in sub_dirs:
+            proccess_dir(dir, station, output, config, comm)
+    else:
+        proccess_dir(path, station, output, config, comm)
 
 
 import time
 
 start = time.time()
 pipeline(
-    path=Path("/home/hampusa/Documents/Data/MU/MUI20140524_CONV/20140524/test_batch/"),
+    # path=Path("/home/hampusa/Documents/Data/MU/MUI20140524_CONV/20140524/test_batch/"),
+    # path=Path("../tmp_data/mui_object/2019-11-06/04-00-00"),
+    path=Path("../tmp_data/mui_larger_batch"),
     config=config,
     station=Mu(),
     output=Path("results"),

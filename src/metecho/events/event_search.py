@@ -13,6 +13,7 @@ from radardef.types.types import ExpDef
 
 from metecho.data_handling.store_events import store_events
 from metecho.events.conf import extract_event_search_configurations, generate_default_configurations
+from metecho.events.constants import MeteorType
 from metecho.events.types import (
     Echo,
     Event,
@@ -68,7 +69,8 @@ def event_search(
         end_time=end_time,
         relative_time=relative_time,
         config=echo_search_cfg,
-        output=Path(output) / "echo" if output else None,
+        output=output,
+        sub_directory="echo",
         progress=progress,
         comm=comm,
     )
@@ -99,14 +101,14 @@ def event_search(
         meteor_events = create_event_cluster(
             echo,
             meteor_indicies,
-            "meteor:head",
+            str(MeteorType.head),
             event_select_cfg,
             overlap_correction=True,
         )
         meteor_trail_events = create_event_cluster(
             echo,
             meteor_trail_indicies,
-            "meteor:trail",
+            str(MeteorType.trail),
             event_select_cfg,
         )
 
