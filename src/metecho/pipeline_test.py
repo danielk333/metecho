@@ -3,11 +3,11 @@ from typing import Optional
 
 import numpy as np
 from hardtarget import direction_of_arrival, target_estimation
-from hardtarget.utils.mpi_progress import MPIProgress
 from pyant.models import Array, ArrayParams  # ,InterpolatedArray, InterpolatedArrayParams
 from radardef import RadarStation
 from radardef.components import DataLoader
 from radardef.radar_stations import Mu
+from radardef.tools.mpi_tools import MPIProgress
 
 # from tqdm import tqdm
 from metecho.events import event_search
@@ -22,10 +22,18 @@ def analyse_event(
     event: Event,
     config: Path,
     station: RadarStation,
-    comm: CommObject,
     output: Optional[Path | str] = None,
-    progress: bool = False,
+    progress: bool | MPIProgress = False,
 ):
+    if progress:
+        prog = MPIProgress(
+            tot=2,
+            desc="Event proccessing",
+            parent_progress=progress if isinstance(progress, MPIProgress) else None,
+            transient=True,
+        )
+    else:
+        prog = False
 
     # Event location
     start_time = int(event.event_date.astype("datetime64[us]").astype("int"))
@@ -43,6 +51,9 @@ def analyse_event(
         progress=progress,
     )
 
+    if prog:
+        prog.update(1)
+
     if isinstance(station.beam, Array) and isinstance(station.beam_parameters, ArrayParams):
         direction_of_arrival(
             data,
@@ -55,6 +66,9 @@ def analyse_event(
             beam_params=station.beam_parameters,
             progress=progress,
         )
+
+    if prog:
+        prog.update(1)
 
 
 def proccess_dir(
@@ -96,7 +110,7 @@ def proccess_dir(
     if progress:
         prog = MPIProgress(tot=tot_events, desc="Analysing events")
     else:
-        prog = None
+        prog = False
 
     for event in events:
         analyse_event(
@@ -105,8 +119,9 @@ def proccess_dir(
             config=config,
             station=station,
             output=output,
-            comm=comm,
-            progress=progress,
+            progress=prog
+            if comm.size == 1
+            else False,  # If processing events on several processes there will too many bars
         )
 
         if prog:
@@ -126,7 +141,7 @@ def pipeline(
 
     if not station.is_data_compatible(path):
         target_format = station.converters.available_target_formats(station.validator.format)[0]
-        conv_path = station.convert(path, target_format, dst=output, progress=True)
+        conv_path = station.convert(path, target_format, dst=output, progress=progress)
         if len(conv_path) > 0:
             path = conv_path[0]
         else:
@@ -144,8 +159,6 @@ def pipeline(
         proccess_dir(path, station, output, config, comm, progress=progress)
 
 
-# import time
-# start = time.time()
 pipeline(
     # path=Path("/home/hampusa/Documents/Data/MU/MUI20140524_CONV/20140524/test_batch/"),
     path=Path("../tmp_data/mui_object/2019-11-06/04-00-00"),
@@ -155,4 +168,3 @@ pipeline(
     output=Path("results"),
     progress=True,
 )
-# print(f"Total time: {time.time() - start}, analysed time: 277s ")

@@ -29,7 +29,6 @@ dependencies = [
   "scipy >= 1.4.1",
   "h5py >= 3.4.0",
   "pyant >= 1.1.0",
-  "tqdm >= 4.66.1",
   "matplotlib >= 2.2.2",
   "hardtarget >= 0.6.0",
   "astropy >= 6",
