@@ -69,6 +69,7 @@ def analyse_event(
 
     if prog:
         prog.update(1)
+        prog.close()
 
 
 def proccess_dir(
@@ -128,6 +129,8 @@ def proccess_dir(
             prog.update(1)
 
     comm.barrier()
+    if prog:
+        prog.close()
 
 
 def pipeline(
@@ -162,6 +165,7 @@ def pipeline(
 pipeline(
     # path=Path("/home/hampusa/Documents/Data/MU/MUI20140524_CONV/20140524/test_batch/"),
     path=Path("../tmp_data/mui_object/2019-11-06/04-00-00"),
+    # path=Path("../tmp_data/mui_object/MUI.191106.042339"),  # Run without MPI
     # path=Path("../tmp_data/mui_larger_batch"),
     config=config,
     station=Mu(),
