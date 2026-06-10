@@ -6,8 +6,9 @@ from typing import TypeVar
 import h5py
 import numpy as np
 
-from metecho.data_handling.store_events import is_namedtuple
+from metecho.data_handling.store_data import is_namedtuple
 from metecho.events.types import Events
+from metecho.noise.types import GaussianNoiseChunks
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,13 @@ def load_events(path: Path) -> Events:
         events = load_object_from_group(file, Events)
 
     return events
+
+
+def load_noise(path, Path) -> GaussianNoiseChunks:
+    with h5py.File(path, "r") as file:
+        noise = load_object_from_group(file, GaussianNoiseChunks)
+
+    return noise
 
 
 GenericObject = TypeVar("GenericObject")

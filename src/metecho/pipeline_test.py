@@ -25,6 +25,7 @@ def analyse_event(
     output: Optional[Path | str] = None,
     progress: bool | MPIProgress = False,
 ):
+
     if progress:
         prog = MPIProgress(
             tot=2,
@@ -93,7 +94,7 @@ def proccess_dir(
     data = comm.bcast(data, root=0)
 
     # Start an event search first
-    events, echo = event_search(
+    events, echo, noise = event_search(
         data,
         config=None,
         progress=progress,
@@ -110,10 +111,29 @@ def proccess_dir(
     events = events[comm.rank : len(events) : comm.size]
     if progress:
         prog = MPIProgress(tot=tot_events, desc="Analysing events")
+        if get_mpi().size > 2:
+            n_processes_prog = MPIProgress(
+                tot=get_mpi().size,
+                desc="Finished ",
+                parent_progress=prog,
+                transient=True,
+            )
+        else:
+            n_processes_prog = False
     else:
         prog = False
+        n_processes_prog = False
 
     for event in events:
+        # Note that when analysing events the same dataloader is shared between all processes,
+        # Each process has different lists of objects to analyse, where each object is one big step away from another
+        # meaning tha the cache function is not being utilized properly.
+
+        # Thought: Should the events be sorted acoording to time and then split into comm.size chunks where each chunk gets its own dataloader
+        #          Will this lead to comm.size * cache RAM usage?
+        # Thoght 2: Should the events be sorted according to time and then spit the same way as they are today? How to utilize the processes
+        #           that are finished before the others? Send events to be utilized there?
+
         analyse_event(
             data=data,
             event=event,
@@ -127,6 +147,10 @@ def proccess_dir(
 
         if prog:
             prog.update(1)
+
+    if n_processes_prog:
+        n_processes_prog.update(1)
+        n_processes_prog.close()
 
     comm.barrier()
     if prog:
@@ -164,9 +188,9 @@ def pipeline(
 
 pipeline(
     # path=Path("/home/hampusa/Documents/Data/MU/MUI20140524_CONV/20140524/test_batch/"),
-    path=Path("../tmp_data/mui_object/2019-11-06/04-00-00"),
     # path=Path("../tmp_data/mui_object/MUI.191106.042339"),  # Run without MPI
     # path=Path("../tmp_data/mui_larger_batch"),
+    path=Path("/home/hampusa/Documents/Data/MU/2014-05-24/12-00-00/converted_data/").resolve(),
     config=config,
     station=Mu(),
     output=Path("results"),

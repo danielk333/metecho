@@ -70,7 +70,7 @@ def main(args: argparse.Namespace) -> None:
 
     data = comm.bcast(data, root=0)
 
-    events, echo = event_search(
+    events, echo, noise = event_search(
         data,
         Path(args.config) if args.config else None,
         start_time=args.start_time,

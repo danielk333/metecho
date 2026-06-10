@@ -53,6 +53,7 @@ def generate_default_configurations(exp_def: ExpDef):
         corr_filter_limit=0.5,
         noise_time_window_sec=1,
         move_std_window=10,
+        noise_chunk_size=100,
     )
 
     event_criteria_cfg = EventCriteriaCfg(

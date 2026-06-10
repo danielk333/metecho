@@ -6,8 +6,6 @@ import numpy.typing as npt
 from hardtarget.echo_search.types import EchoSearchCfgParams
 from radardef.types.types import ExpDef
 
-from metecho.noise.types import GaussianNoise
-
 
 class EventSearchCfg(NamedTuple):
     dop_std_coherr: float
@@ -18,6 +16,7 @@ class EventSearchCfg(NamedTuple):
     corr_filter_limit: float
     noise_time_window_sec: float
     move_std_window: int
+    noise_chunk_size: int
 
 
 class EventSelectCfg(NamedTuple):
@@ -55,7 +54,6 @@ class Echo(NamedTuple):
     epoch_us: int
     tot_pow_filt: npt.NDArray[np.floating]
     best_peak_filt: npt.NDArray[np.complex128]
-    gauss_noise: GaussianNoise
     start_std: npt.NDArray[np.integer]  # derived from max_pow_ind
     start_coherrence: np.floating
     doppler_std: npt.NDArray[np.integer]  # derived from best_doppler
@@ -69,7 +67,6 @@ class Event(NamedTuple):
     event_date: np.datetime64
     event_search_executed: np.datetime64
     type: str
-    noise: GaussianNoise
 
 
 class Events(NamedTuple):

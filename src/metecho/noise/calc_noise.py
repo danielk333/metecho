@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.typing as npt
+from radardef.tools.mpi_tools import MPIProgress
 from scipy.stats.distributions import chi2  # type: ignore[attr-defined]
 
 from metecho.noise.types import GaussianNoise
@@ -10,7 +11,7 @@ def calc_gaussian_noise(data: npt.NDArray[np.complex128]) -> GaussianNoise:
     Calculate gaussain noise.
 
     Args:
-        raw_data: Data to calculate noise on. It is expected that peaks has been filtered out from the data before to get a correct noise estimation.
+        raw_data: Data to calculate noise on.
     Returns:
         Gaussian noise
 
@@ -28,6 +29,94 @@ def calc_gaussian_noise(data: npt.NDArray[np.complex128]) -> GaussianNoise:
         ),
     )
     return GaussianNoise(mean=float(mean), std_dev=float(std_dev), confidence_interval=confidence_interval)
+
+
+def calc_gaussian_noise_batch_chunks(
+    mean_per_batch: npt.NDArray,
+    std_dev_per_batch: npt.NDArray,
+    batch_size: int,
+    chunk_size: int,
+    progress: bool = False,
+) -> tuple[npt.NDArray[np.floating], npt.NDArray[np.floating], npt.NDArray[np.floating]]:
+    """
+    Calculate the gaussian noise in the requested chunk size from a serier of batches.
+
+    ```
+    |s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s|s| original data is in samples
+    |--b--|--b--|--b--|--b--|--b--|--b--|--b--|--b--|--b--|--b--|--b--|--b--| from x amount if samples a batch of mean and std dev is calculated
+    |--------c--------|--------c--------|--------c--------|--------c--------| from these batches we can calculate a mean and std dev of requested sizes
+    ```
+    Args:
+        mean_per_batch: Calculated mean for each batch
+        std_dev_per_batch : Calculated standard deviation for each batch
+        batch_size: number of samples per batch
+        chunk_size: Number of batches per chunk
+
+    Returns
+        Gaussian noise for each chunk derived from the batches. (mean, std_dev, confidence_interval)
+    """
+
+    assert mean_per_batch.shape == std_dev_per_batch.shape
+
+    # Calculate what does not fit in the windows
+    remenants = len(mean_per_batch) % chunk_size
+
+    mean_windows = mean_per_batch[:-remenants].reshape(-1, chunk_size)
+    std_dev_windows = std_dev_per_batch[:-remenants].reshape(-1, chunk_size)
+
+    length = mean_windows.shape[0] + (1 if remenants else 0)
+    mean = np.zeros((length,))
+    std_dev = np.zeros((length,))
+    confidence_interval = np.zeros((length, 2))
+
+    if progress:
+        prog = MPIProgress(
+            tot=length,
+            desc="Estimating Noise",
+        )
+    else:
+        prog = None
+
+    for i in range(mean_windows.shape[0]):
+        mean[i], std_dev[i] = calc_batch_mean_and_std_dev(mean_windows[i], std_dev_windows[i], batch_size)
+        confidence_probability = 0.000001
+        sig_est_freedom = len(mean_windows[i]) * batch_size * 2 - 1
+        try:
+            confidence_interval[i, 0] = np.sqrt(
+                sig_est_freedom
+                * np.square(std_dev[i])
+                / chi2.ppf(confidence_probability / 2, sig_est_freedom)
+            )
+            confidence_interval[i, 1] = np.sqrt(
+                sig_est_freedom
+                * np.square(std_dev[i])
+                / chi2.ppf(1 - (confidence_probability / 2), sig_est_freedom)
+            )
+        except:
+            breakpoint()
+        if prog:
+            prog.update(1)
+
+    if remenants:
+        mean[-1], std_dev[-1] = calc_batch_mean_and_std_dev(
+            mean_per_batch[-remenants:], std_dev_per_batch[-remenants:], batch_size
+        )
+        confidence_probability = 0.000001
+        sig_est_freedom = len(mean_per_batch[-remenants:]) * batch_size * 2 - 1
+        confidence_interval[-1, 0] = np.sqrt(
+            sig_est_freedom * np.square(std_dev[-1]) / chi2.ppf(confidence_probability / 2, sig_est_freedom)
+        )
+        confidence_interval[-1, 1] = np.sqrt(
+            sig_est_freedom
+            * np.square(std_dev[-1])
+            / chi2.ppf(1 - (confidence_probability / 2), sig_est_freedom)
+        )
+
+    if prog:
+        prog.update(1)
+        prog.close()
+
+    return mean, std_dev, confidence_interval
 
 
 def calc_gaussian_noise_from_batches(

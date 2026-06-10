@@ -11,7 +11,7 @@ from hardtarget.echo_search.types import EchoSearchCfgParams, EchoSearchOutArgs,
 from radardef.components import DataLoader
 from radardef.types.types import ExpDef
 
-from metecho.data_handling.store_events import store_events
+from metecho.data_handling.store_data import store_events, store_noise
 from metecho.events.conf import extract_event_search_configurations, generate_default_configurations
 from metecho.events.constants import MeteorType
 from metecho.events.types import (
@@ -23,6 +23,7 @@ from metecho.events.types import (
     EventSelectCfg,
 )
 from metecho.noise import calc_noise
+from metecho.noise.types import GaussianNoiseChunks
 from metecho.tools.mpi_decorators import CommMock, CommObject
 
 from . import event_select, search_objects
@@ -41,7 +42,7 @@ def event_search(
     progress: bool = False,
     output: Optional[str | Path] = None,
     comm: CommObject = CommMock(),
-) -> tuple[Events, Echo]:
+) -> tuple[Events, Echo, GaussianNoiseChunks]:
 
     if comm.rank == 0:
         if isinstance(config, tuple):
@@ -96,6 +97,13 @@ def event_search(
             exp_def=exp,
         )
 
+        noise = calculate_noise(
+            echo_search_analysis=res_out, config=event_search_cfg, exp_def=exp, progress=progress
+        )
+
+        if output:
+            store_noise(noise, Path(output).resolve())
+
         meteor_indicies, meteor_trail_indicies, detection_per_index = meteor_search(echo, event_criteria_cfg)
 
         meteor_events = create_event_cluster(
@@ -127,13 +135,15 @@ def event_search(
 
         if output:
             store_events(events, Path(output).resolve())
+
     else:
-        events = echo = None
+        events = echo = noise = None
 
     events = comm.bcast(events, root=0)
     echo = comm.bcast(echo, root=0)
+    noise = comm.bcast(noise, root=0)
 
-    return events, echo
+    return events, echo, noise
 
 
 def echo_post_process(
@@ -189,13 +199,6 @@ def echo_post_process(
     _tot_pow_std = np.std(echo_search_analysis.tot_pow[_no_coherent_signal_indicator])
     _filter_indices = echo_search_analysis.tot_pow < (_tot_pow_mean + config.pow_std_est * _tot_pow_std)
 
-    _mean_filtered = np.delete(echo_search_analysis.mean, _coherent_signal_indicator)
-    _std_dev_filtered = np.delete(echo_search_analysis.std_dev, _coherent_signal_indicator)
-
-    gauss_noise = calc_noise.calc_gaussian_noise_from_batches(
-        _mean_filtered, _std_dev_filtered, exp_def.ipp_samps
-    )
-
     return Echo(
         exp_def=exp_def,
         tot_pow=echo_search_analysis.tot_pow,
@@ -205,11 +208,30 @@ def echo_post_process(
         epoch_us=echo_search_analysis.epoch_us,
         tot_pow_filt=echo_search_analysis.tot_pow[_filter_indices],
         best_peak_filt=echo_search_analysis.max_corr[_filter_indices],
-        gauss_noise=gauss_noise,
         start_std=start_std,
         start_coherrence=start_coherrence,
         doppler_std=doppler_std,
         doppler_coherrence=doppler_coherrence,
+    )
+
+
+def calculate_noise(
+    echo_search_analysis: EchoSearchOutArgs, exp_def: ExpDef, config: EventSearchCfg, progress: bool = False
+) -> GaussianNoiseChunks:
+    mean, std_dev, confidence_interval = calc_noise.calc_gaussian_noise_batch_chunks(
+        mean_per_batch=echo_search_analysis.mean,
+        std_dev_per_batch=echo_search_analysis.std_dev,
+        batch_size=exp_def.ipp_samps,
+        chunk_size=config.noise_chunk_size,
+        progress=progress,
+    )
+
+    return GaussianNoiseChunks(
+        mean=mean,
+        std_dev=std_dev,
+        confidence_interval=confidence_interval,
+        epoch_us=echo_search_analysis.epoch_us,
+        chunk_size_usec=config.noise_chunk_size * exp_def.ipp_samps * exp_def.t_samp_usec,
     )
 
 
@@ -314,7 +336,6 @@ def create_event_cluster(
             event_date=ev_date,
             event_search_executed=np.datetime64(dt.datetime.now()),
             type=type,
-            noise=echo.gauss_noise,
         )
 
         events.append(ev)

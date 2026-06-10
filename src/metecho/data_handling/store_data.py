@@ -8,6 +8,7 @@ import h5py
 import numpy as np
 
 from metecho.events.types import Events
+from metecho.noise.types import GaussianNoiseChunks
 
 
 def is_namedtuple(data_type: Any) -> bool:
@@ -22,6 +23,24 @@ def is_namedtuple(data_type: Any) -> bool:
 class IsDataclass(Protocol):
     __dataclass_fields__: ClassVar[dict[str, Any]]
     __annotations__: dict[str, Any]
+
+
+def store_noise(gaussian_noise: GaussianNoiseChunks, path: Path) -> None:
+    """
+    file name format..... TBD
+
+    """
+
+    _dt = dt.datetime.fromtimestamp(gaussian_noise.epoch_us * 1e-6, dt.timezone.utc)
+    time_string = _dt.strftime("%Y-%m-%dT%H-%M-%S")
+    folder_name = f"{time_string[0:10]}/{time_string[11:13]}-00-00/noise"
+    file_name = f"noise-{time_string}.h5"
+
+    path = path / folder_name / file_name
+    if not path.parent.is_dir():
+        path.parent.mkdir(parents=True)
+    with h5py.File(path, "w") as file:
+        store_params(file, gaussian_noise)
 
 
 def store_events(events: Events, path: Path) -> None:
