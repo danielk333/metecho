@@ -9,6 +9,7 @@ import numpy as np
 import numpy.typing as npt
 from hardtarget.echo_search.types import EchoSearchCfgParams, EchoSearchOutArgs, EchoSearchProParams
 from radardef.components import DataLoader
+from radardef.tools.mpi_tools import MPIProgress
 from radardef.types.types import ExpDef
 
 from metecho.data_handling.store_data import store_events, store_noise
@@ -104,6 +105,12 @@ def event_search(
         if output:
             store_noise(noise, Path(output).resolve())
 
+        # as it is unknown how many meteors is available we add a buffering bar, not blocking due to only running on one rank
+        if progress:
+            prog = MPIProgress(tot=None, desc="Searching for Events", transient=False, barrier_on_close=False)
+        else:
+            prog = None
+
         meteor_indicies, meteor_trail_indicies, detection_per_index = meteor_search(echo, event_criteria_cfg)
 
         meteor_events = create_event_cluster(
@@ -136,13 +143,17 @@ def event_search(
         if output:
             store_events(events, Path(output).resolve())
 
+        if prog:
+            prog.update(len(events.meteors) + len(events.trails))
+            prog.close()
+
     else:
         events = echo = noise = None
-
+    print(f"Analyse done, rank: {comm.rank}!")  # RANK 0 GETS STUCK HERE!!!
     events = comm.bcast(events, root=0)
     echo = comm.bcast(echo, root=0)
     noise = comm.bcast(noise, root=0)
-
+    print(f"Bcasted results, rank: {comm.rank}!")
     return events, echo, noise
 
 
@@ -218,6 +229,7 @@ def echo_post_process(
 def calculate_noise(
     echo_search_analysis: EchoSearchOutArgs, exp_def: ExpDef, config: EventSearchCfg, progress: bool = False
 ) -> GaussianNoiseChunks:
+
     mean, std_dev, confidence_interval = calc_noise.calc_gaussian_noise_batch_chunks(
         mean_per_batch=echo_search_analysis.mean,
         std_dev_per_batch=echo_search_analysis.std_dev,
@@ -239,6 +251,7 @@ def meteor_search(
     echo: Echo,
     config: EventCriteriaCfg,
     search_function_objects: list[search_objects.SearchObject] = search_objects.get_defaults(),
+    progress: bool | MPIProgress = False,
 ) -> tuple[npt.NDArray[np.int64], npt.NDArray[np.int64], npt.NDArray[np.int64]]:
     """
     Searches the echo output and returns which ipps contains meteors and meteor trails based on the result of the search functions.

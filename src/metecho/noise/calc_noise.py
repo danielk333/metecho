@@ -56,64 +56,59 @@ def calc_gaussian_noise_batch_chunks(
         Gaussian noise for each chunk derived from the batches. (mean, std_dev, confidence_interval)
     """
 
-    assert mean_per_batch.shape == std_dev_per_batch.shape
+    if mean_per_batch.shape != std_dev_per_batch.shape:
+        raise ValueError("mean and std dev those not have the same amount of batches")
 
-    # Calculate what does not fit in the windows
+    # If chunk size is larger than the size of the input, estimate over the available data
+    if len(mean_per_batch) < chunk_size:
+        chunk_size = len(mean_per_batch)
+
+    # Calculate what does not fit in the chunks
     remenants = len(mean_per_batch) % chunk_size
 
-    mean_windows = mean_per_batch[:-remenants].reshape(-1, chunk_size)
-    std_dev_windows = std_dev_per_batch[:-remenants].reshape(-1, chunk_size)
+    # Divide into chunks
+    mean_chunks = mean_per_batch[:-remenants].reshape(-1, chunk_size)
+    std_dev_chunks = std_dev_per_batch[:-remenants].reshape(-1, chunk_size)
 
-    length = mean_windows.shape[0] + (1 if remenants else 0)
+    # Output arrays
+    length = mean_chunks.shape[0] + (1 if remenants else 0)
     mean = np.zeros((length,))
     std_dev = np.zeros((length,))
     confidence_interval = np.zeros((length, 2))
 
     if progress:
-        prog = MPIProgress(
-            tot=length,
-            desc="Estimating Noise",
-        )
+        prog = MPIProgress(tot=length, desc="Estimating Noise", barrier_on_close=False)
+
     else:
         prog = None
 
-    for i in range(mean_windows.shape[0]):
-        mean[i], std_dev[i] = calc_batch_mean_and_std_dev(mean_windows[i], std_dev_windows[i], batch_size)
-        confidence_probability = 0.000001
-        sig_est_freedom = len(mean_windows[i]) * batch_size * 2 - 1
-        try:
-            confidence_interval[i, 0] = np.sqrt(
-                sig_est_freedom
-                * np.square(std_dev[i])
-                / chi2.ppf(confidence_probability / 2, sig_est_freedom)
-            )
-            confidence_interval[i, 1] = np.sqrt(
-                sig_est_freedom
-                * np.square(std_dev[i])
-                / chi2.ppf(1 - (confidence_probability / 2), sig_est_freedom)
-            )
-        except:
-            breakpoint()
-        if prog:
-            prog.update(1)
+    # Calculate mean and std dev for each chunk
+    for i in range(length):
+        if i == length - 1 and remenants:
+            mean_chunk = mean_per_batch[-remenants:]
+            std_dev_chunk = std_dev_per_batch[-remenants:]
+        else:
+            mean_chunk = mean_chunks[i]
+            std_dev_chunk = std_dev_chunks[i]
 
-    if remenants:
-        mean[-1], std_dev[-1] = calc_batch_mean_and_std_dev(
-            mean_per_batch[-remenants:], std_dev_per_batch[-remenants:], batch_size
-        )
+        mean[i], std_dev[i] = calc_batch_mean_and_std_dev(mean_chunk, std_dev_chunk, batch_size)
+
         confidence_probability = 0.000001
-        sig_est_freedom = len(mean_per_batch[-remenants:]) * batch_size * 2 - 1
-        confidence_interval[-1, 0] = np.sqrt(
-            sig_est_freedom * np.square(std_dev[-1]) / chi2.ppf(confidence_probability / 2, sig_est_freedom)
+        sig_est_freedom = len(mean_chunk) * batch_size * 2 - 1
+
+        confidence_interval[i, 0] = np.sqrt(
+            sig_est_freedom * np.square(std_dev[i]) / chi2.ppf(confidence_probability / 2, sig_est_freedom)
         )
-        confidence_interval[-1, 1] = np.sqrt(
+        confidence_interval[i, 1] = np.sqrt(
             sig_est_freedom
-            * np.square(std_dev[-1])
+            * np.square(std_dev[i])
             / chi2.ppf(1 - (confidence_probability / 2), sig_est_freedom)
         )
 
+        if prog:
+            prog.update(1)
+
     if prog:
-        prog.update(1)
         prog.close()
 
     return mean, std_dev, confidence_interval

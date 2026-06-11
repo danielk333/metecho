@@ -102,8 +102,6 @@ def proccess_dir(
         comm=comm,
     )
 
-    comm.barrier()
-
     # Analyse detected meteors and trails
 
     events = events.meteors + events.trails

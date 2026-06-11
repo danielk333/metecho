@@ -2,7 +2,7 @@ import argparse
 import logging
 from pathlib import Path
 
-from metecho.data_handling.load_events import load_events
+from metecho.data_handling.load_data import load_events
 
 from .commands import add_command
 
