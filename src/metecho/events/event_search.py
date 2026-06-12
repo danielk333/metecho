@@ -107,7 +107,9 @@ def event_search(
 
         # as it is unknown how many meteors is available we add a buffering bar, not blocking due to only running on one rank
         if progress:
-            prog = MPIProgress(tot=None, desc="Searching for Events", transient=False, barrier_on_close=False)
+            prog = MPIProgress(
+                tot=None, desc="Searching for Events", transient=False, multi_process_bar=False
+            )
         else:
             prog = None
 
@@ -148,12 +150,14 @@ def event_search(
             prog.close()
 
     else:
-        events = echo = noise = None
-    print(f"Analyse done, rank: {comm.rank}!")  # RANK 0 GETS STUCK HERE!!!
+        events = None
+        echo = None
+        noise = None
+
     events = comm.bcast(events, root=0)
     echo = comm.bcast(echo, root=0)
     noise = comm.bcast(noise, root=0)
-    print(f"Bcasted results, rank: {comm.rank}!")
+
     return events, echo, noise
 
 

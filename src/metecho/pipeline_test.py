@@ -87,7 +87,7 @@ def proccess_dir(
 
     # Load the data
     if comm.rank == 0:
-        data = station.load_data(path)
+        data = station.load_data(path, cache=False)
         assert data is not None
     else:
         data = None
@@ -109,18 +109,8 @@ def proccess_dir(
     events = events[comm.rank : len(events) : comm.size]
     if progress:
         prog = MPIProgress(tot=tot_events, desc="Analysing events")
-        if get_mpi().size > 2:
-            n_processes_prog = MPIProgress(
-                tot=get_mpi().size,
-                desc="Finished ",
-                parent_progress=prog,
-                transient=True,
-            )
-        else:
-            n_processes_prog = False
     else:
         prog = False
-        n_processes_prog = False
 
     for event in events:
         # Note that when analysing events the same dataloader is shared between all processes,
@@ -145,10 +135,6 @@ def proccess_dir(
 
         if prog:
             prog.update(1)
-
-    if n_processes_prog:
-        n_processes_prog.update(1)
-        n_processes_prog.close()
 
     comm.barrier()
     if prog:
@@ -188,7 +174,8 @@ pipeline(
     # path=Path("/home/hampusa/Documents/Data/MU/MUI20140524_CONV/20140524/test_batch/"),
     # path=Path("../tmp_data/mui_object/MUI.191106.042339"),  # Run without MPI
     # path=Path("../tmp_data/mui_larger_batch"),
-    path=Path("/home/hampusa/Documents/Data/MU/2014-05-24/12-00-00/converted_data/").resolve(),
+    # path=Path("/home/hampusa/Documents/Data/MU/2014-05-24/12-00-00/converted_data/").resolve(),
+    path=Path("../tmp_data/mui_object/2019-11-06/04-00-00/converted_data/"),
     config=config,
     station=Mu(),
     output=Path("results"),
