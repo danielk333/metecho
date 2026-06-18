@@ -1,6 +1,6 @@
 import numpy as np
 import numpy.typing as npt
-from radardef.tools.mpi_tools import MPIProgress
+from radardef.tools.mpi_tools import CommBar
 from scipy.stats.distributions import chi2  # type: ignore[attr-defined]
 
 from metecho.noise.types import GaussianNoise
@@ -77,7 +77,7 @@ def calc_gaussian_noise_batch_chunks(
     confidence_interval = np.zeros((length, 2))
 
     if progress:
-        prog = MPIProgress(tot=length, desc="Estimating Noise", multi_process_bar=False)
+        prog = CommBar(tot=length, desc="Estimating Noise", multi_process_bar=False)
 
     else:
         prog = None

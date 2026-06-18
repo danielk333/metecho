@@ -7,7 +7,7 @@ from pyant.models import Array, ArrayParams  # ,InterpolatedArray, InterpolatedA
 from radardef import RadarStation
 from radardef.components import DataLoader
 from radardef.radar_stations import Mu
-from radardef.tools.mpi_tools import MPIProgress
+from radardef.tools.mpi_tools import CommBar
 
 # from tqdm import tqdm
 from metecho.events import event_search
@@ -23,14 +23,14 @@ def analyse_event(
     config: Path,
     station: RadarStation,
     output: Optional[Path | str] = None,
-    progress: bool | MPIProgress = False,
+    progress: bool | CommBar = False,
 ):
 
     if progress:
-        prog = MPIProgress(
+        prog = CommBar(
             tot=2,
             desc="Event proccessing",
-            parent_progress=progress if isinstance(progress, MPIProgress) else None,
+            parent_progress=progress if isinstance(progress, CommBar) else None,
             transient=True,
         )
     else:
@@ -38,7 +38,7 @@ def analyse_event(
 
     # Event location
     start_time = int(event.event_date.astype("datetime64[us]").astype("int"))
-    end_time = start_time + (event.end_ipp - event.start_ipp) * data.experiment.t_ipp_usec
+    end_time = start_time + (event.end_ipp - event.start_ipp) * data.exp_def.t_ipp_usec
 
     sub_dir = f"{event.type}s/{event.type}_{np.datetime_as_string(event.event_date)}"
 
@@ -87,7 +87,7 @@ def proccess_dir(
 
     # Load the data
     if comm.rank == 0:
-        data = station.load_data(path, cache=False)
+        data = station.load_data(path, cache=True)
         assert data is not None
     else:
         data = None
@@ -108,7 +108,7 @@ def proccess_dir(
     tot_events = len(events)
     events = events[comm.rank : len(events) : comm.size]
     if progress:
-        prog = MPIProgress(tot=tot_events, desc="Analysing events")
+        prog = CommBar(tot=tot_events, desc="Analysing events")
     else:
         prog = False
 

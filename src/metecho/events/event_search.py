@@ -9,7 +9,7 @@ import numpy as np
 import numpy.typing as npt
 from hardtarget.echo_search.types import EchoSearchCfgParams, EchoSearchOutArgs, EchoSearchProParams
 from radardef.components import DataLoader
-from radardef.tools.mpi_tools import MPIProgress
+from radardef.tools.mpi_tools import CommBar
 from radardef.types.types import ExpDef
 
 from metecho.data_handling.store_data import store_events, store_noise
@@ -50,7 +50,7 @@ def event_search(
             event_search_cfg, event_criteria_cfg, event_select_cfg, echo_search_cfg = config
         elif not config:
             event_search_cfg, event_criteria_cfg, event_select_cfg, echo_search_cfg = (
-                generate_default_configurations(data.experiment)
+                generate_default_configurations(data.exp_def)
             )
         else:
             event_search_cfg, event_criteria_cfg, event_select_cfg, echo_search_cfg = (
@@ -107,9 +107,7 @@ def event_search(
 
         # as it is unknown how many meteors is available we add a buffering bar, not blocking due to only running on one rank
         if progress:
-            prog = MPIProgress(
-                tot=None, desc="Searching for Events", transient=False, multi_process_bar=False
-            )
+            prog = CommBar(tot=None, desc="Searching for Events", transient=False, multi_process_bar=False)
         else:
             prog = None
 
@@ -255,7 +253,7 @@ def meteor_search(
     echo: Echo,
     config: EventCriteriaCfg,
     search_function_objects: list[search_objects.SearchObject] = search_objects.get_defaults(),
-    progress: bool | MPIProgress = False,
+    progress: bool | CommBar = False,
 ) -> tuple[npt.NDArray[np.int64], npt.NDArray[np.int64], npt.NDArray[np.int64]]:
     """
     Searches the echo output and returns which ipps contains meteors and meteor trails based on the result of the search functions.
