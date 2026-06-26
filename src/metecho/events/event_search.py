@@ -7,6 +7,7 @@ from typing import Optional
 import hardtarget
 import numpy as np
 import numpy.typing as npt
+from hardtarget.constants import AnalysisMethod
 from hardtarget.echo_search.types import EchoSearchCfgParams, EchoSearchOutArgs, EchoSearchProParams
 from radardef.components import DataLoader
 from radardef.tools.mpi_tools import CommBar
@@ -40,7 +41,7 @@ def event_search(
     start_time: Optional[np.datetime64 | int | str | dt.datetime] = None,
     end_time: Optional[np.datetime64 | int | str | dt.datetime] = None,
     relative_time: bool = False,
-    progress: bool = False,
+    progress: bool | CommBar = False,
     output: Optional[str | Path] = None,
     comm: CommObject = CommMock(),
 ) -> tuple[Events, Echo, GaussianNoiseChunks]:
@@ -82,7 +83,7 @@ def event_search(
         if output:
             # No chunksize so will ju be one object
             echo_result: tuple[EchoSearchOutArgs, ExpDef, EchoSearchCfgParams, EchoSearchProParams] = list(
-                hardtarget.load_analysed_data(results["dir"])
+                hardtarget.load_analysed_data(results["file_dir"], method=AnalysisMethod.echo_search)
             )[0]
             res_out, exp, _, _ = echo_result
         else:
@@ -107,7 +108,13 @@ def event_search(
 
         # as it is unknown how many meteors is available we add a buffering bar, not blocking due to only running on one rank
         if progress:
-            prog = CommBar(tot=None, desc="Searching for Events", transient=False, multi_process_bar=False)
+            prog = CommBar(
+                tot=None,
+                desc="Searching for Events",
+                transient=False,
+                multi_process_bar=False,
+                parent_progress=progress if isinstance(progress, CommBar) else None,
+            )
         else:
             prog = None
 
@@ -229,7 +236,10 @@ def echo_post_process(
 
 
 def calculate_noise(
-    echo_search_analysis: EchoSearchOutArgs, exp_def: ExpDef, config: EventSearchCfg, progress: bool = False
+    echo_search_analysis: EchoSearchOutArgs,
+    exp_def: ExpDef,
+    config: EventSearchCfg,
+    progress: bool | CommBar = False,
 ) -> GaussianNoiseChunks:
 
     mean, std_dev, confidence_interval = calc_noise.calc_gaussian_noise_batch_chunks(

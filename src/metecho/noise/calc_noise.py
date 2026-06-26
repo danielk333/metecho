@@ -36,7 +36,7 @@ def calc_gaussian_noise_batch_chunks(
     std_dev_per_batch: npt.NDArray,
     batch_size: int,
     chunk_size: int,
-    progress: bool = False,
+    progress: bool | CommBar = False,
 ) -> tuple[npt.NDArray[np.floating], npt.NDArray[np.floating], npt.NDArray[np.floating]]:
     """
     Calculate the gaussian noise in the requested chunk size from a serier of batches.
@@ -77,8 +77,12 @@ def calc_gaussian_noise_batch_chunks(
     confidence_interval = np.zeros((length, 2))
 
     if progress:
-        prog = CommBar(tot=length, desc="Estimating Noise", multi_process_bar=False)
-
+        prog = CommBar(
+            tot=length,
+            desc="Estimating Noise",
+            multi_process_bar=False,
+            parent_progress=progress if isinstance(progress, CommBar) else None,
+        )
     else:
         prog = None
 
