@@ -92,7 +92,5 @@ def store_params(group: h5py.Group | h5py.File, object: NamedTuple | IsDataclass
                     continue
                 else:
                     data = data
-            try:
-                group.create_dataset(key, data=data)
-            except TypeError:
-                breakpoint()
+
+            group.create_dataset(key, data=data)
