@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from hardtarget.constants import ConfigSubSection
 from hardtarget.echo_search.types import EchoSearchCfgParams
 from hardtarget.process.configuration import extract_config_from_dict, extract_config_section
 from radardef.types.types import ExpDef
@@ -23,7 +22,7 @@ def extract_event_search_configurations(
             **extract_config_section(config, section="event_select", cfg_type=EventSelectCfg)
         )
         echo_search_cfg = EchoSearchCfgParams(
-            **extract_config_section(config, section=ConfigSubSection.ECHO_SEARCH, cfg_type=EventSelectCfg)
+            **extract_config_section(config, section=None, cfg_type=EchoSearchCfgParams)
         )
     else:
         event_search_cfg = extract_config_from_dict(config, EventSearchCfg)
