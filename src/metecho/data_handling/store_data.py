@@ -2,7 +2,7 @@ import datetime as dt
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from types import get_original_bases
-from typing import Any, ClassVar, NamedTuple, Protocol
+from typing import Any, ClassVar, NamedTuple, Protocol, Union
 
 import h5py
 import numpy as np
@@ -61,7 +61,7 @@ def store_events(events: Events, path: Path) -> None:
         store_params(file, events)
 
 
-def store_params(group: h5py.Group | h5py.File, object: NamedTuple | IsDataclass) -> None:
+def store_params(group: h5py.Group | h5py.File, object: Union[NamedTuple, IsDataclass]) -> None:
 
     if is_namedtuple(type(object)):
         key_data_pairs = object._asdict()  # type: ignore[union-attr]
