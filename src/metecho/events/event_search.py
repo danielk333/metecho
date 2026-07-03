@@ -10,7 +10,7 @@ import numpy.typing as npt
 from hardtarget.constants import AnalysisMethod
 from hardtarget.echo_search.types import EchoSearchCfgParams, EchoSearchOutArgs, EchoSearchProParams
 from radardef.components import DataLoader
-from radardef.tools.mpi_tools import CommBar
+from radardef.tools.mpi_tools import CommBar, CommMock, CommObject
 from radardef.types.types import ExpDef
 
 from metecho.data_handling.store_data import store_events, store_noise
@@ -26,7 +26,6 @@ from metecho.events.types import (
 )
 from metecho.noise import calc_noise
 from metecho.noise.types import GaussianNoiseChunks
-from metecho.tools.mpi_decorators import CommMock, CommObject
 
 from . import event_select, search_objects
 
