@@ -4,10 +4,10 @@ from pathlib import Path
 
 from radardef.components import DataLoader
 from radardef.radar_def import RadarDef
+from radardef.tools.mpi_tools import get_mpi
 
 from metecho.events import event_search
 from metecho.plot import plot_events
-from metecho.tools.mpi_decorators import get_mpi
 
 from .commands import add_command
 
