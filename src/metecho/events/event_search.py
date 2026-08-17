@@ -7,7 +7,7 @@ from typing import Optional
 import hardtarget
 import numpy as np
 import numpy.typing as npt
-from hardtarget.constants import AnalysisMethod
+from hardtarget.constants import AnalysisMethod, Impl
 from hardtarget.echo_search.types import EchoSearchCfgParams, EchoSearchOutArgs, EchoSearchProParams
 from radardef.components import DataLoader
 from radardef.tools.mpi_tools import CommBar, CommMock, CommObject
@@ -40,8 +40,9 @@ def event_search(
     start_time: Optional[np.datetime64 | int | str | dt.datetime] = None,
     end_time: Optional[np.datetime64 | int | str | dt.datetime] = None,
     relative_time: bool = False,
-    progress: bool | CommBar = False,
     output: Optional[str | Path] = None,
+    implementation: Impl | None = None,
+    progress: bool | CommBar = False,
     comm: CommObject = CommMock(),
 ) -> tuple[Events, Echo, GaussianNoiseChunks]:
 
@@ -73,6 +74,7 @@ def event_search(
         config=echo_search_cfg,
         output=output,
         sub_directory="echo",
+        implementation=implementation,
         progress=progress,
         comm=comm,
     )
@@ -364,6 +366,7 @@ def create_event_cluster(
 
         events.append(ev)
 
+    events.sort()
     return events
 
 

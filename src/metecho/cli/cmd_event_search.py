@@ -14,44 +14,6 @@ from .commands import add_command
 logger = logging.getLogger(__name__)
 
 
-"""
-Multiprocessing strategy
-
-If several directories/files divide it as:
-
-```
-                [Dir 1, Dir 2, Dir 3, ..., Dir N]
-                              |
-                    Split ranks in N subgroups
-        ______________________|_____________________
-        |                     |                     |
-    sub group 1               :                 sub group N
-        |                     :                     |
- dataloader[Dir 1]            :               dataloader[Dir N]
-        |                     :                     |
- EchoProcess[DL^]             :               EchoProcess[DL^]
-   _____|_____                :                _____|_____
-   |    |    |                :                |    |    |
-  T1   T2    T3                               T1   T2    T3
-
-```
-How to gather results after this?
-
-If only one file/directory -> let Hardtarget do the
-
-Add check that if args.files are multiple directories then split as below!
-
-directories = [n for n in files if n.is_dir()]
-n_directories = len(directories) if len(directories) != 0 else 1
-
-comm = get_mpi()
-subgroup = comm.rank % n_directories
-sub_comm = comm.Split(color=subgroup, key=comm.rank)
-
-data = RadarDef().load_data(directories[subgroup])
-"""
-
-
 def main(args: argparse.Namespace) -> None:
 
     if args.plot_output:
