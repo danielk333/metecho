@@ -83,9 +83,9 @@ def event_search(
     if comm.rank == 0:
         if output:
             # No chunksize so will ju be one object
-            echo_result: tuple[EchoSearchOutArgs, ExpDef, EchoSearchCfgParams, EchoSearchProParams] = list(
+            echo_result: tuple[EchoSearchOutArgs, ExpDef, EchoSearchCfgParams, EchoSearchProParams] = (
                 hardtarget.load_analysed_data(results["file_dir"], method=AnalysisMethod.echo_search)
-            )[0]
+            )
             res_out, exp, _, _ = echo_result
         else:
             # Gather data from echo search
