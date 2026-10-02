@@ -11,6 +11,18 @@ from metecho.events.types import EventCriteriaCfg, EventSearchCfg, EventSelectCf
 def extract_event_search_configurations(
     config: dict | Path,
 ) -> tuple[EventSearchCfg, EventCriteriaCfg, EventSelectCfg, EchoSearchCfgParams]:
+    """
+
+    From given path or dictionary extract configuration parameters.
+
+    Args:
+        config: Path to configuration file (.ini) or a dictornay containing keywords of
+                configuration parameters.
+    Returns:
+        Event search, Event criteria, Event select and Echo search configurations.
+
+    """
+
     if isinstance(config, Path):
         event_search_cfg = EventSearchCfg(
             **extract_config_section(config, section="event_search", cfg_type=EventSearchCfg)
@@ -25,20 +37,24 @@ def extract_event_search_configurations(
             **extract_config_section(config, section=None, cfg_type=EchoSearchCfgParams)
         )
     else:
-        event_search_cfg = extract_config_from_dict(config, EventSearchCfg)
-        event_criteria_cfg = extract_config_from_dict(config, EventCriteriaCfg)
-        event_select_cfg = extract_config_from_dict(config, EventSelectCfg)
-        echo_search_cfg = extract_config_from_dict(config, EchoSearchCfgParams)
+        event_search_cfg = extract_config_from_dict(config, EventSearchCfg)  # type: ignore[type-var]
+        event_criteria_cfg = extract_config_from_dict(config, EventCriteriaCfg)  # type: ignore[type-var]
+        event_select_cfg = extract_config_from_dict(config, EventSelectCfg)  # type: ignore[type-var]
 
     return event_search_cfg, event_criteria_cfg, event_select_cfg, echo_search_cfg
 
 
-def generate_default_configurations(exp_def: ExpDef):
+def generate_default_configurations(
+    exp_def: ExpDef,
+) -> tuple[EventSearchCfg, EventCriteriaCfg, EventSelectCfg, EchoSearchCfgParams]:
+    """
+    Generate default configurations based on the experiment definition.
+    """
 
-    rx_start_samp = exp_def.t_rx_start_usec / exp_def.t_samp_usec
-    rx_end_samp = exp_def.t_rx_end_usec / exp_def.t_samp_usec
-    tx_start_samp = exp_def.t_tx_start_usec / exp_def.t_samp_usec
-    tx_end_samp = exp_def.t_tx_end_usec / exp_def.t_samp_usec
+    rx_start_samp = int(exp_def.t_rx_start_usec / exp_def.t_samp_usec)
+    rx_end_samp = int(exp_def.t_rx_end_usec / exp_def.t_samp_usec)
+    tx_start_samp = int(exp_def.t_tx_start_usec / exp_def.t_samp_usec)
+    tx_end_samp = int(exp_def.t_tx_end_usec / exp_def.t_samp_usec)
 
     rx_samps = rx_end_samp - rx_start_samp
     tx_samps = tx_end_samp - tx_start_samp

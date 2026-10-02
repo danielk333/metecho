@@ -32,7 +32,7 @@ def main(args: argparse.Namespace) -> None:
 
     data = comm.bcast(data, root=0)
 
-    events, echo, noise = event_search(
+    events, echo, _ = event_search(
         data,
         Path(args.config) if args.config else None,
         start_time=args.start_time,
@@ -70,37 +70,14 @@ def parser_build(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         default=None,
         help="The directory to where you want to save events",
     )
-    parser.add_argument(
-        "-P",
-        "--plot",
-        action="store_true",
-        help="Shows plots of the files as it runs. Warning: \
-                        Currently it will pause upon each render which must be closed for it to continue.",
-    )
-    parser.add_argument(
-        "-Ps",
-        "--plot-save",
-        action="store_true",
-        help="Saves image to the output folder if set.",
-    )
-    parser.add_argument(
-        "-q",
-        "--sequential",
-        action="store_true",
-        help="Make sure raw data files are analyzed sequentially and events \
-                        spanning multiple files are correctly identified.",
-    )
-    parser.add_argument(
-        "-b",
-        "--best_data",
-        action="store_true",
-        help="Stores best data in pickle if set.",
-    )
+    parser.add_argument("-P", "--plot", action="store_true", help="Shows plots of the result")
+
     parser.add_argument("--config", default=None, type=str, help="path to event search config file, optional")
     parser.add_argument("-s", "--start_time", default=None, type=str)
     parser.add_argument("-e", "--end_time", default=None, type=str)
     parser.add_argument("--relative_time", action="store_true")
     parser.add_argument("-p", "--progress", action="store_true", help="enable progress bar")
+    parser.add_argument("-i", "--impl", default=None, type=str)
     parser.add_argument("data", help="path to directory to analyse")
     return parser
 

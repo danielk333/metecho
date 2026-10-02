@@ -13,6 +13,8 @@ def cluster(
 ) -> npt.NDArray[np.int64]:
     """
 
+    From a array of indicies with detected objects separate them into individual events.
+
     Args:
         event_indices: Bool array marking the ipps with detected event.
         best_doppler: Best doppler array from echo search.

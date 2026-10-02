@@ -10,4 +10,3 @@ class Model(ABC):
         self, t: npt.NDArray[np.float64] | npt.NDArray[np.int64]
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Evalutate over time t"""
-        pass

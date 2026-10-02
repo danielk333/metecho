@@ -1,1 +1,1 @@
-from .linear_motion import LinearMotion, ExpVelocity
+from .linear_motion import ExpVelocity, LinearMotion

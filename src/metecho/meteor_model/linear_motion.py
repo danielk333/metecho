@@ -45,14 +45,12 @@ class LinearMotion(Model):
     @abstractmethod
     def velocity(self, t: npt.NDArray[np.float64] | npt.NDArray[np.int64]) -> npt.NDArray[np.float64]:
         """Velocity at time t"""
-        pass
 
     @abstractmethod
     def integral_velocity(
         self, t: npt.NDArray[np.float64] | npt.NDArray[np.int64]
     ) -> npt.NDArray[np.float64]:
         """Displacement at time t"""
-        pass
 
 
 class ExpVelocity(LinearMotion):

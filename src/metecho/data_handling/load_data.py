@@ -21,7 +21,7 @@ def load_events(path: Path) -> Events:
     return events
 
 
-def load_noise(path, Path) -> GaussianNoiseChunks:
+def load_noise(path: Path) -> GaussianNoiseChunks:
     with h5py.File(path, "r") as file:
         noise = load_object_from_group(file, GaussianNoiseChunks)
 
@@ -64,7 +64,7 @@ def load_object_from_group(group: h5py.Group, object_type: type[GenericObject]) 
                 data = [d.decode() for d in data]
 
             if data_type == np.datetime64:
-                data = data  # Convert from string to datetime
+                data = np.datetime64(data)
             elif is_namedtuple(data_type) and isinstance(data, str):
                 a = data.strip("{}")
                 d = dict(item.split(": ") for item in a.split(", "))
@@ -76,7 +76,7 @@ def load_object_from_group(group: h5py.Group, object_type: type[GenericObject]) 
             if data_type.__name__ == "list":
                 sub_type = data_type.__args__[0]
                 sub_data = []
-                for sub_key in h5_section.keys():
+                for sub_key in h5_section:
                     # list of dataclass or named tuple
                     if is_dataclass(sub_type) or is_namedtuple(sub_type):
                         sub_data.append(load_object_from_group(h5_section[sub_key], sub_type))

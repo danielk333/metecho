@@ -1,6 +1,5 @@
 import datetime as dt
 from pathlib import Path
-from typing import Optional
 
 import hardtarget
 import matplotlib.pyplot as plt
@@ -15,9 +14,9 @@ from metecho.events.types import Echo, Events
 def plot_events(
     echo: Echo,
     events: Events,
-    data: Optional[DataLoader] = None,
+    data: DataLoader | None = None,
     save_as_image: bool = False,
-    save_location: Optional[str | Path] = None,
+    save_location: str | Path | None = None,
 ) -> None:
     """
     Plot event detections along with the raw data.
@@ -111,7 +110,7 @@ def plot_events(
     start_ipps = [event.start_ipp for event in events.meteors]
     end_ipps = [event.end_ipp for event in events.meteors]
 
-    colors = plt.cm.rainbow(np.linspace(0, 1, len(events.meteors)))  # type: ignore[attr-defined]
+    colors = plt.cm.rainbow(np.linspace(0, 1, len(events.meteors)))
 
     for rows in axs:
         for ax in rows:
@@ -125,11 +124,11 @@ def plot_events(
         for ax in axs[0, 1:]:
             ax.remove()
         long_plot_ax = fig.add_subplot(long_plot[0, 1:])
-        long_plot_ax, mesh = hardtarget.plotting.rti(
+        long_plot_ax, _ = hardtarget.plotting.rti(
             long_plot_ax,
             data,
-            start_time=events.event_search_start_us,
-            end_time=events.event_search_end_us,
+            start_time=events.event_search_start_us * 1e-6,
+            end_time=events.event_search_end_us * 1e-6,
             relative_time=False,
             colorbar=False,
             log=True,
@@ -137,14 +136,16 @@ def plot_events(
         for start, stop, color in zip(start_ipps, end_ipps, colors):
             long_plot_ax.axvspan(start, stop, facecolor=color, alpha=0.4)
 
-    # fig.tight_layout()
+    fig.tight_layout()
+
     if save_as_image and save_location:
         save_location = Path(save_location)
         if "." in str(save_location):
             save_location = save_location.parent
         if not save_location.is_dir():
-            save_location.mkdir(parents=True)
-        save_location = save_location / (data_path + ".png")
+            save_location.mkdir(parents=True, exist_ok=True)
+
+        save_location = save_location / f"events_{Events.event_search_start_us}.png"
         fig.savefig(save_location)
 
     plt.show()

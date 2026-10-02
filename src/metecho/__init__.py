@@ -4,14 +4,8 @@ import ctypes
 import pathlib
 import sysconfig
 
-from . import (
-    estimation,
-    events,
-    meteor_model,
-    meteoroid_streams,
-    plot,
-    tools,
-)
+from . import estimation, events, meteor_model, meteoroid_streams, noise, plot, tools
+from .events import event_search
 from .tools import profiling
 
 # Expose package upon import

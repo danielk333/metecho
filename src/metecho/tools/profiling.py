@@ -11,7 +11,7 @@ import os
 import pathlib
 import time
 from functools import wraps
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 try:
     import yappi
@@ -54,11 +54,11 @@ def profile() -> None:
 
 
 @check_yappi
-def get_profile(modules: Optional[list[str]] = None) -> tuple[yappi.YFuncStats, float]:
+def get_profile(modules: list[str] | None = None) -> tuple[yappi.YFuncStats, float]:
     if modules is None:
         modules = ["pyant"]
     stats = yappi.get_func_stats(
-        filter_callback=lambda x: any(list(_path_to_module(x.module).startswith(mod) for mod in modules)),
+        filter_callback=lambda x: any(_path_to_module(x.module).startswith(mod) for mod in modules),
     )
     stats = stats.sort("ttot", "desc")
 
@@ -66,7 +66,7 @@ def get_profile(modules: Optional[list[str]] = None) -> tuple[yappi.YFuncStats, 
     return stats, total
 
 
-def print_profile(stats: yappi.YFuncStats, total: Optional[float] = None) -> None:
+def print_profile(stats: yappi.YFuncStats, total: float | None = None) -> None:
     header = [
         "Name",
         "Module",
@@ -104,8 +104,7 @@ def print_profile(stats: yappi.YFuncStats, total: Optional[float] = None) -> Non
     ]
     for data in datas:
         for ind in range(3):
-            if column_sizes[ind] < len(data[ind]):
-                column_sizes[ind] = len(data[ind])
+            column_sizes[ind] = max(column_sizes[ind], len(data[ind]))
 
     _str = " | ".join([f"{title:^{size}}" for title, size in zip(header, column_sizes)])
     print(_str)

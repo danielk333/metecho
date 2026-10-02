@@ -7,13 +7,17 @@ from metecho.events.types import Echo, EventCriteriaCfg
 
 
 class SearchObject(ABC):
+    """
+    Generic class for a search filter.
+
+    """
+
     def __init__(self) -> None:
         super().__init__()
 
     @abstractmethod
     def search(self, event_search_out: Echo, config: EventCriteriaCfg) -> npt.NDArray[np.bool]:
         """Searches the data and returns an array of booleans of where the search function is fullfilled"""
-        pass
 
     @property
     @abstractmethod
@@ -138,7 +142,7 @@ class MinDopAllowed(SearchObject):
         return True
 
     def search(self, event_search_out: Echo, config: EventCriteriaCfg) -> npt.NDArray[np.bool]:
-        criteria = np.array(((np.abs(event_search_out.best_doppler)) > config.min_dop_allowed))
+        criteria = np.array((np.abs(event_search_out.best_doppler)) > config.min_dop_allowed)
         return criteria
 
 

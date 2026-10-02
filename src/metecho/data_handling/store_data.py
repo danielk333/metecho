@@ -80,17 +80,18 @@ def store_params(group: h5py.Group | h5py.File, object: Union[NamedTuple, IsData
                 sub_group = group.create_group(key)
                 store_params(sub_group, data)
                 continue
-            elif (isinstance(data, list) or isinstance(data, tuple)) and len(data) > 0:
-                if is_dataclass(data[0]) or is_namedtuple(type(data[0])):
-                    list_group = group.create_group(key)
+            elif (
+                isinstance(data, (list, tuple))
+                and len(data) > 0
+                and (is_dataclass(data[0]) or is_namedtuple(type(data[0])))
+            ):
+                list_group = group.create_group(key)
 
-                    for i, data_point in enumerate(data):
-                        if is_dataclass(data_point) or is_namedtuple(type(data_point)):
-                            list_key = key + f"_{i}"
-                            sub_group = list_group.create_group(list_key)
-                            store_params(sub_group, data_point)
-                    continue
-                else:
-                    data = data
+                for i, data_point in enumerate(data):
+                    if is_dataclass(data_point) or is_namedtuple(type(data_point)):
+                        list_key = key + f"_{i}"
+                        sub_group = list_group.create_group(list_key)
+                        store_params(sub_group, data_point)
+                continue
 
             group.create_dataset(key, data=data)

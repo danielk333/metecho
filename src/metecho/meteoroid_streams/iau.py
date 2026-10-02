@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import LiteralString, Optional
+from typing import LiteralString
 
 import pandas
 import requests
@@ -11,7 +11,7 @@ IAU_SHOWER_URL = "http://www.ta3.sk/IAUC22DB/MDC2007/Etc/streamfulldata.txt"
 IAU_DEFAULT_LOCATION = Path.home() / "tmp" / "iau_meteoroid_stream_data.txt"
 
 
-def download_streams(target_path: Optional[Path] = None) -> Path:
+def download_streams(target_path: Path | None = None) -> Path:
     logger.info("Downloading IAU meteoroid streams list...")
 
     if target_path is None:
@@ -28,7 +28,7 @@ def download_streams(target_path: Optional[Path] = None) -> Path:
 
 
 def read_streams_data(path: Path) -> tuple[pandas.DataFrame, LiteralString]:
-    """ """
+    """TODO Docstring"""
     if pandas is None:
         raise ImportError("pandas import failed, install extras to use this function")
 
@@ -89,7 +89,7 @@ def read_streams_data(path: Path) -> tuple[pandas.DataFrame, LiteralString]:
     return data, meta
 
 
-def get_streams_data(path: Optional[Path] = None) -> tuple[pandas.DataFrame, LiteralString]:
+def get_streams_data(path: Path | None = None) -> tuple[pandas.DataFrame, LiteralString]:
     if path is None:
         path = IAU_DEFAULT_LOCATION
     if not path.is_file():

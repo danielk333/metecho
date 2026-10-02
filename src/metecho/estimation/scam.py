@@ -1,4 +1,4 @@
-from typing import Callable, Optional, TypedDict, Unpack
+from typing import Callable, TypedDict, Unpack
 
 import numpy as np
 import numpy.typing as npt
@@ -39,7 +39,7 @@ class Scam:
         posterior: Callable,
         start: npt.NDArray,
         steps: int,
-        seed: Optional[float | npt.NDArray[np.floating]] = None,
+        seed: float | npt.NDArray[np.floating] | None = None,
     ) -> npt.NDArray:
         if seed is not None:
             seed_state = np.random.seed()
@@ -73,7 +73,7 @@ class Scam:
         for ind in range(run_steps):
             if self.options["progress_bar"]:
                 pbar.update(1)
-                pbar.set_description("Sampling log-posterior = {:<10.3f} ".format(logpost))
+                pbar.set_description(f"Sampling log-posterior = {logpost:<10.3f} ")
 
             xtry = np.copy(xnow)
 
@@ -87,9 +87,7 @@ class Scam:
             logpost_try = posterior(xtry)
             alpha = np.log(np.random.rand(1))
 
-            if logpost_try > logpost:
-                _accept = True
-            elif (logpost_try - alpha) > logpost:
+            if logpost_try > logpost or (logpost_try - alpha) > logpost:
                 _accept = True
             else:
                 _accept = False
@@ -122,7 +120,7 @@ class Scam:
                 _proposal_cov = np.corrcoef(_data)
 
                 if not np.any(np.isnan(_proposal_cov)):
-                    eigs, proposal_axis = np.linalg.eig(_proposal_cov)
+                    eigs, proposal_axis = np.linalg.eig(_proposal_cov)  # type: ignore[assignment]
                     proposal_cov = np.diag(eigs)
 
             chain[:, ind] = xnow

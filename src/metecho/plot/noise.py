@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 
-from src.metecho.noise.types import GaussianNoiseChunks
+from metecho.noise.types import GaussianNoiseChunks
 
 
 def plot_gaussian_noise(noise: GaussianNoiseChunks) -> None:
-    fig, axs = plt.subplots()
+    _, axs = plt.subplots()
 
     axs.plot(noise.mean)
 

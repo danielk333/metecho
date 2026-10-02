@@ -60,8 +60,7 @@ def calc_gaussian_noise_batch_chunks(
         raise ValueError("mean and std dev those not have the same amount of batches")
 
     # If chunk size is larger than the size of the input, estimate over the available data
-    if len(mean_per_batch) < chunk_size:
-        chunk_size = len(mean_per_batch)
+    chunk_size = min(chunk_size, len(mean_per_batch))
 
     # Calculate what does not fit in the chunks
     remenants = len(mean_per_batch) % chunk_size

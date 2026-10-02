@@ -2,7 +2,6 @@ import datetime as dt
 import logging
 import math
 from pathlib import Path
-from typing import Optional
 
 import hardtarget
 import numpy as np
@@ -24,7 +23,7 @@ from metecho.events.types import (
     EventSearchCfg,
     EventSelectCfg,
 )
-from metecho.noise import calc_noise
+from metecho.noise import calc_gaussian_noise_batch_chunks
 from metecho.noise.types import GaussianNoiseChunks
 
 from . import event_select, search_objects
@@ -34,17 +33,39 @@ logger = logging.getLogger(__name__)
 
 def event_search(
     data: DataLoader,
-    config: Optional[
-        tuple[EventSearchCfg, EventCriteriaCfg, EventSelectCfg, EchoSearchCfgParams] | dict | Path
-    ] = None,
-    start_time: Optional[np.datetime64 | int | str | dt.datetime] = None,
-    end_time: Optional[np.datetime64 | int | str | dt.datetime] = None,
+    config: tuple[EventSearchCfg, EventCriteriaCfg, EventSelectCfg, EchoSearchCfgParams]
+    | dict
+    | Path
+    | None = None,
+    start_time: np.datetime64 | int | str | dt.datetime | None = None,
+    end_time: np.datetime64 | int | str | dt.datetime | None = None,
     relative_time: bool = False,
-    output: Optional[str | Path] = None,
+    output: str | Path | None = None,
     implementation: Impl | None = None,
     progress: bool | CommBar = False,
     comm: CommObject = CommMock(),
 ) -> tuple[Events, Echo, GaussianNoiseChunks]:
+    """
+    Runs a echo search to identify meteor events.
+
+    Args:
+        data: Data loader to the data that shall be analysed.
+        config (optional): Path to a configuration file, a dict with the config parameters or a
+                           tuple containing the event search, criteria, select and echo search
+                           cfg. If not set the a configuration will automatically be generated
+                           based on the experiment parameters (from the dataloader).
+        start_time (optional): Start time of analysis, datetime object, date string or seconds since epoch.
+        end_time (optional): End time of analysis,datetime object, date string or seconds since epoch.
+        relative_time (optional): If to use relative time, start and end time must be specified in int or float then.
+        output (optional): Output directory for the analysed files, if None no files will be saved.
+                           Path will be output/YYYY-MM-DD/HH-00-00.
+        implementation (optional): Implementation of the method to be used during the echo search (Numpy/Cuda/C),
+                                will override any implementation defined in the config params.
+        progress (optional): If a progress bar should be visualized.
+        comm (optional): Mpi communication object if analysis is expected to run on MPI or a specific Comm object.
+    Returns:
+        Detected Events, Echo data and the Gaussian Noise
+    """
 
     if comm.rank == 0:
         if isinstance(config, tuple):
@@ -58,7 +79,7 @@ def event_search(
                 extract_event_search_configurations(config)
             )
     else:
-        event_search_cfg = event_criteria_cfg = event_select_cfg = echo_search_cfg = None
+        event_search_cfg = event_criteria_cfg = event_select_cfg = echo_search_cfg = None  # type: ignore[assignment]
 
     event_search_cfg = comm.bcast(event_search_cfg, root=0)
     event_criteria_cfg = comm.bcast(event_criteria_cfg, root=0)
@@ -89,9 +110,7 @@ def event_search(
             res_out, exp, _, _ = echo_result
         else:
             # Gather data from echo search
-            echo_result: tuple[EchoSearchOutArgs, ExpDef, EchoSearchCfgParams, EchoSearchProParams] = (
-                hardtarget.stack_analysed_data(results["data"])
-            )
+            echo_result = hardtarget.stack_analysed_data(results["data"])
             res_out, exp, _, _ = echo_result
 
         echo = echo_post_process(
@@ -101,7 +120,10 @@ def event_search(
         )
 
         noise = calculate_noise(
-            echo_search_analysis=res_out, config=event_search_cfg, exp_def=exp, progress=progress
+            echo_search_analysis=res_out,
+            chunk_size=event_search_cfg.noise_chunk_size,
+            exp_def=exp,
+            progress=progress,
         )
 
         if output:
@@ -173,7 +195,7 @@ def echo_post_process(
     config: EventSearchCfg,
 ) -> Echo:
     """
-    Post processing of echo search to get data
+    Post processing of echo search.
 
     Args:
         echo_search_analysis: Output from hardtarget echo search
@@ -206,8 +228,8 @@ def echo_post_process(
     start_std = np.std(start_window, axis=1)
 
     # Coherrence
-    doppler_coherrence = np.sum(doppler_std < config.dop_std_coherr / len(doppler_std))
-    start_coherrence = np.sum((start_std < (config.start_std_coherr / len(start_std))))
+    doppler_coherrence = int(np.sum(doppler_std < config.dop_std_coherr / len(doppler_std)))
+    start_coherrence = int(np.sum(start_std < (config.start_std_coherr / len(start_std))))
 
     # Gaussian noise
     _coherent_signal_indicator = np.argwhere(
@@ -239,15 +261,26 @@ def echo_post_process(
 def calculate_noise(
     echo_search_analysis: EchoSearchOutArgs,
     exp_def: ExpDef,
-    config: EventSearchCfg,
+    chunk_size: int,
     progress: bool | CommBar = False,
 ) -> GaussianNoiseChunks:
+    """
+    Calculate the gaussian noise from a echo search.
 
-    mean, std_dev, confidence_interval = calc_noise.calc_gaussian_noise_batch_chunks(
+    Args:
+        echo_search_analysis: Output from a echo search (hardtarget)
+        exp_def: Experiment parameters.
+        chunk_size: Number of ipps to calculate each block of gaussian noise over.
+        progress (optional): If a progress bar should be visualized.
+    Returns.
+        The gaussian noise over each chunk.
+    """
+
+    mean, std_dev, confidence_interval = calc_gaussian_noise_batch_chunks(
         mean_per_batch=echo_search_analysis.mean,
         std_dev_per_batch=echo_search_analysis.std_dev,
         batch_size=exp_def.ipp_samps,
-        chunk_size=config.noise_chunk_size,
+        chunk_size=chunk_size,
         progress=progress,
     )
 
@@ -256,7 +289,7 @@ def calculate_noise(
         std_dev=std_dev,
         confidence_interval=confidence_interval,
         epoch_us=echo_search_analysis.epoch_us,
-        chunk_size_usec=config.noise_chunk_size * exp_def.ipp_samps * exp_def.t_samp_usec,
+        chunk_size_usec=chunk_size * exp_def.ipp_samps * exp_def.t_samp_usec,
     )
 
 
@@ -264,7 +297,6 @@ def meteor_search(
     echo: Echo,
     config: EventCriteriaCfg,
     search_function_objects: list[search_objects.SearchObject] = search_objects.get_defaults(),
-    progress: bool | CommBar = False,
 ) -> tuple[npt.NDArray[np.int64], npt.NDArray[np.int64], npt.NDArray[np.int64]]:
     """
     Searches the echo output and returns which ipps contains meteors and meteor trails based on the result of the search functions.
@@ -322,9 +354,21 @@ def create_event_cluster(
     object_indicies: npt.NDArray,
     type: str,
     config: EventSelectCfg,
-    overlap_correction=False,
+    overlap_correction: bool = False,
 ) -> list[Event]:
-    # Generic function to cover both metors and trails
+    """
+    Generate a event cluster of given type
+
+    Args:
+        echo: Echo
+        object_indicies: Indicies in the Echo where events are present.
+        type: object type, used as a category tag for the event.
+        config: Event select configuration.
+        overlap_correction (optional): If more than one event found, adjust the windows to not make them overlap.
+    Returns:
+        List of Events.
+
+    """
 
     # Cluster the start and end point of each event.
     event_span = event_select.cluster(
@@ -339,7 +383,7 @@ def create_event_cluster(
 
     # If multiple meteors are found, adjust them to not overlap as much
     if events_found > 1 and overlap_correction:
-        for x in range(0, events_found - 1):
+        for x in range(events_found - 1):
             event_overlap = event_span[x, 1] - event_span[x + 1, 0]
             if event_overlap > config.event_max_overlap:
                 contr_IPP = math.floor(0.5 * (event_overlap - config.event_max_overlap))
@@ -348,7 +392,7 @@ def create_event_cluster(
 
     # Create head events
     events: list[Event] = []
-    for x in range(0, events_found):
+    for x in range(events_found):
         event_indices = object_indicies[
             np.logical_and(object_indicies > event_span[x, 0], object_indicies < event_span[x, 1])
         ]
@@ -360,7 +404,7 @@ def create_event_cluster(
             end_ipp=int(event_span[x, 1]),
             event_indices=event_indices,
             event_date=ev_date,
-            event_search_executed=np.datetime64(dt.datetime.now()),
+            event_search_executed=np.datetime64(dt.datetime.now(dt.timezone.utc)),
             type=type,
         )
 
@@ -368,40 +412,3 @@ def create_event_cluster(
 
     events.sort()
     return events
-
-
-"""
-TODO: Check where this was used
-def remove_indices(ignore_indices, mets_found, start_IPP, end_IPP, config):
-
-    #Remoces indices where there's overlap
-
-    remove_indices = []
-    if len(ignore_indices) < 1 or mets_found < 1:
-        return start_IPP, end_IPP
-    for index_1 in range(len(ignore_indices[0])):
-        for index_2 in range(0, mets_found):
-            if (
-                start_IPP[index_2] >= ignore_indices[0][index_1]
-                and end_IPP[index_2] <= ignore_indices[1][index_1]
-            ):
-                remove_indices.append(index_2)
-            elif (
-                (ignore_indices[0][index_1] - start_IPP[index_2])
-                > config.getint("General", "allow_analysis_overlap")
-                and end_IPP(index_2) >= ignore_indices[1, index_1]
-                and start_IPP[index_2] >= ignore_indices[0, index_1]
-            ):
-                remove_indices.append(index_2)
-            elif (
-                (end_IPP[index_2] - ignore_indices[0][index_1])
-                > config.getint("General", "allow_analysis_overlap")
-                and start_IPP[index_2] <= ignore_indices[0][index_1]
-                and end_IPP[index_2] <= ignore_indices[1][index_1]
-            ):
-                remove_indices.append(index_2)
-    for remove_index in remove_indices[::-1]:
-        del start_IPP[remove_index]
-        del end_IPP[remove_index]
-    return start_IPP, end_IPP
-"""

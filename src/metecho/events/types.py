@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple
 
@@ -7,7 +8,8 @@ from hardtarget.echo_search.types import EchoSearchCfgParams
 from radardef.types.types import ExpDef
 
 
-class EventSearchCfg(NamedTuple):
+@dataclass
+class EventSearchCfg:
     dop_std_coherr: float
     start_std_coherr: float
     pow_std_est: float
@@ -19,7 +21,8 @@ class EventSearchCfg(NamedTuple):
     noise_chunk_size: int
 
 
-class EventSelectCfg(NamedTuple):
+@dataclass
+class EventSelectCfg:
     least_ipp_available: int
     min_ipp_separation_split: int
     min_dop_separation_split: float
@@ -30,7 +33,8 @@ class EventSelectCfg(NamedTuple):
     event_max_overlap: int = 10
 
 
-class EventCriteriaCfg(NamedTuple):
+@dataclass
+class EventCriteriaCfg:
     criteria_n: int = 3
     correlation_sigma: float = 1
     totpow_sigma: float = 1.5
@@ -55,9 +59,9 @@ class Echo(NamedTuple):
     tot_pow_filt: npt.NDArray[np.floating]
     best_peak_filt: npt.NDArray[np.complex128]
     start_std: npt.NDArray[np.integer]  # derived from max_pow_ind
-    start_coherrence: np.floating
+    start_coherrence: float
     doppler_std: npt.NDArray[np.integer]  # derived from best_doppler
-    doppler_coherrence: np.floating
+    doppler_coherrence: float
 
 
 class Event(NamedTuple):

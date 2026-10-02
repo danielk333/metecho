@@ -3,19 +3,9 @@ import logging
 import sys
 from typing import Callable
 
-try:
-    from mpi4py import MPI
+from radardef.tools.mpi_tools import get_mpi
 
-    comm = MPI.COMM_WORLD
-except ImportError:
-
-    class COMM_WORLD:
-        rank = 0
-        size = 1
-
-    comm = COMM_WORLD()
-
-from ..tools import profiling
+from metecho.tools import profiling
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +55,7 @@ def main() -> None:
 
     parser = build_parser()
     args = parser.parse_args()
-
+    comm = get_mpi()
     handler = logging.StreamHandler(sys.stdout)
     if comm.size > 1:
         formatter = logging.Formatter(f"RANK{comm.rank} - %(asctime)s %(levelname)s %(name)s - %(message)s")
