@@ -1,0 +1,1 @@
+::: metecho.events.search_objects

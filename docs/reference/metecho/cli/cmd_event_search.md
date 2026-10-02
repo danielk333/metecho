@@ -1,0 +1,1 @@
+::: metecho.cli.cmd_event_search

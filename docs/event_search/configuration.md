@@ -1,0 +1,3 @@
+# Event search configuration
+
+TODO

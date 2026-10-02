@@ -1,0 +1,96 @@
+site_name: metecho
+
+theme:
+  name: "material"
+  logo: assets/logo.png
+  favicon: assets/logo.png
+  features:
+    - navigation.instant
+    - navigation.path
+    - navigation.top
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: "#002d72"
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: "#002d72"
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/danielk333/metecho
+
+extra_css:
+  - assets/style.css
+
+plugins:
+  - search
+  - section-index
+  - gen-files:
+      scripts:
+        - docs/scripts/generate_api_docs.py
+  - literate-nav:
+      nav_file: nav.md
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            docstring_section_style: table
+            show_docstring_functions: true
+            show_docstring_modules: true
+            show_docstring_description: true
+            inherited_members: true
+            parameter_headings: true
+            type_parameter_headings: true
+            show_symbol_type_toc: true
+            separate_signature: true
+            show_signature_annotations: true
+            show_signature_type_parameters: true
+            summary: true
+  - mkdocs-jupyter:
+      execute: true
+      execute_ignore:
+        - TODO
+
+      include_source: false
+      ignore: ["_wip*"]
+      allow_errors: false
+      remove_tag_config:
+        remove_input_tags:
+          - hide_code
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - javascripts/config.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+nav:
+  - Home: index.md
+  - Usage:
+      - Install: usage/install.md
+      - CLI: usage/cli.md
+  - Event Search:
+      - Event Search: event_search/event_search.md
+      - Configuration: event_search/configuration.md
+  - Reference: reference/
+  - Examples:
+      - Event search: examples/event_search.py
+      - Meteoroid streams: examples/iau_showers.py
+      - Meteor models: examples/meteor_models.py

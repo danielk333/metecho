@@ -1,0 +1,1 @@
+::: metecho.meteor_model.linear_motion
