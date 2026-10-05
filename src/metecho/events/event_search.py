@@ -200,7 +200,7 @@ def echo_post_process(
     Args:
         echo_search_analysis: Output from hardtarget echo search
         exp_def: Experiment definition
-        config : The search configuration
+        config: The search configuration
 
     Returns:
         Collected analysis from the echo search

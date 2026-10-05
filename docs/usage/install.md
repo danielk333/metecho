@@ -3,7 +3,7 @@
 ---
 
 !!! note
-metecho installation is only supported on Linux
+    metecho installation is only supported on Linux
 
 ---
 

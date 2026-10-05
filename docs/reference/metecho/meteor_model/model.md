@@ -1,1 +1,0 @@
-::: metecho.meteor_model.model

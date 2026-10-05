@@ -10,20 +10,39 @@ from radardef.types.types import ExpDef
 
 @dataclass
 class EventSearchCfg:
+    """
+    Args:
+        dop_std_coherr: Threshold for the moving Doppler standard deviation to be considered coherent.
+        start_std_coherr: Threshold for the moving range (max correlation index) standard deviation to be considered coherent.
+        power_std_est: The number of standard deviations above the mean noise power used as a threshold to filter out Gaussian noise.
+        corr_filter_limit: The correlation threshold used to separate coherent signals from background Gaussian noise.
+        move_std_window:  Sliding windown size for standard deviation calculations.
+        noise_chunk_size: The number of IPPs that each noise calculation segment should span.
+    """
+
     dop_std_coherr: float
     start_std_coherr: float
     pow_std_est: float
-    pow_std_filt: float
-    allow_analysis_overlap: int
     corr_filter_limit: float
-    noise_time_window_sec: float
     move_std_window: int
     noise_chunk_size: int
 
 
 @dataclass
 class EventSelectCfg:
-    least_ipp_available: int
+    """
+    Args:
+        min_ipps: Least amount of ipps available to create a event.
+        min_ipp_separation_split: Least amount of ipps between sightings for them to be qualified as different events.
+        min_dop_separation_split: Least difference in doppler between sightings for them to be qualified as different events.
+        min_range_separation_split: Least difference in range between sightings for them to be qualified as different events.
+        ipp_extend: Ipp buffer to add around a event window.
+        smoothing_window: Window size for savgol filter when smoothing doppler and range.
+        polyorder: Order of the polynomial used to fit the samples within the moving window.
+        event_max_overlap: Maximum ipp overlap of windows before merging them to one.
+    """
+
+    min_ipps: int
     min_ipp_separation_split: int
     min_dop_separation_split: float
     min_range_separation_split: float
@@ -35,6 +54,22 @@ class EventSelectCfg:
 
 @dataclass
 class EventCriteriaCfg:
+    """
+    Args:
+        criteria_n: Number of search criteria that must be fulfilled per index to classify a detection as an event.
+        correlation_sigma:  Number of standard deviations above the mean filtered peak used as a threshold for cross-correlation.
+        totpow_sigma:  Number of standard deviations above the mean filtered total power used as a threshold.
+        doppler_std_sigma: Multiplier for the standard deviation of best Doppler used to threshold the Doppler standard deviation.
+        start_std_sigma:  Multiplier for the standard deviation of max correlation index used to threshold the range standard deviation.
+        doppler_sigma: Number of standard deviations used to define the upper and lower bounds around the mean Doppler.
+        ind_pm: The index tolerance (plus/minus) relative to the mean correlation index.
+        min_start_allowed: Minimum tolerated start sample within the ipp (typically the tx start sample)
+        max_start_allowed: Maximum tolerated start sanoke within the ipp.
+        min_dop_allowed: Minimum doppler tolerated.
+        start_std_coherr_percent: The minimum allowed percentage level of coherence for the range (max correlation index).
+        dop_std_coherr_percent: The minimum allowed percentage level of coherence for the Doppler signal.
+    """
+
     criteria_n: int = 3
     correlation_sigma: float = 1
     totpow_sigma: float = 1.5

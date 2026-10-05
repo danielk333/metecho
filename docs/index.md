@@ -8,6 +8,8 @@
 Metecho (Radar meteor echo analysis toolbox) is a library to support meteor analysis. At time writing this
 it supports event search and some simple meteor models.
 
+---
+
 ## Installation
 
 To install, ensure dependencies `gcc`, `libfftw3-dev`, and `libhdf5-dev` are
@@ -31,6 +33,8 @@ Read the CLI description
 ```bash
    metecho -h
 ```
+
+---
 
 ## Usage
 
@@ -58,10 +62,14 @@ options:
   -v, --verbose        Increase output verbosity
 ```
 
+---
+
 ## Getting Help
 
 If you have questions about using metecho please open a [GitHub Issue](https://github.com/danielk333/metecho/issues) or email the [metecho
 developers](mailto:daniel.kastinen@irf.se)
+
+---
 
 ## Contributing
 

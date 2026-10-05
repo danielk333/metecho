@@ -63,10 +63,7 @@ def generate_default_configurations(
         dop_std_coherr=7e3,
         start_std_coherr=13,
         pow_std_est=3,
-        pow_std_filt=2,
-        allow_analysis_overlap=3,
         corr_filter_limit=0.5,
-        noise_time_window_sec=1,
         move_std_window=10,
         noise_chunk_size=100,
     )
@@ -87,7 +84,7 @@ def generate_default_configurations(
     )
 
     event_select_cfg = EventSelectCfg(
-        least_ipp_available=5,
+        min_ipps=5,
         min_ipp_separation_split=20,
         min_dop_separation_split=10 * 1e3 * exp_def.radar_frequency * 1e6 / c,
         min_range_separation_split=4,

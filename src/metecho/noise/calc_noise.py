@@ -11,7 +11,7 @@ def calc_gaussian_noise(data: npt.NDArray[np.complex128]) -> GaussianNoise:
     Calculate gaussain noise.
 
     Args:
-        raw_data: Data to calculate noise on.
+        data: Data to calculate noise on.
     Returns:
         Gaussian noise
 

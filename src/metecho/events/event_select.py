@@ -27,7 +27,7 @@ def cluster(
 
     event_ipp_indices: list[tuple[int, int]] = []
 
-    if event_indices.size < config.least_ipp_available:
+    if event_indices.size < config.min_ipps:
         return np.array(event_ipp_indices)
 
     smooth_doppler = savgol_filter(
@@ -61,10 +61,8 @@ def cluster(
         new_indices.append(event_indices[start_index : split_indices[x]])
         start_index = split_indices[x]
 
-    least_ipp_available = config.least_ipp_available
-
     for x in range(len(new_indices)):
-        if len(new_indices[x]) > least_ipp_available:
+        if len(new_indices[x]) > config.min_ipps:
             event_ipp_indices.append(
                 (np.amin(new_indices[x]) - config.ipp_extend, np.amax(new_indices[x]) + config.ipp_extend)
             )

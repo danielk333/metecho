@@ -1,1 +1,0 @@
-::: metecho.plot.event_search

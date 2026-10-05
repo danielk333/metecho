@@ -76,11 +76,11 @@ coverage.xml
 *.mo
 *.pot
 
- # Sphinx documentation
+#docs
 docs/build/
-docs/source/autosummary
-docs/source/autogallery
-docs/source/autopackages
+docs/source/apidoc
+docs/reference/
+site/
 
 # Jupyter Notebook
 .ipynb_checkpoints
