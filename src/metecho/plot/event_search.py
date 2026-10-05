@@ -15,6 +15,7 @@ def plot_events(
     echo: Echo,
     events: Events,
     data: DataLoader | None = None,
+    log: bool = False,
     save_as_image: bool = False,
     save_location: str | Path | None = None,
 ) -> None:
@@ -125,13 +126,13 @@ def plot_events(
             ax.remove()
         long_plot_ax = fig.add_subplot(long_plot[0, 1:])
         long_plot_ax, _ = hardtarget.plotting.rti(
-            long_plot_ax,
-            data,
+            ax=long_plot_ax,
+            data_loader=data,
             start_time=events.event_search_start_us * 1e-6,
             end_time=events.event_search_end_us * 1e-6,
             relative_time=False,
             colorbar=False,
-            log=True,
+            log=log,
         )
         for start, stop, color in zip(start_ipps, end_ipps, colors):
             long_plot_ax.axvspan(start, stop, facecolor=color, alpha=0.4)

@@ -9,6 +9,7 @@ import numpy.typing as npt
 from hardtarget.constants import AnalysisMethod, Impl
 from hardtarget.echo_search.types import EchoSearchCfgParams, EchoSearchOutArgs, EchoSearchProParams
 from radardef.components import DataLoader
+from radardef.radar_def import RadarDef
 from radardef.tools.mpi_tools import CommBar, CommMock, CommObject
 from radardef.types.types import ExpDef
 
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 def event_search(
-    data: DataLoader,
+    data: DataLoader | str | Path,
     config: tuple[EventSearchCfg, EventCriteriaCfg, EventSelectCfg, EchoSearchCfgParams]
     | dict
     | Path
@@ -40,6 +41,7 @@ def event_search(
     start_time: np.datetime64 | int | str | dt.datetime | None = None,
     end_time: np.datetime64 | int | str | dt.datetime | None = None,
     relative_time: bool = False,
+    exp_def: ExpDef | None = None,
     output: str | Path | None = None,
     implementation: Impl | None = None,
     progress: bool | CommBar = False,
@@ -57,6 +59,7 @@ def event_search(
         start_time (optional): Start time of analysis, datetime object, date string or seconds since epoch.
         end_time (optional): End time of analysis,datetime object, date string or seconds since epoch.
         relative_time (optional): If to use relative time, start and end time must be specified in int or float then.
+        exp_def (optional): Custom experiment definitions.
         output (optional): Output directory for the analysed files, if None no files will be saved.
                            Path will be output/YYYY-MM-DD/HH-00-00.
         implementation (optional): Implementation of the method to be used during the echo search (Numpy/Cuda/C),
@@ -68,19 +71,29 @@ def event_search(
     """
 
     if comm.rank == 0:
+        # Extract data
+        if isinstance(data, (str, Path)):
+            data_loader = RadarDef().load_data(Path(data), exp_def=exp_def)
+            if data_loader is None:
+                raise ValueError(f"Not possible to load data file from: {data}")
+        else:
+            data_loader = data
+
+        # Extract configurations
         if isinstance(config, tuple):
             event_search_cfg, event_criteria_cfg, event_select_cfg, echo_search_cfg = config
         elif not config:
             event_search_cfg, event_criteria_cfg, event_select_cfg, echo_search_cfg = (
-                generate_default_configurations(data.exp_def)
+                generate_default_configurations(data_loader.exp_def)
             )
         else:
             event_search_cfg, event_criteria_cfg, event_select_cfg, echo_search_cfg = (
                 extract_event_search_configurations(config)
             )
     else:
-        event_search_cfg = event_criteria_cfg = event_select_cfg = echo_search_cfg = None  # type: ignore[assignment]
+        event_search_cfg = event_criteria_cfg = event_select_cfg = echo_search_cfg = data_loader = None  # type: ignore[assignment]
 
+    data_loader = comm.bcast(data_loader, root=0)
     event_search_cfg = comm.bcast(event_search_cfg, root=0)
     event_criteria_cfg = comm.bcast(event_criteria_cfg, root=0)
     event_select_cfg = comm.bcast(event_select_cfg, root=0)
@@ -88,7 +101,7 @@ def event_search(
 
     # Run echo search
     results = hardtarget.echo_search(
-        data=data,
+        data=data_loader,
         start_time=start_time,
         end_time=end_time,
         relative_time=relative_time,
@@ -120,7 +133,9 @@ def event_search(
         )
 
         noise = calculate_noise(
-            echo_search_analysis=res_out,
+            mean=res_out.mean,
+            std_dev=res_out.std_dev,
+            epoch_us=res_out.epoch_us,
             chunk_size=event_search_cfg.noise_chunk_size,
             exp_def=exp,
             progress=progress,
@@ -167,7 +182,7 @@ def event_search(
             exp_def=exp,
             event_search_start_us=echo.epoch_us,
             event_search_end_us=int(echo.epoch_us + len(echo.max_corr) * exp.t_ipp_usec),
-            file=data.path,
+            file=data_loader.path,
         )
 
         if output:
@@ -259,7 +274,9 @@ def echo_post_process(
 
 
 def calculate_noise(
-    echo_search_analysis: EchoSearchOutArgs,
+    mean: npt.NDArray,
+    std_dev: npt.NDArray,
+    epoch_us: int,
     exp_def: ExpDef,
     chunk_size: int,
     progress: bool | CommBar = False,
@@ -268,7 +285,9 @@ def calculate_noise(
     Calculate the gaussian noise from a echo search.
 
     Args:
-        echo_search_analysis: Output from a echo search (hardtarget)
+        mean: Mean per ipp
+        std_dev: Standard deviation per ipp.
+        epoch_us: Start time (mean[0]) since epoch.
         exp_def: Experiment parameters.
         chunk_size: Number of ipps to calculate each block of gaussian noise over.
         progress (optional): If a progress bar should be visualized.
@@ -276,19 +295,19 @@ def calculate_noise(
         The gaussian noise over each chunk.
     """
 
-    mean, std_dev, confidence_interval = calc_gaussian_noise_batch_chunks(
-        mean_per_batch=echo_search_analysis.mean,
-        std_dev_per_batch=echo_search_analysis.std_dev,
+    mean_batches, std_dev_batches, confidence_interval = calc_gaussian_noise_batch_chunks(
+        mean_per_batch=mean,
+        std_dev_per_batch=std_dev,
         batch_size=exp_def.ipp_samps,
         chunk_size=chunk_size,
         progress=progress,
     )
 
     return GaussianNoiseChunks(
-        mean=mean,
-        std_dev=std_dev,
+        mean=mean_batches,
+        std_dev=std_dev_batches,
         confidence_interval=confidence_interval,
-        epoch_us=echo_search_analysis.epoch_us,
+        epoch_us=epoch_us,
         chunk_size_usec=chunk_size * exp_def.ipp_samps * exp_def.t_samp_usec,
     )
 

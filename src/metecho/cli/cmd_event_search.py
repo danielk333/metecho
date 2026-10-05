@@ -47,11 +47,11 @@ def main(args: argparse.Namespace) -> None:
 
     if args.plot and comm.rank == 0:
         plot_events(
-            echo,
-            events,
-            data if isinstance(data, DataLoader) else None,
-            plot_save,
-            plot_output,
+            echo=echo,
+            events=events,
+            data=data if isinstance(data, DataLoader) else None,
+            save_as_image=plot_save,
+            save_location=plot_output,
         )
 
 

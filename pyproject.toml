@@ -98,7 +98,7 @@ warn_unused_ignores = true
 packages = ["metecho"]
 
 [tool.pytest]
-addopts = ["-v", "--cov"]
+addopts = ["-v"]
 testpaths = ["tests"]
 
 [tool.ruff]
