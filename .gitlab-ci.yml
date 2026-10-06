@@ -46,7 +46,7 @@ pytest:
     - apt-get install -y gcc libfftw3-dev libhdf5-dev mpich
     - uv venv --python $VERSION
     - source .venv/bin/activate
-    - uv pip install .[develop,test,mpi]
+    - uv pip install .[develop,test,mpi,profiling]
     - uv pip install mpich pytest-random-order
     - uv run pytest --cov --random-order-seed=$VERSION
   coverage: /TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/

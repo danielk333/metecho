@@ -1,8 +1,13 @@
-from typing import Callable, TypedDict, Unpack
+import sys
+from typing import Callable, TypedDict
 
 import numpy as np
 import numpy.typing as npt
-from tqdm import tqdm
+
+if (sys.version_info.major, sys.version_info.minor) <= (3, 10):
+    from typing_extensions import Unpack
+else:
+    from typing import Unpack
 
 
 class ScamKwargs(TypedDict, total=False):
@@ -67,13 +72,13 @@ class Scam:
                 not recognized'
             )
 
-        if self.options["progress_bar"]:
-            pbar = tqdm(position=0, total=run_steps)
+        # if self.options["progress_bar"]:
+        #   pbar = tqdm(position=0, total=run_steps)
 
         for ind in range(run_steps):
-            if self.options["progress_bar"]:
-                pbar.update(1)
-                pbar.set_description(f"Sampling log-posterior = {logpost:<10.3f} ")
+            # if self.options["progress_bar"]:
+            #    pbar.update(1)
+            #    pbar.set_description(f"Sampling log-posterior = {logpost:<10.3f} ")
 
             xtry = np.copy(xnow)
 

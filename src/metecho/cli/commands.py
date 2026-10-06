@@ -3,10 +3,6 @@ import logging
 import sys
 from typing import Callable
 
-from radardef.tools.mpi_tools import get_mpi
-
-from metecho.tools import profiling
-
 logger = logging.getLogger(__name__)
 
 COMMANDS: dict[str, dict] = dict()
@@ -15,10 +11,10 @@ COMMANDS: dict[str, dict] = dict()
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Radar meteor echo analysis toolbox")
 
-    parser.add_argument("-p", "--profiler", action="store_true", help="Run profiler")
+    parser.add_argument("--version", action="store_true", help="package version")
     parser.add_argument("-v", "--verbose", help="Increase output verbosity", action="count", default=0)
 
-    subparsers = parser.add_subparsers(help="Avalible command line interfaces", dest="command")
+    subparsers = parser.add_subparsers(help="available command line interfaces", dest="command")
     subparsers.required = True
 
     for name, dat in COMMANDS.items():
@@ -52,38 +48,20 @@ def add_command(
 
 
 def main() -> None:
-
+    """
+    Main parser.
+    """
     parser = build_parser()
     args = parser.parse_args()
-    comm = get_mpi()
-    handler = logging.StreamHandler(sys.stdout)
-    if comm.size > 1:
-        formatter = logging.Formatter(f"RANK{comm.rank} - %(asctime)s %(levelname)s %(name)s - %(message)s")
+
+    if args.command is None:
+        # Handle non-commands
+        if args.version:
+            print(__version__)
+            sys.exit()
+        else:
+            parser.print_help()
     else:
-        formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s - %(message)s")
-    handler.setFormatter(formatter)
-
-    lib_logger = logging.getLogger("metecho")
-    if args.verbose > 0:
-        lib_logger.addHandler(handler)
-        lib_logger.setLevel(logging.INFO)
-    else:
-        logger.addHandler(handler)
-        logger.setLevel(logging.WARNING)
-
-    if args.verbose > 1:
-        logger.info("Logging level set to debug")
-        lib_logger.setLevel(logging.DEBUG)
-
-    if args.profiler:
-        profiling.profile()
-
-    function = COMMANDS[args.command]["function"]
-    logger.info(f"Executing command {args.command}")
-
-    function(args)
-
-    if args.verbose > 0 and args.profiler:
-        stats, total = profiling.get_profile()
-        profiling.print_profile(stats, total=total)
-        profiling.profile_stop()
+        cmd_function = COMMANDS[args.command]["function"]
+        logger.info(f"Executing command {args.command}")
+        cmd_function(args)
