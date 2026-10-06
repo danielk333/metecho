@@ -66,8 +66,12 @@ def calc_gaussian_noise_batch_chunks(
     remenants = len(mean_per_batch) % chunk_size
 
     # Divide into chunks
-    mean_chunks = mean_per_batch[:-remenants].reshape(-1, chunk_size)
-    std_dev_chunks = std_dev_per_batch[:-remenants].reshape(-1, chunk_size)
+    if remenants:
+        mean_chunks = mean_per_batch[:-remenants].reshape(-1, chunk_size)
+        std_dev_chunks = std_dev_per_batch[:-remenants].reshape(-1, chunk_size)
+    else:
+        mean_chunks = mean_per_batch.reshape(-1, chunk_size)
+        std_dev_chunks = std_dev_per_batch.reshape(-1, chunk_size)
 
     # Output arrays
     length = mean_chunks.shape[0] + (1 if remenants else 0)

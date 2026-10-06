@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import numpy.typing as npt
+import pytest
 from hardtarget.data_simulation.simulate_h5 import simulate_h5
 from hardtarget.echo_search.types import EchoSearchOutArgs
 from radardef.radar_def import RadarDef
@@ -107,17 +108,28 @@ def test_calculate_noise():
             0.05891441,
             0.05879873,
         ]
-    )  # most likely shape has to be (x,1), fix that#
+    )
 
-    gaussian_chunks = calculate_noise(mean=mean, std_dev=std_dev, epoch_us=0, exp_def=mu_exp, chunk_size=4)
-    # TODO: NOT DONE
+    gaussian_chunks = calculate_noise(mean=mean, std_dev=std_dev, epoch_us=1000, exp_def=mu_exp, chunk_size=5)
+    np.testing.assert_array_almost_equal(
+        gaussian_chunks.mean, np.array([-0.00068706, -0.00079006, -0.00141561, 0.00024359])
+    )
+    np.testing.assert_array_almost_equal(
+        gaussian_chunks.std_dev, np.array([0.06218262, 0.06183952, 0.06330855, 0.05960062])
+    )
+    assert gaussian_chunks.epoch_us == 1000
+    assert gaussian_chunks.chunk_size_usec == 5 * mu_exp.t_ipp_usec
 
 
+@pytest.mark.skip(reason="Work in progress")
 def test_meteor_search():
+    # TODO
     pass
 
 
+@pytest.mark.skip(reason="Work in progress")
 def test_create_event_cluster():
+    # TODO
     pass
 
 

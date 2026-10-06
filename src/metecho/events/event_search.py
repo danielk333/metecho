@@ -423,7 +423,7 @@ def create_event_cluster(
             end_ipp=int(event_span[x, 1]),
             event_indices=event_indices,
             event_date=ev_date,
-            event_search_executed=np.datetime64(dt.datetime.now(dt.timezone.utc)),
+            event_search_executed=np.datetime64("now", "ms"),
             type=type,
         )
 
