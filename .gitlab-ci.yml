@@ -1,155 +1,160 @@
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
-image: python:3.8.10
+image: python:3.11
 
 stages:
   - test
+  - type_checking
+  - documentation
   - release
-  - deploy
 
-variables:
-  #Change pip's cache directory to be inside 
-  # the project directory since we can
-  # only cache local items.
-  PIP_CACHE_DIR: "${CI_PROJECT_DIR}/.cache/pip"
-  #Use a gitlab variable to securly store the 
-  # user token used to upload to PyPI
-  PYPI_TOKEN: $PYPI_TOKEN
-
-
-
-#Pip's cache doesn't store the python packages
-# https://pip.pypa.io/en/stable/reference/pip_install/#caching
-# If you want to also cache the installed packages, you have to install
-# them in a virtualenv and cache it as well.
-cache:
-  key: "${CI_JOB_NAME}"
-  paths:
-    - .cache/pip
-    - .venv
-
-# #
-# Template information: 
-#   https://docs.gitlab.com/ee/ci/yaml/yaml_specific_features.html
-# #
-
-#Template script for all jobs that installs
-# the package and dependancies into a virtualenv
-.install-deps-template: &install-deps
-  # Print version for debug
-  - python -V
-  # Prepare and activate virtualenv
-  - pip install virtualenv
-  - pip install -U pip
-  - virtualenv venv
-  - source venv/bin/activate
-  - apt update
-  # install the develop dependancies
-  - pip install .[develop]
-  - apt install -y pandoc
-  #install extras dependancies
-  - apt install -y openmpi-bin libopenmpi3 libopenmpi-dev openmpi-bin openmpi-doc
-  #install extras
-  - pip install .[all]
-
-
-default:
-  tags:
-    - IRF
+# Prepare the development environment
+.devsetup:
   before_script:
-    - *install-deps # execute script in alias
+    - python -V
+    - pip install -U pip
+    - python -m venv venv
+    - source venv/bin/activate
+    - apt update
+    - apt install -y gcc libfftw3-dev libhdf5-dev
+    - apt install -y openmpi-bin libopenmpi-dev
+    - pip install .[develop,profiling,mpi]
 
-
-#Template for testing on python images, 
-# extend this for each python-platform 
-# the package is intended to work on
-.py-test-template: &python-test
-  stage: test
-  allow_failure: true
-  script: 
-    - pytest
+# Rules to trigger standard jobs
+.merge_request_rules:
   rules:
+    - if: $CI_MERGE_REQUEST_TITLE =~ /^(\[Draft\]|\(Draft\)|Draft:)/
+      when: never
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "develop"
     - if: $CI_COMMIT_BRANCH == "main"
 
-
-# Run all diagnostics
-diagnostics:
+##### Testing #####
+pytest:
   stage: test
-  script: 
-    - radon cc -a src/metecho/ > radon_cc_report
-    - radon raw -s src/metecho/ > radon_raw_report
-    - radon mi -s src/metecho/ > radon_mi_report
-    - radon hal src/metecho/ > radon_hal_report
-    - coverage run -m pytest > pytest_report || true
-    - coverage report -m > coverage_report
-    - python -m flake8 --extend-exclude venv src/metecho > flake8_report || true
-  allow_failure: true
-  artifacts:
-    paths:
-      - "*_report"
-  rules:
-    - if: $CI_COMMIT_TAG
-
-
-##########################
-## Platforms to test on ##
-#
-# 
-#Official language images, look for the different tagged releases at:
-# https://hub.docker.com/r/library/python/tags/
-# And use the `python-test` alias
-# 
-#To test on OS distributions, find the OS images, e.g:
-# https://hub.docker.com/_/ubuntu
-# and use the `os-test` alias to allow for specific 
-# os-dependancy setup (e.g. gcc or gfortran) before 
-# install of the pacakge trough `before_script`
-# 
-
-# python3.7:
-#   <<: *python-test # Merge the contents of the alias
-#   image: python:3.7
-
-# python3.9:
-#   <<: *python-test # Merge the contents of the alias
-#   image: python:3.9
-
-
-#Build and check integrity of distribution
-package:
-  stage: release
+  image: ghcr.io/astral-sh/uv:bookworm-slim
+  allow_failure: false
+  parallel:
+    matrix:
+      - VERSION: ["3.10", "3.11", "3.12", "3.13"]
   script:
-    - python -m build
-    - python -m twine check dist/*
-  artifacts:
-    paths:
-      - dist/*
+    # Note that the bookworm slim image has mpi compability issues when using openmpi, thus mpich is installed.
+    # Randomizes tests aswell as the mpi tests freezees if run at the same time in parallel
+    - uv python install $VERSION
+    - apt-get update
+    - apt-get -y install git
+    - apt-get install -y gcc libfftw3-dev libhdf5-dev mpich
+    - uv venv --python $VERSION
+    - source .venv/bin/activate
+    - uv pip install .[develop,test,mpi]
+    - uv pip install mpich pytest-random-order
+    - uv run pytest --cov --random-order-seed=$VERSION
+  coverage: /TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/
   rules:
-    - if: $CI_COMMIT_TAG
+    - !reference [.merge_request_rules, rules]
 
-#Compile documentation for publication
+##### Type checking, type hinting , cyclomatic complexity #####
+mypy:
+  stage: type_checking
+  extends:
+    - .devsetup
+  allow_failure: false
+  script:
+    - pip install .[type_checker]
+    - mypy
+  rules:
+    - !reference [.merge_request_rules, rules]
+
+Ruff:
+  stage: type_checking
+  extends:
+    - .devsetup
+  allow_failure: false
+  script:
+    - ruff check
+  rules:
+    - !reference [.merge_request_rules, rules]
+
+cyclomatic-complexity:
+  stage: type_checking
+  extends:
+    - .devsetup
+  allow_failure: false
+  script:
+    - pip install .[type_checker]
+    - xenon src/metecho -m C -a A # Average of a file (-m): max C, Total average (-a): max A
+  rules:
+    - !reference [.merge_request_rules, rules]
+
+##### Documentation #####
+build-docs:
+  stage: documentation
+  extends:
+    - .devsetup
+  allow_failure: false
+  script:
+    - pip install .[documentation]
+    - mkdocs build
+  rules:
+    - !reference [.merge_request_rules, rules]
+
+doc-coverage:
+  stage: documentation
+  extends:
+    - .devsetup
+  variables:
+    DOC_COVERAGE: 0
+    DOC_MIN_COVERAGE: 50
+  script:
+    - pip install .[documentation]
+    - set +e
+    - docstr-coverage src/metecho/
+    - DOC_COVERAGE=$((docstr-coverage src/metecho/ |& grep 'Total coverage') | grep -Eo '[+-]?[0-9]+([.][0-9]+)?')
+    - DOC_COVERAGE=${DOC_COVERAGE%.*}
+    - set -e
+    - >
+      if [ $DOC_MIN_COVERAGE -gt $DOC_COVERAGE ]; then
+        echo "\"Good code is its own best documentation\", too bad we are lacking that. Bump up the documentation coverage!"
+        echo "Total coverage: $DOC_COVERAGE%, Minimum coverage: $DOC_MIN_COVERAGE%"
+        exit 1
+      else
+        echo "Wonderful documentation, future you will thank you!"
+        exit 0
+      fi
+  rules:
+    - !reference [.merge_request_rules, rules]
+
+##### Releasing #####
+# Compile documentation for publication
 pages:
-  stage: deploy
+  stage: release
+  extends: .devsetup
   script:
-    - cd docs
-    - make html
-    - mv build ../public
+    - pip install .[documentation]
+    - mkdocs build --site-dir public
   artifacts:
     paths:
       - public
-  rules:
-    - if: $CI_COMMIT_TAG
+  only:
+    - tags
 
-#Publish package on local PyPI if
-# the commit has a version tag
-# upload:
-#   stage: deploy
-#   script:
-#     - >
-#       TWINE_USERNAME=gitlab-ci-token
-#       TWINE_PASSWORD=$CI_JOB_TOKEN
-#       python -m twine upload
-#       --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi
-#       dist/*
-#   rules:
-#     - if: $CI_COMMIT_TAG
+# Build and check integrity of distribution
+# Then publish package on public PyPI
+pypi:
+  stage: release
+  extends: .devsetup
+  variables:
+    #Use a gitlab variable to securely store the token
+    PYPI_TOKEN: $PYPI_TOKEN
+  script:
+    - python -m build
+    - python -m twine check dist/*
+    - >
+      TWINE_USERNAME=__token__
+      TWINE_PASSWORD=$PYPI_TOKEN
+      python -m twine upload dist/*
+  artifacts:
+    paths:
+      - dist/*
+  only:
+    - tags
