@@ -65,7 +65,7 @@ class Scam:
         if self.options["proposal"] in ["normal", "adaptive"]:
             proposal_mu = np.zeros((n_var,), dtype=np.float64)
             proposal_cov = np.eye(n_var, dtype=np.float64)
-            proposal_axis = np.eye(n_var, dtype=np.float64)
+            proposal_axis: npt.NDArray[np.floating | np.complexfloating] = np.eye(n_var, dtype=np.float64)
         else:
             raise ValueError(
                 f'proposal option "{self.options["proposal"]}"\
@@ -125,7 +125,7 @@ class Scam:
                 _proposal_cov = np.corrcoef(_data)
 
                 if not np.any(np.isnan(_proposal_cov)):
-                    eigs, proposal_axis = np.linalg.eig(_proposal_cov)  # type: ignore[assignment]
+                    eigs, proposal_axis = np.linalg.eig(_proposal_cov)
                     proposal_cov = np.diag(eigs)
 
             chain[:, ind] = xnow
