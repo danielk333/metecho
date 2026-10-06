@@ -1,9 +1,15 @@
 import logging
+import sys
 from pathlib import Path
-from typing import LiteralString
 
 import pandas
 import requests
+
+if (sys.version_info.major, sys.version_info.minor) <= (3, 10):
+    # in python 3.10 there is a bug present for TypedDict
+    from typing_extensions import LiteralString
+else:
+    from typing import LiteralString
 
 logger = logging.getLogger(__name__)
 
