@@ -3,6 +3,8 @@ import logging
 import sys
 from typing import Callable
 
+from metecho import __version__
+
 logger = logging.getLogger(__name__)
 
 COMMANDS: dict[str, dict] = dict()

@@ -1,7 +1,6 @@
 import datetime as dt
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
-from types import get_original_bases
 from typing import Any, ClassVar, NamedTuple, Protocol, Union
 
 import h5py
@@ -10,12 +9,24 @@ import numpy as np
 from metecho.events.types import Events
 from metecho.noise.types import GaussianNoiseChunks
 
+try:
+    # Only available from python 3.12
+    from types import get_original_bases  # type: ignore[attr-defined,unused-ignore]
+
+    def orig_bases(cls: type) -> tuple[Any, ...]:
+        return get_original_bases(cls)
+
+except ImportError:
+
+    def orig_bases(cls: type) -> tuple[Any, ...]:
+        return cls.__orig_bases__  # type: ignore[attr-defined]
+
 
 def is_namedtuple(data_type: Any) -> bool:
     # TODO: Accept and isntance of a object aswell and not just the type
 
     try:
-        return get_original_bases(data_type) == (NamedTuple,)
+        return orig_bases(data_type) == (NamedTuple,)
     except TypeError:
         return False
 
