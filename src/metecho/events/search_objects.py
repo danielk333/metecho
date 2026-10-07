@@ -40,6 +40,7 @@ class XcorrSigma(SearchObject):
         return False
 
     def search(self, event_search_out: Echo, config: EventCriteriaCfg) -> npt.NDArray[np.bool]:
+        """Search for indices where the max correlation per ipp is above the configured threshold"""
         criteria = np.array(
             event_search_out.max_corr
             > (
@@ -60,6 +61,7 @@ class TotpowSigma(SearchObject):
         return False
 
     def search(self, event_search_out: Echo, config: EventCriteriaCfg) -> npt.NDArray[np.bool]:
+        """Search for indices where the total power per ipp is above the configured threshold"""
         criteria = np.array(
             event_search_out.tot_pow
             > (
@@ -80,6 +82,8 @@ class DopplerSigma(SearchObject):
         return False
 
     def search(self, event_search_out: Echo, config: EventCriteriaCfg) -> npt.NDArray[np.bool]:
+        """Search for indices where the best doppler per ipp is within the configurable tolerance"""
+
         self.doppler_coherrence = (
             event_search_out.doppler_coherrence < config.dop_std_coherr_percent
             or event_search_out.start_coherrence < config.start_std_coherr_percent
@@ -113,6 +117,10 @@ class IndPm(SearchObject):
         return False
 
     def search(self, event_search_out: Echo, config: EventCriteriaCfg) -> npt.NDArray[np.bool]:
+        """
+        Search for indicies where the correlation index per ipp is within the configurable tolerance.
+        """
+
         self.doppler_coherrence = (
             event_search_out.doppler_coherrence < config.dop_std_coherr_percent
             or event_search_out.start_coherrence < config.start_std_coherr_percent
@@ -142,6 +150,7 @@ class MinDopAllowed(SearchObject):
         return True
 
     def search(self, event_search_out: Echo, config: EventCriteriaCfg) -> npt.NDArray[np.bool]:
+        """Search for indicies where the best doppler per ipp is above the configurable minimum"""
         criteria = np.array((np.abs(event_search_out.best_doppler)) > config.min_dop_allowed)
         return criteria
 
@@ -156,6 +165,8 @@ class MinStartAllowed(SearchObject):
         return False
 
     def search(self, event_search_out: Echo, config: EventCriteriaCfg) -> npt.NDArray[np.bool]:
+        """Search for indicies where the correlation index is within the configurable threshold"""
+
         criteria = np.logical_and(
             (event_search_out.max_corr_ind >= config.min_start_allowed),
             (event_search_out.max_corr_ind <= config.max_start_allowed),
@@ -164,4 +175,5 @@ class MinStartAllowed(SearchObject):
 
 
 def get_defaults() -> list[SearchObject]:
+    """Get default search object"""
     return [XcorrSigma(), TotpowSigma(), DopplerSigma(), IndPm(), MinDopAllowed(), MinStartAllowed()]

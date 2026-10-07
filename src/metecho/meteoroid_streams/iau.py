@@ -18,6 +18,8 @@ IAU_DEFAULT_LOCATION = Path.home() / "tmp" / "iau_meteoroid_stream_data.txt"
 
 
 def download_streams(target_path: Path | None = None) -> Path:
+    """Download IAU meteoroid streams"""
+
     logger.info("Downloading IAU meteoroid streams list...")
 
     if target_path is None:
@@ -34,7 +36,8 @@ def download_streams(target_path: Path | None = None) -> Path:
 
 
 def read_streams_data(path: Path) -> tuple[pandas.DataFrame, LiteralString]:
-    """TODO Docstring"""
+    """Extract information from a IAU meteoroid streams file"""
+
     if pandas is None:
         raise ImportError("pandas import failed, install extras to use this function")
 
@@ -96,6 +99,7 @@ def read_streams_data(path: Path) -> tuple[pandas.DataFrame, LiteralString]:
 
 
 def get_streams_data(path: Path | None = None) -> tuple[pandas.DataFrame, LiteralString]:
+    """Download and extrect IAU meteoroid streams data"""
     if path is None:
         path = IAU_DEFAULT_LOCATION
     if not path.is_file():

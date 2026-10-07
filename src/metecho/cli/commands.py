@@ -11,6 +11,9 @@ COMMANDS: dict[str, dict] = dict()
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """
+    Build parser object from commands.
+    """
     parser = argparse.ArgumentParser(description="Radar meteor echo analysis toolbox")
 
     parser.add_argument("--version", action="store_true", help="package version")

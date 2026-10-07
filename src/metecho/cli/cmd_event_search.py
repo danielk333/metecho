@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def main(args: argparse.Namespace) -> None:
+    """Event search CLI"""
 
     if args.plot_output:
         plot_save = True

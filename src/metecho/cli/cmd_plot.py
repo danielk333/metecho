@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def main(args: argparse.Namespace) -> None:
+    """Plot CLI"""
 
     load_events(Path(args.file))
 

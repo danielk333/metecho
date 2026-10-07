@@ -124,6 +124,16 @@ def calc_gaussian_noise_batch_chunks(
 def calc_gaussian_noise_from_batches(
     mean_per_batch: npt.NDArray, std_dev_per_batch: npt.NDArray, batch_size: int
 ) -> GaussianNoise:
+    """
+    Calculate Gaussian noise from a number of man and standard deviation batches
+
+    Args:
+        mean_per_batch: Array of means from multiple batches
+        std_dev_per: Array of standard deviations from multiple bathes
+        batch_size: Number of samples of the original batch that the mean and standard deviation was calculated from.
+    Returns:
+        Gaussian noise of the batches.
+    """
 
     mean, std_dev = calc_batch_mean_and_std_dev(mean_per_batch, std_dev_per_batch, batch_size)
 
@@ -141,7 +151,17 @@ def calc_gaussian_noise_from_batches(
 def calc_batch_mean_and_std_dev(
     mean_per_batch: npt.NDArray, std_dev_per_batch: npt.NDArray, samples_per_batch: int
 ) -> tuple[float, float]:
-    # https://stats.stackexchange.com/a/442050
+    """
+    Calculate mean and standard deviation from  batch means and batch standard deviations.
+    see: https://stats.stackexchange.com/a/442050
+
+    Args:
+        mean_per_batch: Array of means from multiple batches
+        std_dev_per: Array of standard deviations from multiple bathes
+    Returns:
+        mean and standard deviation of the batches
+    """
+
     n_batches = len(mean_per_batch)
     mean = np.mean(mean_per_batch)
 

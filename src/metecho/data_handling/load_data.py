@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def load_events(path: Path) -> Events:
+    """Load events from file"""
 
     with h5py.File(path, "r") as file:
         events = load_object_from_group(file, Events)
@@ -22,6 +23,7 @@ def load_events(path: Path) -> Events:
 
 
 def load_noise(path: Path) -> GaussianNoiseChunks:
+    """Load gaussain noise from file"""
     with h5py.File(path, "r") as file:
         noise = load_object_from_group(file, GaussianNoiseChunks)
 
@@ -32,7 +34,17 @@ GenericObject = TypeVar("GenericObject")
 
 
 def load_object_from_group(group: h5py.Group, object_type: type[GenericObject]) -> GenericObject:
-    "Assumes h5 file is structured the same as the object type"
+    """
+    Load a dataclass or NamedTuple from group.
+    Assumes h5 file is structured the same as the object type
+
+    Args:
+        group: h5py group to read from
+        object_type: Class of object to read.
+    Returns:
+        Data of type object_type extracted from group.
+
+    """
 
     # Dict containing the decoded data
     decoded_data = {}

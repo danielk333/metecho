@@ -5,6 +5,8 @@ import numpy.typing as npt
 
 
 class Model(ABC):
+    """Meteor model base class"""
+
     @abstractmethod
     def evaluate(
         self, t: npt.NDArray[np.float64] | npt.NDArray[np.int64]

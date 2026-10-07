@@ -14,16 +14,18 @@ try:
     from types import get_original_bases  # type: ignore[attr-defined,unused-ignore]
 
     def orig_bases(cls: type) -> tuple[Any, ...]:
+        """Get bases of class"""
         return get_original_bases(cls)
 
 except ImportError:
 
     def orig_bases(cls: type) -> tuple[Any, ...]:
+        """Get bases of class"""
         return cls.__orig_bases__  # type: ignore[attr-defined]
 
 
 def is_namedtuple(data_type: Any) -> bool:
-    # TODO: Accept and isntance of a object aswell and not just the type
+    """Is object a NamedTuple"""
 
     try:
         return orig_bases(data_type) == (NamedTuple,)
@@ -32,14 +34,15 @@ def is_namedtuple(data_type: Any) -> bool:
 
 
 class IsDataclass(Protocol):
+    """Is Dataclass protocol"""
+
     __dataclass_fields__: ClassVar[dict[str, Any]]
     __annotations__: dict[str, Any]
 
 
 def store_noise(gaussian_noise: GaussianNoiseChunks, path: Path) -> None:
     """
-    file name format..... TBD
-
+    Store gaussian noise according to naming convention at given path.
     """
 
     _dt = dt.datetime.fromtimestamp(gaussian_noise.epoch_us * 1e-6, dt.timezone.utc)
@@ -56,10 +59,8 @@ def store_noise(gaussian_noise: GaussianNoiseChunks, path: Path) -> None:
 
 def store_events(events: Events, path: Path) -> None:
     """
-    file name format..... TBD
-
+    Store events according to naming convention at given path.
     """
-
     _dt = dt.datetime.fromtimestamp(events.event_search_start_us * 1e-6, dt.timezone.utc)
     time_string = _dt.strftime("%Y-%m-%dT%H-%M-%S")
     folder_name = f"{time_string[0:10]}/{time_string[11:13]}-00-00/events"
@@ -73,6 +74,14 @@ def store_events(events: Events, path: Path) -> None:
 
 
 def store_params(group: h5py.Group | h5py.File, object: Union[NamedTuple, IsDataclass]) -> None:
+    """
+    Store a dataclass or NamedTuple in group.
+    H5 file will get same structure as object.
+
+    Args:
+        group: h5py group to write to.
+        object: Data to store.
+    """
 
     if is_namedtuple(type(object)):
         key_data_pairs = object._asdict()  # type: ignore[union-attr]
