@@ -20,12 +20,12 @@ class EventSearchCfg:
         noise_chunk_size: The number of IPPs that each noise calculation segment should span.
     """
 
-    dop_std_coherr: float
-    start_std_coherr: float
-    pow_std_est: float
-    corr_filter_limit: float
-    move_std_window: int
-    noise_chunk_size: int
+    dop_std_coherr: float = 7e3
+    start_std_coherr: float = 13
+    pow_std_est: float = 3
+    corr_filter_limit: float = 0.5
+    move_std_window: int = 10
+    noise_chunk_size: int = 100
 
 
 @dataclass
@@ -89,6 +89,7 @@ class Echo(NamedTuple):
     tot_pow: npt.NDArray[np.floating]
     max_corr: npt.NDArray[np.complex128]
     max_corr_ind: npt.NDArray[np.integer]
+    max_corr_delay: npt.NDArray[np.integer]
     best_doppler: npt.NDArray[np.integer]
     epoch_us: int
     tot_pow_filt: npt.NDArray[np.floating]

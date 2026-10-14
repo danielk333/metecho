@@ -34,12 +34,13 @@ def extract_event_search_configurations(
             **extract_config_section(config, section="event_select", cfg_type=EventSelectCfg)
         )
         echo_search_cfg = EchoSearchCfgParams(
-            **extract_config_section(config, section=None, cfg_type=EchoSearchCfgParams)
+            **extract_config_section(config, section="echo_search", cfg_type=EchoSearchCfgParams)
         )
     else:
         event_search_cfg = extract_config_from_dict(config, EventSearchCfg)  # type: ignore[type-var]
         event_criteria_cfg = extract_config_from_dict(config, EventCriteriaCfg)  # type: ignore[type-var]
         event_select_cfg = extract_config_from_dict(config, EventSelectCfg)  # type: ignore[type-var]
+        echo_search_cfg = extract_config_from_dict(config, EchoSearchCfgParams)
 
     return event_search_cfg, event_criteria_cfg, event_select_cfg, echo_search_cfg
 
@@ -59,14 +60,7 @@ def generate_default_configurations(
     rx_samps = rx_end_samp - rx_start_samp
     tx_samps = tx_end_samp - tx_start_samp
 
-    event_search_cfg = EventSearchCfg(
-        dop_std_coherr=7e3,
-        start_std_coherr=13,
-        pow_std_est=3,
-        corr_filter_limit=0.5,
-        move_std_window=10,
-        noise_chunk_size=100,
-    )
+    event_search_cfg = EventSearchCfg()
 
     event_criteria_cfg = EventCriteriaCfg(
         criteria_n=3,

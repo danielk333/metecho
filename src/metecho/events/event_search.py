@@ -8,13 +8,14 @@ import numpy as np
 import numpy.typing as npt
 from hardtarget.constants import AnalysisMethod, Impl
 from hardtarget.echo_search.types import EchoSearchCfgParams, EchoSearchOutArgs, EchoSearchProParams
+from hardtarget.process.configuration import extract_config_from_dict, extract_config_section
 from radardef.components import DataLoader
 from radardef.radar_def import RadarDef
 from radardef.tools.mpi_tools import CommBar, CommMock, CommObject
 from radardef.types.types import ExpDef
 
 from metecho.data_handling.store_data import store_events, store_noise
-from metecho.events.conf import extract_event_search_configurations, generate_default_configurations
+from metecho.events.conf import generate_default_configurations
 from metecho.events.constants import MeteorType
 from metecho.events.types import (
     Echo,
@@ -82,14 +83,50 @@ def event_search(
         # Extract configurations
         if isinstance(config, tuple):
             event_search_cfg, event_criteria_cfg, event_select_cfg, echo_search_cfg = config
-        elif not config:
+        elif isinstance(config, dict):
+            event_search_cfg = extract_config_from_dict(config, EventSearchCfg)  # type: ignore[type-var]
+            event_criteria_cfg = extract_config_from_dict(config, EventCriteriaCfg)  # type: ignore[type-var]
+            event_select_cfg = extract_config_from_dict(config, EventSelectCfg)  # type: ignore[type-var]
+            echo_search_cfg = extract_config_from_dict(config, EchoSearchCfgParams)
+        else:
+            # Generate default configuration
             event_search_cfg, event_criteria_cfg, event_select_cfg, echo_search_cfg = (
                 generate_default_configurations(data_loader.exp_def)
             )
-        else:
-            event_search_cfg, event_criteria_cfg, event_select_cfg, echo_search_cfg = (
-                extract_event_search_configurations(config)
-            )
+            # If user specified params, replace the default ones
+            if config:
+                event_search_cfg = EventSearchCfg(
+                    **extract_config_section(
+                        config,
+                        section="event_search",
+                        cfg_type=EventSearchCfg,
+                        existing_cfg=event_search_cfg,  # type: ignore[arg-type]
+                    )
+                )
+                event_criteria_cfg = EventCriteriaCfg(
+                    **extract_config_section(
+                        config,
+                        section="event_criterias",
+                        cfg_type=EventCriteriaCfg,
+                        existing_cfg=event_criteria_cfg,  # type: ignore[arg-type]
+                    )
+                )
+                event_select_cfg = EventSelectCfg(
+                    **extract_config_section(
+                        config,
+                        section="event_select",
+                        cfg_type=EventSelectCfg,
+                        existing_cfg=event_select_cfg,  # type: ignore[arg-type]
+                    )
+                )
+                echo_search_cfg = EchoSearchCfgParams(
+                    **extract_config_section(
+                        config,
+                        section=None,
+                        cfg_type=EchoSearchCfgParams,
+                        existing_cfg=echo_search_cfg,
+                    )
+                )
     else:
         event_search_cfg = event_criteria_cfg = event_select_cfg = echo_search_cfg = data_loader = None  # type: ignore[assignment]
 
@@ -112,7 +149,6 @@ def event_search(
         progress=progress,
         comm=comm,
     )
-    comm.barrier()
 
     if comm.rank == 0:
         if output:
@@ -262,6 +298,7 @@ def echo_post_process(
         tot_pow=echo_search_analysis.tot_pow,
         max_corr=echo_search_analysis.max_corr,
         max_corr_ind=echo_search_analysis.max_corr_ind,
+        max_corr_delay=echo_search_analysis.max_corr_delay,
         best_doppler=echo_search_analysis.best_doppler,
         epoch_us=echo_search_analysis.epoch_us,
         tot_pow_filt=echo_search_analysis.tot_pow[_filter_indices],
