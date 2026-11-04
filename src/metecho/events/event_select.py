@@ -63,8 +63,6 @@ def cluster(
 
     for x in range(len(new_indices)):
         if len(new_indices[x]) > config.min_ipps:
-            event_ipp_indices.append(
-                (np.amin(new_indices[x]) - config.ipp_extend, np.amax(new_indices[x]) + config.ipp_extend)
-            )
+            event_ipp_indices.append((np.amin(new_indices[x]), np.amax(new_indices[x])))
 
     return np.array(event_ipp_indices)

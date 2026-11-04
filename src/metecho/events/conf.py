@@ -82,7 +82,6 @@ def generate_default_configurations(
         min_ipp_separation_split=20,
         min_dop_separation_split=10 * 1e3 * exp_def.radar_frequency * 1e6 / c,
         min_range_separation_split=4,
-        ipp_extend=10,
         smoothing_window=5,
         polyorder=2,
         event_max_overlap=10,

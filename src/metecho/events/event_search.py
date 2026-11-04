@@ -446,6 +446,8 @@ def create_event_cluster(
                 event_span[x, 1] -= contr_IPP
                 event_span[x + 1, 0] += contr_IPP
 
+    tx_len = int((echo.exp_def.t_tx_end_usec - echo.exp_def.t_tx_start_usec) / echo.exp_def.t_samp_usec)
+
     # Create head events
     events: list[Event] = []
     for x in range(events_found):
@@ -458,6 +460,8 @@ def create_event_cluster(
         ev = Event(
             start_ipp=int(event_span[x, 0]),
             end_ipp=int(event_span[x, 1]),
+            min_range_gate=echo.max_corr_delay[event_indices].min() + tx_len,
+            max_range_gate=echo.max_corr_delay[event_indices].max() + tx_len,
             event_indices=event_indices,
             event_date=ev_date,
             event_search_executed=np.datetime64("now", "ms"),

@@ -1,7 +1,9 @@
+import datetime as dt
+import inspect
 import logging
 from dataclasses import fields, is_dataclass
 from pathlib import Path
-from typing import TypeVar
+from typing import Any, TypeVar, get_args, get_origin
 
 import h5py
 import numpy as np
@@ -30,6 +32,29 @@ def load_noise(path: Path) -> GaussianNoiseChunks:
     return noise
 
 
+def get_exact_annotations(data_type: Any) -> dict:
+    """
+    Returns a dictionary of fieldnames mapped to their exact types, works also with generic types.
+    """
+
+    base_class = get_origin(data_type)
+
+    if base_class is None:
+        return inspect.get_annotations(data_type)
+
+    raw_annotations = inspect.get_annotations(base_class)
+    type_map = dict(zip(base_class.__parameters__, get_args(data_type)))
+
+    exact_annotations = {}
+    for field_name, field_type in raw_annotations.items():
+        if isinstance(field_type, TypeVar) and field_type in type_map:
+            exact_annotations[field_name] = type_map[field_type]
+        else:
+            exact_annotations[field_name] = field_type
+
+    return exact_annotations
+
+
 GenericObject = TypeVar("GenericObject")
 
 
@@ -50,7 +75,7 @@ def load_object_from_group(group: h5py.Group, object_type: type[GenericObject]) 
     decoded_data = {}
 
     # Get Key and Type pairs from the given object
-    annotations = object_type.__annotations__
+    annotations = get_exact_annotations(object_type)
 
     # If object is a dataclass only read datapoints that is a part of the init
     if is_dataclass(object_type):
@@ -72,11 +97,13 @@ def load_object_from_group(group: h5py.Group, object_type: type[GenericObject]) 
             data = h5_section[()]
             if isinstance(data, bytes):
                 data = data.decode()
-            elif isinstance(data, np.ndarray) and isinstance(data[0], bytes):
+            elif isinstance(data, np.ndarray) and data.size > 0 and isinstance(data[0], bytes):
                 data = [d.decode() for d in data]
 
             if data_type == np.datetime64:
-                data = np.datetime64(data)
+                data = np.datetime64(str(data))
+            elif data_type == dt.datetime:
+                data = dt.datetime.strptime(str(data), "%Y-%m-%dT%H:%M:%S.%f").replace(tzinfo=dt.timezone.utc)
             elif is_namedtuple(data_type) and isinstance(data, str):
                 a = data.strip("{}")
                 d = dict(item.split(": ") for item in a.split(", "))
@@ -84,17 +111,35 @@ def load_object_from_group(group: h5py.Group, object_type: type[GenericObject]) 
             elif data_type == dict and isinstance(data, str):
                 a = data.strip("{}")
                 data = dict(item.split(": ") for item in a.split(", "))
+            elif data_type.__name__ == "list" and isinstance(data, np.ndarray) and data.size == 0:
+                data = []
         else:
             if data_type.__name__ == "list":
                 sub_type = data_type.__args__[0]
+                if len(get_args(sub_type)) > 0:
+                    base_type = get_origin(sub_type)
+                    is_dataclass_or_named_tuple = is_dataclass(base_type) or is_namedtuple(base_type)
+                else:
+                    is_dataclass_or_named_tuple = is_dataclass(sub_type) or is_namedtuple(sub_type)
                 sub_data = []
-                for sub_key in h5_section:
+                for sub_key in h5_section.keys():
                     # list of dataclass or named tuple
-                    if is_dataclass(sub_type) or is_namedtuple(sub_type):
+                    if is_dataclass_or_named_tuple:
                         sub_data.append(load_object_from_group(h5_section[sub_key], sub_type))
                     else:
                         sub_data.append(h5_section[sub_key])
                 data = sub_data
+            elif data_type.__name__ == "tuple":
+                sub_types = list(data_type.__args__)
+                sub_data = []
+                for i, sub_key in enumerate(h5_section.keys()):
+                    type = sub_types[i]
+                    if is_dataclass(type) or is_namedtuple(type):
+                        sub_data.append(load_object_from_group(h5_section[sub_key], type))
+                    else:
+                        sub_data.append(h5_section[sub_key])
+                data = tuple(sub_data)
+
             else:
                 # case of a Named tuple or dataclass
                 data = load_object_from_group(h5_section, data_type)

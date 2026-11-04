@@ -36,7 +36,6 @@ class EventSelectCfg:
         min_ipp_separation_split: Least amount of ipps between sightings for them to be qualified as different events.
         min_dop_separation_split: Least difference in doppler between sightings for them to be qualified as different events.
         min_range_separation_split: Least difference in range between sightings for them to be qualified as different events.
-        ipp_extend: Ipp buffer to add around a event window.
         smoothing_window: Window size for savgol filter when smoothing doppler and range.
         polyorder: Order of the polynomial used to fit the samples within the moving window.
         event_max_overlap: Maximum ipp overlap of windows before merging them to one.
@@ -46,7 +45,6 @@ class EventSelectCfg:
     min_ipp_separation_split: int
     min_dop_separation_split: float
     min_range_separation_split: float
-    ipp_extend: int
     smoothing_window: int
     polyorder: int
     event_max_overlap: int = 10
@@ -103,6 +101,8 @@ class Echo(NamedTuple):
 class Event(NamedTuple):
     start_ipp: int
     end_ipp: int
+    min_range_gate: int
+    max_range_gate: int
     event_indices: npt.NDArray[np.int64]
     event_date: np.datetime64
     event_search_executed: np.datetime64

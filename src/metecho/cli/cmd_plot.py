@@ -1,33 +1,52 @@
+"""
+The CLI Plot functionality,  gathers the plot functionality for both the analysed and raw format.
+"""
+
 import argparse
 import logging
-from pathlib import Path
 
-from metecho.data_handling.load_data import load_events
+from hardtarget.types import ParserArgs, SubParser
 
+from . import plot_event_search
 from .commands import add_command
 
 logger = logging.getLogger(__name__)
 
-
-def main(args: argparse.Namespace) -> None:
-    """Plot CLI"""
-
-    load_events(Path(args.file))
+SOURCES = {
+    "event-search": SubParser(
+        main=plot_event_search.main,
+        parser_build=plot_event_search.parser_build,
+        parser_args=ParserArgs(
+            description="Plot cluster ",
+            usage="%(prog)s [options] path",
+        ),
+    ),
+}
 
 
 def parser_build(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     """Adds mandatory and optional positional arguments to the parser."""
-
-    parser.add_argument(
-        "file",
-        help="Input the location of the file to plot.",
-    )
+    subparsers = parser.add_subparsers(help="resordan file types", dest="filetype")
+    subparsers.required = True
+    for source in SOURCES:
+        cmd_parser = subparsers.add_parser(source, **SOURCES[source].parser_args)
+        parser_builder = SOURCES[source].parser_build
+        parser_builder(cmd_parser)
     return parser
+
+
+def main(args: argparse.Namespace) -> None:
+    """Plot CLI"""
+    function = SOURCES[args.filetype].main
+    logger.info(f"Executing command {args.command} {args.filetype}")
+    function(args)
 
 
 add_command(
     name="plot",
     function=main,
     parser_build=parser_build,
-    # command_help="Searches radar data to look for signs of meteor events.",
+    add_parser_args=dict(
+        description="Metecho plotting tools",
+    ),
 )
