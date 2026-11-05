@@ -32,7 +32,7 @@ def plot(
 ) -> None:
     """Load and plot Cluster data"""
 
-    out, exp, cfg, pro = load_analysed_data(  # type: ignore[var-annotated]
+    out, exp, _, _ = load_analysed_data(  # type: ignore[var-annotated]
         data_dir=echo_path,
     )
     events = load_events(event_path)

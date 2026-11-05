@@ -122,7 +122,7 @@ def load_object_from_group(group: h5py.Group, object_type: type[GenericObject]) 
                 else:
                     is_dataclass_or_named_tuple = is_dataclass(sub_type) or is_namedtuple(sub_type)
                 sub_data = []
-                for sub_key in h5_section.keys():
+                for sub_key in h5_section:
                     # list of dataclass or named tuple
                     if is_dataclass_or_named_tuple:
                         sub_data.append(load_object_from_group(h5_section[sub_key], sub_type))
@@ -133,9 +133,9 @@ def load_object_from_group(group: h5py.Group, object_type: type[GenericObject]) 
                 sub_types = list(data_type.__args__)
                 sub_data = []
                 for i, sub_key in enumerate(h5_section.keys()):
-                    type = sub_types[i]
-                    if is_dataclass(type) or is_namedtuple(type):
-                        sub_data.append(load_object_from_group(h5_section[sub_key], type))
+                    tuple_type = sub_types[i]
+                    if is_dataclass(tuple_type) or is_namedtuple(tuple_type):
+                        sub_data.append(load_object_from_group(h5_section[sub_key], tuple_type))
                     else:
                         sub_data.append(h5_section[sub_key])
                 data = tuple(sub_data)
