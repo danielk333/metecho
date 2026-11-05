@@ -26,7 +26,7 @@ SOURCES = {
 
 def parser_build(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     """Adds mandatory and optional positional arguments to the parser."""
-    subparsers = parser.add_subparsers(help="hardtarget file types", dest="filetype")
+    subparsers = parser.add_subparsers(help="metecho file types", dest="filetype")
     subparsers.required = True
     for source, sub_parser in SOURCES.items():
         cmd_parser = subparsers.add_parser(source, **sub_parser.parser_args)
