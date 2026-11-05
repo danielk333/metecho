@@ -452,7 +452,7 @@ def create_event_cluster(
     events: list[Event] = []
     for x in range(events_found):
         event_indices = object_indicies[
-            np.logical_and(object_indicies > event_span[x, 0], object_indicies < event_span[x, 1])
+            np.logical_and(object_indicies >= event_span[x, 0], object_indicies <= event_span[x, 1])
         ]
         event_offset_us = int(event_span[x, 0] * echo.exp_def.t_ipp_usec)
         ev_date = np.datetime64(int(echo.epoch_us + event_offset_us), "us")
